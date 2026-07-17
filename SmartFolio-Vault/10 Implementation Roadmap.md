@@ -1,5 +1,8 @@
 # Implementation Roadmap
 
+> Engineering blueprint for the remaining phases (M1–M5 sequencing, schemas,
+> contracts, verification criteria): [[15 Improvement Design]].
+
 ## Phase 1 - Prototype Hardening
 
 Goal: make the current SmartFolio demo feel like a polished public financial application.
@@ -10,9 +13,14 @@ Goal: make the current SmartFolio demo feel like a polished public financial app
 - Improve empty states, loading states, and responsive behavior.
 - Add clear disclaimers that outputs are educational and not financial advice.
 
-## Phase 2 - Frontend Application
+## Phase 2 - Frontend Application  ✅ (in progress — 2026-07-17)
 
 Goal: move from static prototype toward a maintainable app.
+
+Done: converted `index.html` into a component-based **Vite + React + TypeScript**
+app in `frontend/`, with the deterministic/AI split enforced by folder structure
+and Zustand for state. See [[13 Frontend Architecture]]. Remaining: client-side
+persistence of setup answers across reloads, and point Vercel at `frontend/`.
 
 - Convert `index.html` into React or Next.js.
 - Create reusable UI modules:
@@ -24,9 +32,16 @@ Goal: move from static prototype toward a maintainable app.
   - risk profile summary
 - Add client-side state management for setup answers and analysis sessions.
 
-## Phase 3 - Backend Services
+## Phase 3 - Backend Services  ✅ (core done — 2026-07-17)
 
 Goal: create production APIs that separate data, calculations, and AI.
+
+Done: FastAPI service in `backend/` with typed Pydantic models, deterministic
+services + AI explanation layer, CORS, and endpoints `/health`,
+`/portfolio/analyze`, `/stocks/analyze`, `/advisor/ask` — wired into the
+frontend with graceful local fallback. See [[14 Backend API]]. Remaining:
+provider fallback for market data/LLM; `POST /profiles` and `GET /analyses/{id}`
+move to Phase 4 (they need persistence).
 
 - Add Python FastAPI service.
 - Add typed Pydantic models for profiles, holdings, analyses, forecasts, and memos.

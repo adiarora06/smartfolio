@@ -74,3 +74,11 @@ Analyze Stock is not just a stock picker. It should answer:
 
 > How would this stock affect my portfolio?
 
+## Implementation
+
+- Forecast, backtest, and live price run through [[14 Backend API]]
+  (`/stocks/analyze` — deterministic engine + market data).
+- The terminal UI lives in [[13 Frontend Architecture]] (Analyze Stock screen).
+- The "how would this stock affect my portfolio?" impact analysis is **designed
+  but not yet built** — milestone M1 in [[15 Improvement Design]].
+

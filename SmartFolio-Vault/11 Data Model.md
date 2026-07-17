@@ -87,3 +87,12 @@ Project and user memory should be separated.
 - user memory: profile, goals, holdings, watchlist, preferences
 - analysis memory: prior stock analyses, generated memos, agent traces
 
+## Implementation
+
+These entities exist as typed contracts today (durable storage is Phase 4):
+
+- Backend Pydantic schemas — [[14 Backend API]] (`backend/app/schemas.py`).
+- Frontend TypeScript types — [[13 Frontend Architecture]]
+  (`frontend/src/types.ts`), kept as a line-for-line mirror (camelCase wire).
+- Neon Postgres persistence is designed in [[15 Improvement Design]] (M2).
+
