@@ -1,0 +1,6 @@
+.DS_Store
+node_modules/
+.vercel/
+work/
+outputs/.portfolio_base_model.md.swp
+
