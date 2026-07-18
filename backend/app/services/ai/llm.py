@@ -1,6 +1,6 @@
 """LLM provider routing for the AI explanation layer.
 
-Primary: Anthropic Messages API via the official SDK (AsyncAnthropic).
+Supports: Anthropic (Claude) or OpenAI (GPT).
 Fallback: the deterministic templates (always available — keyless deploys are
 byte-identical to the pre-LLM behavior).
 
@@ -14,9 +14,10 @@ Hard rules enforced here:
 from __future__ import annotations
 
 import json
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 from anthropic import AsyncAnthropic
+from openai import AsyncOpenAI
 
 from ...config import settings
 from ...schemas import Narrator, PortfolioAnalysis, PortfolioImpact, StockForecast
@@ -25,18 +26,29 @@ from .format import pct, title_case
 from .insights import describe_concentrations, describe_recommendations
 from .memo import template_memo
 
-_client: Optional[AsyncAnthropic] = None
+_anthropic_client: Optional[AsyncAnthropic] = None
+_openai_client: Optional[AsyncOpenAI] = None
 
 
-def _get_client() -> AsyncAnthropic:
-    global _client
-    if _client is None:
-        _client = AsyncAnthropic(
+def _get_anthropic_client() -> AsyncAnthropic:
+    global _anthropic_client
+    if _anthropic_client is None:
+        _anthropic_client = AsyncAnthropic(
             api_key=settings.anthropic_api_key,
             timeout=settings.llm_timeout,
             max_retries=1,
         )
-    return _client
+    return _anthropic_client
+
+
+def _get_openai_client() -> AsyncOpenAI:
+    global _openai_client
+    if _openai_client is None:
+        _openai_client = AsyncOpenAI(
+            api_key=settings.openai_api_key,
+            timeout=settings.llm_timeout,
+        )
+    return _openai_client
 
 
 _MEMO_SYSTEM = """You write SmartFolio's stock research memos.
@@ -60,22 +72,34 @@ STRICT REWRITE: Your previous draft contained non-compliant language (e.g. guara
 
 
 async def _complete(system: str, user: str) -> Optional[str]:
-    """One Messages API call; None on any failure (caller falls back)."""
+    """One LLM API call; None on any failure (caller falls back)."""
     if not settings.llm_enabled:
         return None
     try:
-        resp = await _get_client().messages.create(
-            model=settings.llm_model,
-            max_tokens=settings.llm_max_tokens,
-            thinking={"type": "adaptive"},
-            output_config={"effort": "low"},
-            system=system,
-            messages=[{"role": "user", "content": user}],
-        )
-        if resp.stop_reason == "refusal":
-            return None
-        text = "".join(b.text for b in resp.content if b.type == "text").strip()
-        return text or None
+        if settings.llm_provider == "openai":
+            resp = await _get_openai_client().chat.completions.create(
+                model=settings.llm_model,
+                max_tokens=settings.llm_max_tokens,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+            )
+            text = resp.choices[0].message.content or ""
+            return text.strip() or None
+        else:  # anthropic (default)
+            resp = await _get_anthropic_client().messages.create(
+                model=settings.llm_model,
+                max_tokens=settings.llm_max_tokens,
+                thinking={"type": "adaptive"},
+                output_config={"effort": "low"},
+                system=system,
+                messages=[{"role": "user", "content": user}],
+            )
+            if resp.stop_reason == "refusal":
+                return None
+            text = "".join(b.text for b in resp.content if b.type == "text").strip()
+            return text or None
     except Exception:
         # Timeout, auth, rate limit, network — all roads lead to the template.
         return None

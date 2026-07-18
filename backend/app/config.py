@@ -19,8 +19,10 @@ class Settings:
     market_data_timeout: float = float(os.environ.get("MARKET_DATA_TIMEOUT", "6"))
 
     # LLM routing (AI explanation layer). No key -> deterministic templates.
+    llm_provider: str = os.environ.get("LLM_PROVIDER", "anthropic").strip().lower()
     anthropic_api_key: str = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    llm_model: str = os.environ.get("LLM_MODEL", "claude-opus-4-8").strip()
+    openai_api_key: str = os.environ.get("OPENAI_API_KEY", "").strip()
+    llm_model: str = os.environ.get("LLM_MODEL", "gpt-4o-mini" if os.environ.get("OPENAI_API_KEY") else "claude-opus-4-8").strip()
     llm_max_tokens: int = int(os.environ.get("LLM_MAX_TOKENS", "1024"))
     # Per-request LLM timeout (seconds). Kept tight so the UI never stalls long
     # before the template fallback kicks in.
