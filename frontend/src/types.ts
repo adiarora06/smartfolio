@@ -10,7 +10,8 @@ export type Screen =
   | 'scenarios'
   | 'advisor'
   | 'connections'
-export type StockTab = 'forecast' | 'backtest' | 'topology' | 'audit' | 'memory'
+  | 'opensource'
+export type StockTab = 'forecast' | 'backtest' | 'audit' | 'memory'
 
 export type RiskProfileName = 'conservative' | 'balanced' | 'growth' | 'aggressive'
 export type Liquidity = 'low' | 'medium' | 'high'

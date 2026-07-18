@@ -51,9 +51,7 @@ export function ConnectionsScreen() {
           <div className="connGrid">
             <div className={`conn ${backendOnline ? 'on' : ''}`}>
               <strong>SmartFolio API</strong>
-              <span style={{ color: 'var(--muted)' }}>
-                FastAPI · deterministic engine + AI layer
-              </span>
+              <span style={{ color: 'var(--muted)' }}>Analysis service · live market data</span>
               <button onClick={() => void checkBackend()}>
                 {backendOnline === null ? 'Checking…' : backendOnline ? 'Live · Recheck' : 'Offline · Retry'}
               </button>

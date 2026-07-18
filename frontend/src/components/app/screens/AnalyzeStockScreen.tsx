@@ -9,10 +9,11 @@ import { AppHero, Panel, PanelHead } from '../../shared/ui'
 import { ForecastChart } from '../../shared/ForecastChart'
 import type { StockTab } from '../../../types'
 
+// Topology (the agent-flow view) lives in the Open Source screen now — the
+// terminal keeps only the tabs a customer acts on.
 const TABS: Array<[StockTab, string]> = [
   ['forecast', 'Forecast'],
   ['backtest', 'Backtest'],
-  ['topology', 'Topology'],
   ['audit', 'Audit Log'],
   ['memory', 'Memory'],
 ]
@@ -120,13 +121,6 @@ export function AnalyzeStockScreen() {
         <div className="pane active">
           {stockTab === 'forecast' && <ForecastPane />}
           {stockTab === 'backtest' && <BacktestPane />}
-          {stockTab === 'topology' && (
-            <ul className="list termList">
-              {stock.trace.topology.map((line, i) => (
-                <li key={i}>{line}</li>
-              ))}
-            </ul>
-          )}
           {stockTab === 'audit' && (
             <ul className="list termList">
               {stock.trace.audit.map((line, i) => (

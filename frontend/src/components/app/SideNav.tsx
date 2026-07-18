@@ -10,6 +10,7 @@ const NAV_ITEMS: Array<[Screen, string]> = [
   ['scenarios', 'Scenarios'],
   ['advisor', 'AI Advisor'],
   ['connections', 'Connections'],
+  ['opensource', 'Open Source'],
 ]
 
 export function SideNav() {

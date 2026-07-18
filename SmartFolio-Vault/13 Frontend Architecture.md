@@ -66,9 +66,27 @@ backend lands, `lib/calculations` maps onto its deterministic services and
 - `layout/` — TopBar, SkipToDemoButton (reused in 3 places), Disclaimer
 - `landing/` — LandingPage (hero, preview, features)
 - `setup/` — SetupFlow (guided onboarding wizard)
-- `app/` — AppShell, SideNav, AgentPanel
-- `app/screens/` — Overview, Portfolio, AnalyzeStock, Scenarios, Advisor, Connections
+- `app/` — AppShell, SideNav
+- `app/screens/` — Overview, Portfolio, AnalyzeStock, Scenarios, Advisor,
+  Connections, OpenSource
 - `shared/` — ui primitives (Panel/AppHero/MetricCard), ForecastChart, AllocationBars, InsightList
+
+## Customer / Internals Separation (2026-07-18)
+
+Product decision: system internals ("how it works") are not shown on the
+screens a general customer uses. They live in a dedicated **Open Source**
+screen (last nav item):
+
+- The sidebar **Agent Network panel was removed** (AgentPanel.tsx deleted).
+- The Analyze Stock terminal **lost its Topology tab** — the terminal keeps
+  only actionable tabs (Forecast, Backtest, Audit Log, Memory).
+- `OpenSourceScreen` now holds: an **SVG agent graph** (8 nodes / 7 edges —
+  profile flow and market flow converging on the Portfolio Agent, Compliance
+  as the amber guardrail), the **active agents list** (7 agents with live
+  API/local status), the run pipeline steps, the design rule, and a
+  View-on-GitHub link.
+- Connections' API card copy was de-jargoned ("Analysis service · live market
+  data").
 
 ## Fidelity Notes
 
