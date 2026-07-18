@@ -40,7 +40,7 @@ class Settings:
 
     @property
     def llm_enabled(self) -> bool:
-        return bool(self.anthropic_api_key)
+        return bool(self.anthropic_api_key or self.openai_api_key)
 
 
 settings = Settings()
