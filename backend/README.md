@@ -80,6 +80,28 @@ export MARKET_DATA_API_KEY=your_key_here
 
 `GET /health` reports `liveMarketData` and `marketDataProvider`.
 
+## AI narration (LLM routing)
+
+With `ANTHROPIC_API_KEY` set, research memos and advisor answers are written by
+a real LLM (default model `claude-opus-4-8`, override with `LLM_MODEL`) that
+receives the deterministic results as read-only JSON context. Output is
+validated by the compliance module (no guarantees, no buy/sell language — one
+stricter retry, then the deterministic template) and the disclaimer is appended
+server-side. **Without a key, behavior is byte-identical to the deterministic
+templates** — the app never depends on the LLM. Responses carry
+`narrator: "llm" | "template"`.
+
+## Persistence
+
+SQLite by default — `backend/data/smartfolio.db` is created on first start and
+survives restarts with zero setup. Point `DATABASE_URL` at Postgres/Neon for
+cloud deploys (install an async driver, e.g. `pip install asyncpg`, and use
+`postgresql+asyncpg://...`). Anonymous workspaces: the frontend mints an id
+(`POST /workspaces`), keeps it in localStorage, hydrates via
+`GET /workspaces/{id}/state`, and saves with debounced PUTs. Analysis runs sent
+with an `X-Workspace-Id` header are stored and replayable via
+`GET /analyses/{id}`.
+
 ## Config
 
 - `SMARTFOLIO_CORS_ORIGINS` — comma-separated allowed origins. Defaults to the
@@ -88,6 +110,10 @@ export MARKET_DATA_API_KEY=your_key_here
 - `MARKET_DATA_API_KEY` — provider key; unset = offline-only.
 - `MARKET_DATA_CACHE_TTL` — quote cache seconds (default `900`).
 - `MARKET_DATA_TIMEOUT` — provider request timeout seconds (default `6`).
+- `ANTHROPIC_API_KEY` — enables LLM narration; unset = templates.
+- `LLM_MODEL` — Anthropic model id (default `claude-opus-4-8`).
+- `LLM_MAX_TOKENS` / `LLM_TIMEOUT` — narration limits (default `1024` / `10`s).
+- `DATABASE_URL` — SQLAlchemy async URL (default SQLite file under `data/`).
 - `VITE_API_URL` (frontend) — backend base URL (default `http://localhost:8000`).
 
 ## Disclaimer

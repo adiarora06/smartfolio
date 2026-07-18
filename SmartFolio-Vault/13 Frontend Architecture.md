@@ -98,6 +98,21 @@ screen (last nav item):
   investor context actually flows into the app (Review step + dashboard update
   live). UI unchanged.
 
+## Full-App State Model (added 2026-07-18)
+
+- **Impact card + real trace**: the Analyze Stock terminal shows the
+  deterministic what-if (position size, new weight, sector after, flags) and
+  the Audit Log renders the backend's real timed AgentEvents. Local mode keeps
+  parity via `lib/calculations/impact.ts` (falls back to static trace).
+- **Async UX**: `running` disables/labels the Run button; the advisor shows a
+  Thinking… bubble while a request is in flight.
+- **Persistence**: localStorage always mirrors profile/holdings/memos (reload
+  survives offline); when the backend is up, an anonymous workspace id (also
+  localStorage) hydrates server state on load and receives debounced (800ms)
+  saves. Server state wins over the local snapshot on hydrate; only
+  user-initiated analysis runs are persisted to history (the on-load hydration
+  run passes `persist: false`).
+
 ## Backend Integration (added in Phase 3)
 
 `src/lib/api/client.ts` is a typed client for the FastAPI backend

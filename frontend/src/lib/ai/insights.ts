@@ -7,12 +7,13 @@
 //
 // Nothing here computes financial values — it only phrases them.
 
-import { pct, title } from '../format'
+import { fmt, pct, title } from '../format'
 import type {
   ConcentrationFinding,
   PortfolioAnalysis,
   RecommendationSignal,
 } from '../calculations/portfolio'
+import type { PortfolioImpact } from '../../types'
 
 /** Phrase concentration findings as warning sentences. */
 export function describeConcentrations(findings: ConcentrationFinding[]): string[] {
@@ -41,6 +42,20 @@ export function describeRecommendations(signals: RecommendationSignal[]): string
         return 'Use broader funds or future contributions to reduce single-stock dependency.'
     }
   })
+}
+
+/** Phrase the what-if impact findings. Mirror of the backend's describe_impact. */
+export function describeImpact(impact: PortfolioImpact, symbol: string): string[] {
+  const first =
+    `Adding ${fmt.format(impact.addedValue)} of ${symbol} would make it ` +
+    `${pct(impact.newWeight)} of your portfolio` +
+    (impact.triggersSingleStockFlag
+      ? ', triggering a single-stock concentration flag.'
+      : '.')
+  const second =
+    `${title(impact.sector)} exposure would move to ${pct(impact.sectorWeightAfter)}` +
+    (impact.triggersSectorFlag ? ', crossing the sector concentration threshold.' : '.')
+  return [first, second]
 }
 
 export interface PortfolioInsights {

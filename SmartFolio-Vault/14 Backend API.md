@@ -1,8 +1,10 @@
 # Backend API
 
-Status: implemented in Phase 3 (2026-07-17). Python FastAPI service in
-`backend/` of the parent repo. See [[13 Frontend Architecture]] for the client
-side and [[10 Implementation Roadmap]] for phase status.
+Status: implemented in Phase 3 (2026-07-17); major expansion 2026-07-18
+(orchestrator + impact, persistence, LLM routing — M1/M2/M4 of
+[[15 Improvement Design]]). Python FastAPI service in `backend/` of the parent
+repo. See [[13 Frontend Architecture]] for the client side and
+[[10 Implementation Roadmap]] for phase status.
 
 ## What It Is
 
@@ -20,13 +22,52 @@ The backend is the **canonical** home of both layers of the core rule:
 
 ## Endpoints
 
-- `GET /health` — liveness; the frontend pings this on load to detect the backend
+- `GET /health` — liveness + capability flags (live data, LLM, database)
 - `POST /portfolio/analyze` — deterministic diagnosis + AI-layer insight prose
-- `POST /stocks/analyze` — OpenVC-style forecast run for ticker + horizon
-- `POST /advisor/ask` — advisor answer grounded in a fresh analysis of the sent state
+- `POST /stocks/analyze` — **full pipeline run**: forecast + optional what-if
+  impact (send `profile` + `holdings`) + real agent trace + narrated memo.
+  With an `X-Workspace-Id` header the run is persisted to history.
+- `POST /advisor/ask` — advisor answer (LLM or template) + `narrator` tag
+- `POST /workspaces` · `GET /workspaces/{id}/state` · `PUT .../profile` ·
+  `PUT .../holdings` · `POST .../memos` · `GET .../analyses` — anonymous
+  workspace persistence (no accounts; id lives in the browser's localStorage)
+- `GET /analyses/{id}` — a full stored run, replayable (the roadmap endpoint)
 
-Roadmap's `POST /profiles` and `GET /analyses/{id}` are deferred to Phase 4 —
-they only make sense with Neon Postgres persistence behind them.
+## Agent Orchestration (M1 — 2026-07-18)
+
+`app/orchestrator.py` runs the stock analysis as a real pipeline of named,
+timed steps: Ticker Intake → Market Data Tool → Stock Forecast → Backtest →
+**Portfolio Agent (what-if impact)** → Memo Writer → Compliance. Each step
+emits an `AgentEvent {agent, status, duration_ms, detail}` — the frontend's
+Audit Log renders this real trace (millisecond timings, actual data
+provenance) instead of the old static strings.
+
+`app/services/impact.py` answers the product's core question deterministically:
+adding `round(price*10)` of the stock — new combined weight, sector weight
+after, single-stock (>20%) and sector (>35%) flag triggers, and per-asset-class
+allocation-gap deltas. Mirrored in `frontend/src/lib/calculations/impact.ts`.
+
+## LLM Routing (M4 — 2026-07-18)
+
+`app/services/ai/llm.py`: AsyncAnthropic (official SDK) with
+`LLM_MODEL=claude-opus-4-8` default, adaptive thinking, low effort, 10s
+timeout. Surfaces: memo narration and advisor answers. The LLM receives the
+deterministic results as **read-only JSON context** and is instructed never to
+invent numbers. `app/services/ai/compliance.py` is enforcement, not fiction:
+banned-pattern validation (guarantees, buy/sell imperatives, "risk-free"...),
+one stricter retry, then the deterministic template; the disclaimer is appended
+server-side. Keyless deploys are byte-identical to template behavior
+(verified). Responses carry `narrator: "llm" | "template"`.
+
+## Persistence (M2 — 2026-07-18)
+
+`app/db.py`: SQLAlchemy 2.0 async. **SQLite file by default**
+(`backend/data/smartfolio.db`, gitignored — zero-setup persistence, verified to
+survive restarts); set `DATABASE_URL` for Neon/Postgres. Tables: workspaces,
+profiles, holdings, stock_runs (full response as JSON), memos. Schema is
+`create_all` on startup — move to Alembic when it stabilizes. Anonymous
+workspace model: the frontend mints an id once, keeps it in localStorage,
+hydrates on load, and pushes debounced saves. Auth is explicitly out of scope.
 
 ## Key Decision: Hybrid Determinism (Backend-First, Local Fallback)
 
@@ -93,8 +134,10 @@ live**. `StockForecast` gained `source` + `asOf`; the terminal shows "Live price
 
 ## Not Yet Done
 
-- Persistence (Phase 4): Neon Postgres, `POST /profiles`, `GET /analyses/{id}`,
-  saved analysis runs and memos.
+- Neon/Postgres in production (code-ready via `DATABASE_URL`; needs a driver
+  install — asyncpg/psycopg — and an Alembic migration baseline).
 - Live vol/trend from historical series + DB-backed quote cache (rest of M3).
-- LLM provider routing in `services/ai/`.
-- Docker + deployment target for the API ([[06 Deployment]]).
+- Live-LLM path exercised end-to-end (needs the user's `ANTHROPIC_API_KEY`;
+  keyless fallback + compliance validator are verified).
+- Rate limiting, structured logging, CI (M5); deployment of the new backend
+  ([[06 Deployment]] — Render env needs `DATABASE_URL`/`ANTHROPIC_API_KEY`).

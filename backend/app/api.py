@@ -1,26 +1,30 @@
 """REST endpoints.
 
-Each endpoint composes the two layers explicitly: deterministic services
-compute the numbers/findings, the AI layer phrases them. The roadmap's
-`POST /profiles` and `GET /analyses/{id}` arrive with persistence (Phase 4).
+Each endpoint composes the layers explicitly: deterministic services compute
+the numbers/findings, the AI layer narrates them (LLM when configured, template
+fallback otherwise), and the Compliance agent validates the narration.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter
+from typing import Optional
 
+from fastapi import APIRouter, Depends, Header
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .db import get_session, save_stock_run
+from .orchestrator import run_stock_analysis
 from .schemas import (
     AdvisorAskRequest,
     AdvisorAskResponse,
     PortfolioAnalyzeRequest,
     PortfolioAnalyzeResponse,
     StockAnalyzeRequest,
-    StockForecast,
+    StockAnalyzeResponse,
 )
-from .marketdata.resolver import resolver
 from .services.ai.advisor import answer_advisor
 from .services.ai.insights import describe_insights
+from .services.ai.llm import answer_question
 from .services.portfolio import analyze_portfolio
-from .services.stock import analyze_stock
 
 router = APIRouter()
 
@@ -32,19 +36,27 @@ def portfolio_analyze(req: PortfolioAnalyzeRequest) -> PortfolioAnalyzeResponse:
     return PortfolioAnalyzeResponse(analysis=analysis, insights=describe_insights(analysis))
 
 
-@router.post("/stocks/analyze", response_model=StockForecast)
-async def stocks_analyze(req: StockAnalyzeRequest) -> StockForecast:
-    """Deterministic OpenVC-style forecast run for a ticker + horizon.
+@router.post("/stocks/analyze", response_model=StockAnalyzeResponse)
+async def stocks_analyze(
+    req: StockAnalyzeRequest,
+    x_workspace_id: Optional[str] = Header(default=None, alias="X-Workspace-Id"),
+    session: AsyncSession = Depends(get_session),
+) -> StockAnalyzeResponse:
+    """Full pipeline run: forecast + what-if impact + real agent trace + memo.
 
-    Resolves the live price first (offline reference when no key/network), then
-    runs the unchanged deterministic engine over it.
+    When an X-Workspace-Id header is present, the run is persisted so it shows
+    up in the workspace's analysis history (GET /analyses/{id}).
     """
-    snapshot = await resolver.resolve(req.ticker)
-    return analyze_stock(req.ticker, req.days, snapshot)
+    resp = await run_stock_analysis(req)
+    if x_workspace_id:
+        await save_stock_run(session, x_workspace_id, resp)
+    return resp
 
 
 @router.post("/advisor/ask", response_model=AdvisorAskResponse)
-def advisor_ask(req: AdvisorAskRequest) -> AdvisorAskResponse:
+async def advisor_ask(req: AdvisorAskRequest) -> AdvisorAskResponse:
     """Advisor answer grounded in a fresh deterministic analysis of the sent state."""
     analysis = analyze_portfolio(req.holdings, req.profile)
-    return AdvisorAskResponse(answer=answer_advisor(req.question, analysis, req.stock))
+    template = answer_advisor(req.question, analysis, req.stock)
+    answer, narrator = await answer_question(req.question, analysis, req.stock, template)
+    return AdvisorAskResponse(answer=answer, narrator=narrator)

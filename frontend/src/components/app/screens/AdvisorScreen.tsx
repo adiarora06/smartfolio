@@ -13,6 +13,7 @@ const SHORTCUTS: Array<[prompt: string, label: string]> = [
 
 export function AdvisorScreen() {
   const chat = useStore((s) => s.chat)
+  const advisorPending = useStore((s) => s.advisorPending)
   const ask = useStore((s) => s.ask)
   const [draft, setDraft] = useState('')
 
@@ -37,6 +38,11 @@ export function AdvisorScreen() {
                   {m.text}
                 </div>
               ))}
+              {advisorPending && (
+                <div className="msg ai" style={{ color: 'var(--muted)' }}>
+                  Thinking…
+                </div>
+              )}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginTop: 12 }}>
               <textarea

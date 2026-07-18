@@ -135,6 +135,45 @@ class StockForecast(ApiModel):
 class StockAnalyzeRequest(ApiModel):
     ticker: str = "AAPL"
     days: float = 30
+    # Optional investor context. When present, the Portfolio Agent runs the
+    # what-if impact analysis against these holdings.
+    profile: Optional[InvestorProfile] = None
+    holdings: Optional[List[Holding]] = None
+
+
+Narrator = Literal["llm", "template"]
+
+
+class AgentEvent(ApiModel):
+    """One step of the analysis pipeline — a real trace entry, not a fiction."""
+
+    agent: str
+    status: Literal["succeeded", "failed", "skipped"]
+    duration_ms: float
+    detail: str
+
+
+class PortfolioImpact(ApiModel):
+    """Deterministic what-if: adding this stock to the sent portfolio."""
+
+    added_value: float  # proposed position size (round(price * 10))
+    new_weight: float  # combined weight of the symbol after adding
+    sector: str
+    sector_weight_after: float
+    triggers_single_stock_flag: bool
+    triggers_sector_flag: bool
+    # Allocation-gap shift per asset class (gap_after - gap_before).
+    gap_delta: Dict[str, float]
+
+
+class StockAnalyzeResponse(ApiModel):
+    forecast: StockForecast
+    impact: Optional[PortfolioImpact] = None
+    events: List[AgentEvent]
+    # Research memo prose (forecast + impact narration). LLM-written when a key
+    # is configured and compliance passes; deterministic template otherwise.
+    memo: List[str]
+    narrator: Narrator
 
 
 class AdvisorAskRequest(ApiModel):
@@ -146,3 +185,43 @@ class AdvisorAskRequest(ApiModel):
 
 class AdvisorAskResponse(ApiModel):
     answer: str
+    narrator: Narrator = "template"
+
+
+# --- Workspace persistence (Phase 4 core) ---------------------------------
+
+
+class WorkspaceCreateResponse(ApiModel):
+    id: str
+
+
+class MemoIn(ApiModel):
+    symbol: str
+    rating: str
+    body: str
+
+
+class MemoOut(MemoIn):
+    id: str
+    created_at: str
+
+
+class WorkspaceState(ApiModel):
+    """One-shot hydration payload for the frontend."""
+
+    profile: Optional[InvestorProfile] = None
+    holdings: List[Holding] = []
+    memos: List[MemoOut] = []
+
+
+class HoldingsPut(ApiModel):
+    holdings: List[Holding]
+
+
+class AnalysisSummary(ApiModel):
+    id: str
+    symbol: str
+    days: float
+    rating: str
+    source: str
+    created_at: str

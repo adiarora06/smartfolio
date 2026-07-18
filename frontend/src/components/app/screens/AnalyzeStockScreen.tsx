@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useStore } from '../../../store/useStore'
 import { fmt, pct, title } from '../../../lib/format'
 import { buildForecastMemo } from '../../../lib/ai/memo'
+import { describeImpact } from '../../../lib/ai/insights'
 import { AppHero, Panel, PanelHead } from '../../shared/ui'
 import { ForecastChart } from '../../shared/ForecastChart'
 import type { StockTab } from '../../../types'
@@ -21,6 +22,9 @@ const TABS: Array<[StockTab, string]> = [
 export function AnalyzeStockScreen() {
   const stock = useStore((s) => s.stock)
   const stockSource = useStore((s) => s.stockSource)
+  const running = useStore((s) => s.running)
+  const narrator = useStore((s) => s.narrator)
+  const agentEvents = useStore((s) => s.agentEvents)
   const stockTab = useStore((s) => s.stockTab)
   const stockMemory = useStore((s) => s.stockMemory)
   const setStockTab = useStore((s) => s.setStockTab)
@@ -74,10 +78,16 @@ export function AnalyzeStockScreen() {
               onChange={(e) => setHorizon(e.target.value)}
             />
           </label>
-          <button className="primary" onClick={() => runStock(ticker, Number(horizon))}>
-            Run Analysis
+          <button
+            className="primary"
+            disabled={running}
+            onClick={() => runStock(ticker, Number(horizon))}
+          >
+            {running ? 'Running…' : 'Run Analysis'}
           </button>
-          <button onClick={resetStock}>Reset AAPL</button>
+          <button disabled={running} onClick={resetStock}>
+            Reset AAPL
+          </button>
         </div>
       </Panel>
 
@@ -103,6 +113,7 @@ export function AnalyzeStockScreen() {
           </div>
           <span>
             {stock.rating} · {stockSource === 'api' ? 'API' : 'Local'}
+            {narrator === 'llm' ? ' · LLM memo' : ''}
           </span>
         </div>
 
@@ -123,9 +134,15 @@ export function AnalyzeStockScreen() {
           {stockTab === 'backtest' && <BacktestPane />}
           {stockTab === 'audit' && (
             <ul className="list termList">
-              {stock.trace.audit.map((line, i) => (
-                <li key={i}>{line} · succeeded</li>
-              ))}
+              {agentEvents
+                ? agentEvents.map((e, i) => (
+                    <li key={i}>
+                      <strong>{e.agent}</strong> · {e.status} · {e.durationMs.toFixed(1)}ms
+                      <br />
+                      {e.detail}
+                    </li>
+                  ))
+                : stock.trace.audit.map((line, i) => <li key={i}>{line} · succeeded</li>)}
             </ul>
           )}
           {stockTab === 'memory' && (
@@ -151,13 +168,33 @@ export function AnalyzeStockScreen() {
 
 function ForecastPane() {
   const stock = useStore((s) => s.stock)
-  const memo = buildForecastMemo(stock)
+  const impact = useStore((s) => s.impact)
+  const serverMemo = useStore((s) => s.serverMemo)
+
+  // Server-narrated memo when the API produced one; local template otherwise.
+  const memo =
+    serverMemo ?? [
+      ...buildForecastMemo(stock),
+      ...(impact ? describeImpact(impact, stock.symbol) : []),
+    ]
+
   const metrics: Array<[string, string]> = [
     ['Price', fmt.format(stock.price)],
     ['Median Target', fmt.format(stock.medianTarget)],
     ['Expected Return', pct(stock.expected)],
     ['Confidence', pct(stock.confidence)],
   ]
+
+  const impactFlags = impact
+    ? impact.triggersSingleStockFlag && impact.triggersSectorFlag
+      ? 'Stock + Sector'
+      : impact.triggersSingleStockFlag
+        ? 'Single-stock'
+        : impact.triggersSectorFlag
+          ? 'Sector'
+          : 'None'
+    : 'None'
+
   return (
     <>
       <div className="stockMetrics">
@@ -168,6 +205,33 @@ function ForecastPane() {
           </div>
         ))}
       </div>
+      {impact && (
+        <>
+          <div style={{ color: '#93c5fd', fontSize: 12, fontWeight: 850, textTransform: 'uppercase' }}>
+            Portfolio impact — if added to your holdings
+          </div>
+          <div className="stockMetrics">
+            <div className="stockM">
+              <span>Position Size</span>
+              <strong>{fmt.format(impact.addedValue)}</strong>
+            </div>
+            <div className="stockM">
+              <span>New Weight</span>
+              <strong>{pct(impact.newWeight)}</strong>
+            </div>
+            <div className="stockM">
+              <span>{title(impact.sector)} After</span>
+              <strong>{pct(impact.sectorWeightAfter)}</strong>
+            </div>
+            <div className="stockM">
+              <span>Flags Triggered</span>
+              <strong style={{ color: impactFlags === 'None' ? '#5eead4' : '#f59e0b' }}>
+                {impactFlags}
+              </strong>
+            </div>
+          </div>
+        </>
+      )}
       <div>
         <ForecastChart forecast={stock} />
       </div>

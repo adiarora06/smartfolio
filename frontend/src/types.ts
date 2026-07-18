@@ -115,3 +115,34 @@ export interface StockForecast {
   /** Trading day the live price is from (ISO date), when live. */
   asOf?: string | null
 }
+
+/** One step of the backend analysis pipeline — a real timed trace entry. */
+export interface AgentEvent {
+  agent: string
+  status: 'succeeded' | 'failed' | 'skipped'
+  durationMs: number
+  detail: string
+}
+
+/** Deterministic what-if: adding the analyzed stock to the current portfolio. */
+export interface PortfolioImpact {
+  addedValue: number
+  newWeight: number
+  sector: string
+  sectorWeightAfter: number
+  triggersSingleStockFlag: boolean
+  triggersSectorFlag: boolean
+  gapDelta: Record<string, number>
+}
+
+/** Which engine narrated the prose: a real LLM or the deterministic template. */
+export type Narrator = 'llm' | 'template'
+
+/** Full response of POST /stocks/analyze. */
+export interface StockAnalyzeResponse {
+  forecast: StockForecast
+  impact: PortfolioImpact | null
+  events: AgentEvent[]
+  memo: string[]
+  narrator: Narrator
+}

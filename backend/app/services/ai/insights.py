@@ -9,10 +9,11 @@ from typing import List
 from ...schemas import (
     ConcentrationFinding,
     PortfolioAnalysis,
+    PortfolioImpact,
     PortfolioInsights,
     RecommendationSignal,
 )
-from .format import pct, title_case
+from .format import currency, pct, title_case
 
 
 def describe_concentrations(findings: List[ConcentrationFinding]) -> List[str]:
@@ -43,6 +44,29 @@ def describe_recommendations(signals: List[RecommendationSignal]) -> List[str]:
         else:
             out.append("Use broader funds or future contributions to reduce single-stock dependency.")
     return out
+
+
+def describe_impact(impact: PortfolioImpact, symbol: str) -> List[str]:
+    """Phrase the what-if impact findings. Mirrored in frontend lib/ai/insights.ts."""
+    first = (
+        f"Adding {currency(impact.added_value)} of {symbol} would make it "
+        f"{pct(impact.new_weight)} of your portfolio"
+    )
+    first += (
+        ", triggering a single-stock concentration flag."
+        if impact.triggers_single_stock_flag
+        else "."
+    )
+    second = (
+        f"{title_case(impact.sector)} exposure would move to "
+        f"{pct(impact.sector_weight_after)}"
+    )
+    second += (
+        ", crossing the sector concentration threshold."
+        if impact.triggers_sector_flag
+        else "."
+    )
+    return [first, second]
 
 
 def describe_insights(analysis: PortfolioAnalysis) -> PortfolioInsights:

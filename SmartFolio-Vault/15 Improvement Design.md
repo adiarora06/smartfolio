@@ -26,6 +26,13 @@ Guiding constraints (unchanged):
 M1 first deliberately: it needs no accounts, no keys, no DB — and it closes the
 biggest gap between the product's pitch and what the app actually does.
 
+> **Status 2026-07-18:** M1 ✅ done · M2 ✅ core done (SQLite default,
+> Postgres-ready via `DATABASE_URL`; Alembic pending) · M3 ◐ price live
+> (vol/trend pending) · M4 ✅ done (router + compliance enforcement; live-LLM
+> path awaits a key) · M5 ◐ deploy config exists (ops hardening pending).
+> Implementation detail recorded in [[14 Backend API]] and
+> [[13 Frontend Architecture]].
+
 ## M1 — Portfolio Impact + Real Agent Orchestration
 
 ### Problem
