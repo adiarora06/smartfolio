@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(
         title="SmartFolio API",
-        version="0.3.0",
+        version="0.3.1",
         description=(
             "Deterministic portfolio and stock analysis services plus an AI explanation "
             "layer for SmartFolio. All outputs are educational analysis, not financial advice."
@@ -61,6 +61,9 @@ def create_app() -> FastAPI:
             "marketDataProvider": resolver.provider.name if resolver.provider else "offline",
             "llm": settings.llm_enabled,
             "llmModel": settings.llm_model if settings.llm_enabled else None,
+            "llmProvider": settings.llm_provider,
+            "hasOpenAIKey": bool(settings.openai_api_key),
+            "hasAnthropicKey": bool(settings.anthropic_api_key),
             "database": "postgres" if "postgres" in settings.database_url else "sqlite",
         }
 
