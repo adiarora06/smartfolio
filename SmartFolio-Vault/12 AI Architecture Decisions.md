@@ -32,6 +32,13 @@ This is stronger than a single chatbot because it lets SmartFolio show real syst
 - database writes without validation
 - guaranteed financial claims
 
+## How This Is Enforced In Code (Phase 2)
+
+The frontend draws this boundary as a one-way import rule: `src/lib/calculations`
+(deterministic — returns numbers and structured findings) never imports from
+`src/lib/ai` (explanation — turns findings into prose). The AI layer is the seam
+where an LLM plugs in later. Details in [[13 Frontend Architecture]].
+
 ## Best Resume Positioning
 
 SmartFolio should be positioned as:

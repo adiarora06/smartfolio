@@ -23,9 +23,25 @@ Implemented deterministic analytics for allocation gaps, concentration risk, ris
 
 ## Tech
 
-- HTML, CSS, JavaScript
-- Vercel deployment
-- Planned production architecture: Python, FastAPI, Docker, Neon Postgres, live market data APIs, MCP tools, A2A-style agents, and LLM provider routing
+- `frontend/` — React 18 + TypeScript + Vite + Zustand (component-based conversion of the original static prototype)
+- `backend/` — Python FastAPI + Pydantic: canonical deterministic financial engine + AI explanation layer (`/health`, `/portfolio/analyze`, `/stocks/analyze`, `/advisor/ask`)
+- `index.html` — original static prototype (still what Vercel currently deploys)
+- Deterministic code calculates; AI explains — enforced as a one-way import boundary on both sides
+- Planned next: Neon Postgres persistence, live market data APIs, LLM provider routing, Docker, MCP tools, A2A-style agents
+
+### Run locally
+
+```bash
+# backend
+cd backend && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/uvicorn app.main:app --reload --port 8000
+
+# frontend (in another terminal)
+cd frontend && npm install && npm run dev   # http://localhost:5173
+```
+
+The frontend auto-detects the backend on load and falls back to its built-in
+client-side engine when the API is offline.
 
 ## Disclaimer
 

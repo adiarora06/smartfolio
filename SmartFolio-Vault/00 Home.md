@@ -16,6 +16,9 @@ SmartFolio is an AI-assisted investment intelligence platform combining portfoli
 - [[10 Implementation Roadmap]]
 - [[11 Data Model]]
 - [[12 AI Architecture Decisions]]
+- [[13 Frontend Architecture]]
+- [[14 Backend API]]
+- [[15 Improvement Design]]
 
 ## External Links
 
@@ -30,8 +33,8 @@ SmartFolio is an AI-assisted investment intelligence platform combining portfoli
 
 Turn the current deployed prototype into a production-grade app:
 
-1. Split the static UI into a component-based frontend.
-2. Add a backend API for portfolio, stock, and agent workflows.
+1. Split the static UI into a component-based frontend. **(Done — Phase 2: Vite + React + TypeScript in `frontend/`. See [[13 Frontend Architecture]].)**
+2. Add a backend API for portfolio, stock, and agent workflows. **(Done — Phase 3: FastAPI in `backend/`, wired to the frontend with local fallback. See [[14 Backend API]].)**
 3. Store investor profiles, watchlists, analysis runs, and generated memos.
 4. Route AI tasks through specialized agents with deterministic financial calculations.
 5. Keep the Obsidian vault as project memory for product, architecture, and resume positioning.
