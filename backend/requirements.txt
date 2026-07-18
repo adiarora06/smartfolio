@@ -6,3 +6,4 @@ sqlalchemy[asyncio]>=2.0
 aiosqlite>=0.20
 anthropic>=0.40
 openai>=1.40
+asyncpg>=0.29

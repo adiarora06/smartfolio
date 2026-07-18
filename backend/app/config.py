@@ -6,6 +6,29 @@ offline reference engine exactly as before. Set a free key to get live prices.
 from __future__ import annotations
 
 import os
+from urllib.parse import urlsplit, urlunsplit
+
+
+def _normalize_db_url(url: str) -> str:
+    """Make common Postgres URLs (e.g. Neon) work with async SQLAlchemy.
+
+    - postgres:// and postgresql:// -> postgresql+asyncpg://
+    - Strip query params asyncpg can't parse (sslmode, channel_binding).
+      SSL is enabled separately via connect_args in db.py.
+    Leaves sqlite (or already-correct) URLs untouched.
+    """
+    url = url.strip()
+    if url.startswith("postgres://"):
+        url = "postgresql+asyncpg://" + url[len("postgres://"):]
+    elif url.startswith("postgresql://"):
+        url = "postgresql+asyncpg://" + url[len("postgresql://"):]
+
+    if url.startswith("postgresql+asyncpg://"):
+        parts = urlsplit(url)
+        # Drop query entirely — SSL handled via connect_args, other params
+        # (sslmode/channel_binding) are psycopg-only and break asyncpg.
+        url = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+    return url
 
 
 class Settings:
@@ -30,9 +53,13 @@ class Settings:
 
     # Persistence. SQLite file by default (works with zero setup); point at
     # Neon/Postgres via DATABASE_URL (e.g. postgresql+asyncpg://...).
-    database_url: str = os.environ.get(
-        "DATABASE_URL", "sqlite+aiosqlite:///./data/smartfolio.db"
+    database_url: str = _normalize_db_url(
+        os.environ.get("DATABASE_URL", "sqlite+aiosqlite:///./data/smartfolio.db")
     )
+
+    @property
+    def is_postgres(self) -> bool:
+        return "postgresql" in self.database_url
 
     @property
     def live_market_data_enabled(self) -> bool:

@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(
         title="SmartFolio API",
-        version="0.3.1",
+        version="0.3.2",
         description=(
             "Deterministic portfolio and stock analysis services plus an AI explanation "
             "layer for SmartFolio. All outputs are educational analysis, not financial advice."
@@ -64,7 +64,7 @@ def create_app() -> FastAPI:
             "llmProvider": settings.llm_provider,
             "hasOpenAIKey": bool(settings.openai_api_key),
             "hasAnthropicKey": bool(settings.anthropic_api_key),
-            "database": "postgres" if "postgres" in settings.database_url else "sqlite",
+            "database": "postgres" if settings.is_postgres else "sqlite",
         }
 
     app.include_router(router)

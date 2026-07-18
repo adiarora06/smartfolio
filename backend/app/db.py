@@ -94,7 +94,10 @@ class MemoRow(Base):
     created_at: Mapped[str] = mapped_column(String(32), default=_now)
 
 
-engine = create_async_engine(settings.database_url)
+# Neon (and most managed Postgres) require SSL; asyncpg takes it via connect_args,
+# not the URL query string (which we strip in config._normalize_db_url).
+_connect_args = {"ssl": True} if settings.is_postgres else {}
+engine = create_async_engine(settings.database_url, connect_args=_connect_args)
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 
