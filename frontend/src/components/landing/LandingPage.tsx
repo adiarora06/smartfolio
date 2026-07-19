@@ -16,6 +16,51 @@ const PROOF: Array<[string, string]> = [
   ['0 advice', 'Educational analysis with deterministic calculations'],
 ]
 
+// The demo portfolio's real allocation (mirrors DEMO_HOLDING_TUPLES, $25k total).
+const ALLOCATION: Array<[label: string, pct: number, color: string]> = [
+  ['VOO', 28, '#5eead4'],
+  ['NVDA', 22, '#60a5fa'],
+  ['AAPL', 20, '#a78bfa'],
+  ['TSLA', 14, '#f59e0b'],
+  ['Cash', 10, '#94a3b8'],
+  ['VXUS', 6, '#f472b6'],
+]
+
+/** Donut chart of the demo allocation — same technique as the app's charts. */
+function AllocationDonut() {
+  const R = 40
+  const C = 2 * Math.PI * R
+  let cumulative = 0
+  return (
+    <svg width="140" height="140" viewBox="0 0 120 120" role="img" aria-label="Portfolio allocation donut chart">
+      {ALLOCATION.map(([label, pct, color]) => {
+        const offset = (cumulative / 100) * C
+        cumulative += pct
+        return (
+          <circle
+            key={label}
+            cx="60"
+            cy="60"
+            r={R}
+            fill="none"
+            stroke={color}
+            strokeWidth="14"
+            strokeDasharray={`${(pct / 100) * C - 1.5} ${C}`}
+            strokeDashoffset={-offset}
+            transform="rotate(-90 60 60)"
+          />
+        )
+      })}
+      <text x="60" y="56" textAnchor="middle" fill="#fff" fontSize="15" fontWeight="800">
+        $25k
+      </text>
+      <text x="60" y="72" textAnchor="middle" fill="#93c5fd" fontSize="9" fontWeight="700">
+        6 HOLDINGS
+      </text>
+    </svg>
+  )
+}
+
 export function LandingPage() {
   const goToPage = useStore((s) => s.goToPage)
   return (
@@ -46,6 +91,7 @@ export function LandingPage() {
             ))}
           </div>
         </div>
+        <div className="previewCol">
         <div className="preview">
           <div className="previewTop">
             <strong>Analyze Stock</strong>
@@ -97,6 +143,33 @@ export function LandingPage() {
             <li>Backtest Agent checks sample directional accuracy.</li>
             <li>Portfolio Agent checks whether the stock increases concentration.</li>
           </ul>
+        </div>
+
+        <div className="preview">
+          <div className="previewTop">
+            <strong>Portfolio</strong>
+            <span className="pill">
+              <span className="dot" />
+              DIAGNOSED
+            </span>
+          </div>
+          <div className="allocRow">
+            <AllocationDonut />
+            <ul className="allocLegend">
+              {ALLOCATION.map(([label, pct, color]) => (
+                <li key={label}>
+                  <span className="swatch" style={{ background: color }} />
+                  <span className="allocLabel">{label}</span>
+                  <strong>{pct}%</strong>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <ul className="list termList">
+            <li>Portfolio Agent maps allocation, sector exposure, and target gaps.</li>
+            <li>Concentration check: technology is 42% of direct holdings.</li>
+          </ul>
+        </div>
         </div>
       </div>
       <div className="features">
