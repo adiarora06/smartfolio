@@ -50,14 +50,14 @@ Backend API
   |-- Backtest Service
   |-- Recommendation Service
   |
-Agent Orchestration Layer
+Agent Orchestration Layer (orchestrator.py — runs in this order)
   |
-  |-- Profile Agent
-  |-- Risk Agent
-  |-- Portfolio Agent
+  |-- Ticker Intake Agent
+  |-- Market Data Tool
   |-- Stock Forecast Agent
   |-- Backtest Agent
-  |-- Recommendation Agent
+  |-- Portfolio Agent
+  |-- Memo Writer (LLM or template)
   |-- Compliance Agent
   |
 Data Layer

@@ -11,8 +11,8 @@ const FEATURES: Array<[string, string]> = [
 ]
 
 const PROOF: Array<[string, string]> = [
-  ['7 agents', 'Profile, risk, portfolio, forecast, backtest, recommendation, compliance'],
-  ['5 modules', 'Setup, portfolio, Analyze Stock, scenarios, advisor, connections'],
+  ['7 agents', 'Intake, market data, forecast, backtest, portfolio, AI memo, compliance'],
+  ['6 modules', 'Setup, portfolio, Analyze Stock, scenarios, advisor, connections'],
   ['0 advice', 'Educational analysis with deterministic calculations'],
 ]
 
@@ -93,7 +93,7 @@ export function LandingPage() {
             </svg>
           </div>
           <ul className="list termList">
-            <li>Forecast Agent creates bear, median, and bull paths.</li>
+            <li>Stock Forecast Agent creates bear, median, and bull paths.</li>
             <li>Backtest Agent checks sample directional accuracy.</li>
             <li>Portfolio Agent checks whether the stock increases concentration.</li>
           </ul>

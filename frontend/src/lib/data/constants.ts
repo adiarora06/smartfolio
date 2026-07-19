@@ -120,17 +120,6 @@ export const GOALS: Array<[Goal, string]> = [
   ['income', 'Income'],
 ]
 
-/** The seven-agent network shown in the sidebar and topology. */
-export const AGENT_NETWORK: string[] = [
-  'Profile Agent',
-  'Risk Agent',
-  'Portfolio Agent',
-  'Stock Forecast Agent',
-  'Backtest Agent',
-  'Recommendation Agent',
-  'Compliance Agent',
-]
-
 type StockBaseTuple = [
   name: string,
   sector: string,

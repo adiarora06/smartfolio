@@ -22,12 +22,14 @@ const AUDIT_TRACE = [
   'Memo written',
 ]
 
+// Mirrors the backend pipeline order in orchestrator.py (7 steps).
 const TOPOLOGY_TRACE = [
   'Ticker Intake Agent normalizes symbol and horizon.',
   'Market Data Tool provides price, volatility, sector, and quality inputs.',
-  'Forecast Agent creates median, bear, and bull paths.',
+  'Stock Forecast Agent creates median, bear, and bull paths.',
   'Backtest Agent evaluates sample windows.',
   'Portfolio Agent checks concentration risk.',
+  'Memo Writer narrates the result (template in local mode).',
   'Compliance Agent frames output as educational analysis.',
 ]
 
