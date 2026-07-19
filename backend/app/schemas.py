@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 
@@ -35,14 +35,14 @@ class InvestorProfile(ApiModel):
 
 
 class Holding(ApiModel):
-    symbol: str
-    name: str
+    symbol: str = Field(max_length=16)
+    name: str = Field(max_length=128)
     type: Literal["stock", "etf", "cash"]
     asset: Literal[
         "us_equity", "intl_equity", "bonds", "cash", "alternatives", "crypto", "other"
     ]
-    sector: str
-    value: float
+    sector: str = Field(max_length=64)
+    value: float = Field(ge=0, le=1e12)
 
 
 class ConcentrationFinding(ApiModel):
@@ -133,12 +133,12 @@ class StockForecast(ApiModel):
 
 
 class StockAnalyzeRequest(ApiModel):
-    ticker: str = "AAPL"
+    ticker: str = Field("AAPL", max_length=12)
     days: float = 30
     # Optional investor context. When present, the Portfolio Agent runs the
     # what-if impact analysis against these holdings.
     profile: Optional[InvestorProfile] = None
-    holdings: Optional[List[Holding]] = None
+    holdings: Optional[List[Holding]] = Field(None, max_length=200)
 
 
 Narrator = Literal["llm", "template"]
@@ -177,9 +177,9 @@ class StockAnalyzeResponse(ApiModel):
 
 
 class AdvisorAskRequest(ApiModel):
-    question: str
+    question: str = Field(max_length=2000)
     profile: InvestorProfile
-    holdings: List[Holding]
+    holdings: List[Holding] = Field(max_length=200)
     stock: StockForecast
 
 
@@ -215,7 +215,7 @@ class WorkspaceState(ApiModel):
 
 
 class HoldingsPut(ApiModel):
-    holdings: List[Holding]
+    holdings: List[Holding] = Field(max_length=500)
 
 
 class AnalysisSummary(ApiModel):

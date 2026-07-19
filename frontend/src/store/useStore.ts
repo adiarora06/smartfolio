@@ -43,11 +43,14 @@ import {
   apiAnalyzeStock,
   apiAskAdvisor,
   apiCreateWorkspace,
+  apiGetAnalysis,
   apiGetWorkspaceState,
   apiHealth,
+  apiListAnalyses,
   apiPostMemo,
   apiPutHoldings,
   apiPutProfile,
+  type AnalysisSummary,
   type HealthResponse,
 } from '../lib/api/client'
 
@@ -110,6 +113,11 @@ interface AppState {
   workspaceId: string | null
   checkBackend: () => Promise<void>
 
+  // analysis history (persisted runs from the workspace)
+  history: AnalysisSummary[]
+  refreshHistory: () => Promise<void>
+  loadStoredRun: (analysisId: string) => Promise<void>
+
   // navigation actions
   goToPage: (page: Page) => void
   openDemo: () => void
@@ -169,6 +177,35 @@ export const useStore = create<AppState>((set, get) => ({
   backendOnline: null,
   health: null,
   workspaceId: null,
+  history: [],
+
+  refreshHistory: async () => {
+    const { workspaceId, backendOnline } = get()
+    if (!workspaceId || !backendOnline) return
+    try {
+      set({ history: await apiListAnalyses(workspaceId) })
+    } catch {
+      // History is a nice-to-have — never surface an error for it.
+    }
+  },
+
+  loadStoredRun: async (analysisId) => {
+    try {
+      const r = await apiGetAnalysis(analysisId)
+      set({
+        stock: r.forecast,
+        impact: r.impact,
+        agentEvents: r.events,
+        serverMemo: r.memo,
+        narrator: r.narrator,
+        stockSource: 'api',
+        stockTab: 'forecast',
+      })
+    } catch {
+      // Stored run gone (e.g. wiped DB) — refresh the list so it disappears.
+      void get().refreshHistory()
+    }
+  },
 
   checkBackend: async () => {
     try {
@@ -176,6 +213,7 @@ export const useStore = create<AppState>((set, get) => ({
       const health = await apiHealth({ timeoutMs: 60000 })
       set({ backendOnline: true, health })
       await bootstrapWorkspace(set, get)
+      void get().refreshHistory()
       // Hydrate the initial forecast from the canonical engine if the user
       // hasn't run an API-backed analysis yet. Not persisted — only
       // user-initiated runs belong in the workspace history.
@@ -239,6 +277,7 @@ export const useStore = create<AppState>((set, get) => ({
         stockTab: 'forecast',
         backendOnline: true,
       })
+      if (persist) void get().refreshHistory()
     } catch {
       const stock = analyzeStock(ticker, days)
       set({

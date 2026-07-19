@@ -17,6 +17,7 @@ const TABS: Array<[StockTab, string]> = [
   ['backtest', 'Backtest'],
   ['audit', 'Audit Log'],
   ['memory', 'Memory'],
+  ['history', 'History'],
 ]
 
 export function AnalyzeStockScreen() {
@@ -180,9 +181,53 @@ export function AnalyzeStockScreen() {
               )}
             </ul>
           )}
+          {stockTab === 'history' && <HistoryPane />}
         </div>
       </section>
     </section>
+  )
+}
+
+function HistoryPane() {
+  const history = useStore((s) => s.history)
+  const backendOnline = useStore((s) => s.backendOnline)
+  const loadStoredRun = useStore((s) => s.loadStoredRun)
+
+  if (!backendOnline) {
+    return (
+      <ul className="list termList">
+        <li>History lives on the backend — reconnect to see past runs.</li>
+      </ul>
+    )
+  }
+  if (!history.length) {
+    return (
+      <ul className="list termList">
+        <li>No runs stored yet — every Run Analysis lands here automatically.</li>
+      </ul>
+    )
+  }
+  return (
+    <ul className="list termList">
+      {history.map((run) => (
+        <li
+          key={run.id}
+          onClick={() => void loadStoredRun(run.id)}
+          style={{ cursor: 'pointer' }}
+          title="Replay this run"
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+            <strong>
+              {run.symbol} · {run.rating}
+            </strong>
+            <span style={{ color: '#93c5fd', fontSize: 12 }}>{run.days}d</span>
+          </div>
+          <span style={{ color: '#93c5fd', fontSize: 12 }}>
+            {new Date(run.createdAt).toLocaleString()} · {run.source} · tap to replay
+          </span>
+        </li>
+      ))}
+    </ul>
   )
 }
 

@@ -163,3 +163,23 @@ export function apiPostMemo(
 ): Promise<ServerMemo> {
   return post<ServerMemo>(`/workspaces/${workspaceId}/memos`, memo)
 }
+
+// --- Analysis history --------------------------------------------------------
+
+export interface AnalysisSummary {
+  id: string
+  symbol: string
+  days: number
+  rating: string
+  source: string
+  createdAt: string
+}
+
+export function apiListAnalyses(workspaceId: string, limit = 20): Promise<AnalysisSummary[]> {
+  return request<AnalysisSummary[]>(`/workspaces/${workspaceId}/analyses?limit=${limit}`)
+}
+
+/** A full stored run — same shape the live analyze endpoint returns. */
+export function apiGetAnalysis(analysisId: string): Promise<StockAnalyzeResponse> {
+  return request<StockAnalyzeResponse>(`/analyses/${analysisId}`)
+}

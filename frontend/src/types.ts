@@ -11,7 +11,7 @@ export type Screen =
   | 'advisor'
   | 'connections'
   | 'opensource'
-export type StockTab = 'forecast' | 'backtest' | 'audit' | 'memory'
+export type StockTab = 'forecast' | 'backtest' | 'audit' | 'memory' | 'history'
 
 export type RiskProfileName = 'conservative' | 'balanced' | 'growth' | 'aggressive'
 export type Liquidity = 'low' | 'medium' | 'high'

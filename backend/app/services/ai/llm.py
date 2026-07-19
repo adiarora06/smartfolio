@@ -71,14 +71,31 @@ _STRICTER = """
 STRICT REWRITE: Your previous draft contained non-compliant language (e.g. guarantees or buy/sell imperatives). Rewrite the response without any such phrasing."""
 
 
-async def _complete(system: str, user: str) -> Optional[str]:
-    """One LLM API call; None on any failure (caller falls back)."""
-    if not settings.llm_enabled:
-        return None
+# Model used when a provider runs as FALLBACK (the primary uses LLM_MODEL).
+_FALLBACK_MODEL = {"openai": "gpt-4o-mini", "anthropic": "claude-sonnet-5"}
+
+
+def _has_key(provider: str) -> bool:
+    return bool(
+        settings.openai_api_key if provider == "openai" else settings.anthropic_api_key
+    )
+
+
+def _provider_chain() -> List[str]:
+    """Providers to try in order: configured primary first, other key as backup."""
+    chain: List[str] = []
+    for provider in (settings.llm_provider, "openai", "anthropic"):
+        if provider in _FALLBACK_MODEL and _has_key(provider) and provider not in chain:
+            chain.append(provider)
+    return chain
+
+
+async def _complete_with(provider: str, model: str, system: str, user: str) -> Optional[str]:
+    """One call against one provider; None on any failure."""
     try:
-        if settings.llm_provider == "openai":
+        if provider == "openai":
             resp = await _get_openai_client().chat.completions.create(
-                model=settings.llm_model,
+                model=model,
                 max_tokens=settings.llm_max_tokens,
                 messages=[
                     {"role": "system", "content": system},
@@ -87,22 +104,37 @@ async def _complete(system: str, user: str) -> Optional[str]:
             )
             text = resp.choices[0].message.content or ""
             return text.strip() or None
-        else:  # anthropic (default)
-            resp = await _get_anthropic_client().messages.create(
-                model=settings.llm_model,
-                max_tokens=settings.llm_max_tokens,
-                thinking={"type": "adaptive"},
-                output_config={"effort": "low"},
-                system=system,
-                messages=[{"role": "user", "content": user}],
-            )
-            if resp.stop_reason == "refusal":
-                return None
-            text = "".join(b.text for b in resp.content if b.type == "text").strip()
-            return text or None
+        resp = await _get_anthropic_client().messages.create(
+            model=model,
+            max_tokens=settings.llm_max_tokens,
+            thinking={"type": "adaptive"},
+            output_config={"effort": "low"},
+            system=system,
+            messages=[{"role": "user", "content": user}],
+        )
+        if resp.stop_reason == "refusal":
+            return None
+        text = "".join(b.text for b in resp.content if b.type == "text").strip()
+        return text or None
     except Exception:
-        # Timeout, auth, rate limit, network — all roads lead to the template.
+        # Timeout, auth, rate limit, network — try the next provider.
         return None
+
+
+async def _complete(system: str, user: str) -> Optional[str]:
+    """Try each configured provider in order; None -> deterministic template."""
+    if not settings.llm_enabled:
+        return None
+    for provider in _provider_chain():
+        model = (
+            settings.llm_model
+            if provider == settings.llm_provider
+            else _FALLBACK_MODEL[provider]
+        )
+        text = await _complete_with(provider, model, system, user)
+        if text is not None:
+            return text
+    return None
 
 
 async def _compliant(system: str, user: str) -> Optional[str]:

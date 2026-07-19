@@ -100,6 +100,31 @@ def test_workspace_404(client):
     assert client.get("/analyses/does-not-exist").status_code == 404
 
 
+def test_oversized_holdings_rejected(client):
+    """201 holdings breaches the 200 cap -> validation error, not a 500."""
+    too_many = [dict(HOLDINGS[0]) for _ in range(201)]
+    r = client.post(
+        "/stocks/analyze",
+        json={"ticker": "AAPL", "days": 30, "profile": PROFILE, "holdings": too_many},
+    )
+    assert r.status_code == 422
+
+
+def test_oversized_question_rejected(client):
+    r = client.post(
+        "/advisor/ask",
+        json={
+            "question": "x" * 2001,
+            "profile": PROFILE,
+            "holdings": HOLDINGS,
+            "stock": client.post(
+                "/stocks/analyze", json={"ticker": "AAPL", "days": 30}
+            ).json()["forecast"],
+        },
+    )
+    assert r.status_code == 422
+
+
 def test_analysis_persisted_via_header(client):
     ws = client.post("/workspaces").json()["id"]
     r = client.post(

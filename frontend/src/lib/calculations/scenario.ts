@@ -18,6 +18,10 @@ export interface ScenarioProjection {
   /** Blended annual return actually used (decimal). */
   blendedReturn: number
   points: Array<{ years: number; value: number }>
+  /** Year-by-year values 0..10 with contributions — the chart line. */
+  series: number[]
+  /** Same horizon with $0 contributions — shows what saving adds. */
+  growthOnlySeries: number[]
 }
 
 export function projectScenario(
@@ -29,15 +33,22 @@ export function projectScenario(
     analysis.targetReturn * inputs.rebalance +
     inputs.returnAdj
 
-  const compound = (years: number): number => {
+  const monthly = Math.pow(1 + blendedReturn, 1 / 12) - 1
+  const yearly = (contribution: number): number[] => {
+    const values = [analysis.value]
     let v = analysis.value
-    const monthly = Math.pow(1 + blendedReturn, 1 / 12) - 1
-    for (let i = 0; i < years * 12; i++) v = v * (1 + monthly) + inputs.contribution
-    return v
+    for (let year = 1; year <= 10; year++) {
+      for (let m = 0; m < 12; m++) v = v * (1 + monthly) + contribution
+      values.push(v)
+    }
+    return values
   }
 
+  const series = yearly(inputs.contribution)
   return {
     blendedReturn,
-    points: [1, 5, 10].map((years) => ({ years, value: compound(years) })),
+    points: [1, 5, 10].map((years) => ({ years, value: series[years] })),
+    series,
+    growthOnlySeries: yearly(0),
   }
 }

@@ -8,9 +8,11 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from .ratelimit import limiter
 
 from .db import (
     HoldingRow,
@@ -42,7 +44,9 @@ async def _require_workspace(session: AsyncSession, workspace_id: str) -> None:
 
 
 @router.post("/workspaces", response_model=WorkspaceCreateResponse)
+@limiter.limit("10/minute")  # each call writes a row — keep spam out
 async def create_workspace(
+    request: Request,
     session: AsyncSession = Depends(get_session),
 ) -> WorkspaceCreateResponse:
     workspace_id = new_id()
