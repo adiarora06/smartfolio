@@ -4,3 +4,7 @@ node_modules/
 work/
 outputs/.portfolio_base_model.md.swp
 
+# Graphify knowledge-graph output — generated locally, regenerable via
+# `graphify update .`; large (2MB+) and not needed in version control.
+graphify-out/
+
