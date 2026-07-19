@@ -8,10 +8,11 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Header
+from fastapi import APIRouter, BackgroundTasks, Header, Request
 
 from .db import SessionLocal, save_stock_run
 from .orchestrator import run_stock_analysis
+from .ratelimit import EXPENSIVE_LIMIT, limiter
 from .schemas import (
     AdvisorAskRequest,
     AdvisorAskResponse,
@@ -42,7 +43,9 @@ async def _persist_run(workspace_id: str, resp: StockAnalyzeResponse) -> None:
 
 
 @router.post("/stocks/analyze", response_model=StockAnalyzeResponse)
+@limiter.limit(EXPENSIVE_LIMIT)
 async def stocks_analyze(
+    request: Request,
     req: StockAnalyzeRequest,
     background: BackgroundTasks,
     x_workspace_id: Optional[str] = Header(default=None, alias="X-Workspace-Id"),
@@ -60,7 +63,8 @@ async def stocks_analyze(
 
 
 @router.post("/advisor/ask", response_model=AdvisorAskResponse)
-async def advisor_ask(req: AdvisorAskRequest) -> AdvisorAskResponse:
+@limiter.limit(EXPENSIVE_LIMIT)
+async def advisor_ask(request: Request, req: AdvisorAskRequest) -> AdvisorAskResponse:
     """Advisor answer grounded in a fresh deterministic analysis of the sent state."""
     analysis = analyze_portfolio(req.holdings, req.profile)
     template = answer_advisor(req.question, analysis, req.stock)

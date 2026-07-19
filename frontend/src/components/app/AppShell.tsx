@@ -5,6 +5,7 @@
 import { useStore } from '../../store/useStore'
 import { Disclaimer } from '../layout/Disclaimer'
 import { SideNav } from './SideNav'
+import { SystemStatus } from './SystemStatus'
 import { OverviewScreen } from './screens/OverviewScreen'
 import { PortfolioScreen } from './screens/PortfolioScreen'
 import { AnalyzeStockScreen } from './screens/AnalyzeStockScreen'
@@ -20,6 +21,7 @@ export function AppShell() {
       <div className="appShell">
         <aside>
           <SideNav />
+          <SystemStatus />
           <Disclaimer />
         </aside>
         <main>

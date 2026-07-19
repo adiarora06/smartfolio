@@ -48,6 +48,7 @@ import {
   apiPostMemo,
   apiPutHoldings,
   apiPutProfile,
+  type HealthResponse,
 } from '../lib/api/client'
 
 /** Where the last analysis/answer came from: the FastAPI backend or the local mirror. */
@@ -104,6 +105,8 @@ interface AppState {
 
   // backend
   backendOnline: boolean | null
+  /** Live /health payload — powers the system status chip. */
+  health: HealthResponse | null
   workspaceId: string | null
   checkBackend: () => Promise<void>
 
@@ -164,12 +167,14 @@ export const useStore = create<AppState>((set, get) => ({
   stockSource: 'local',
 
   backendOnline: null,
+  health: null,
   workspaceId: null,
 
   checkBackend: async () => {
     try {
-      await apiHealth()
-      set({ backendOnline: true })
+      // Long timeout: a sleeping free-tier server takes ~30-60s to wake.
+      const health = await apiHealth({ timeoutMs: 60000 })
+      set({ backendOnline: true, health })
       await bootstrapWorkspace(set, get)
       // Hydrate the initial forecast from the canonical engine if the user
       // hasn't run an API-backed analysis yet. Not persisted — only

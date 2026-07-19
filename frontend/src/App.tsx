@@ -12,10 +12,23 @@ export default function App() {
   const page = useStore((s) => s.page)
   const checkBackend = useStore((s) => s.checkBackend)
 
-  // Detect the FastAPI backend once on load; the app runs on the local
-  // deterministic mirror when it is unreachable.
+  // Detect the FastAPI backend on load; the app runs on the local
+  // deterministic mirror when it is unreachable. Free-tier hosts sleep when
+  // idle, so retry a few times while the server wakes instead of giving up
+  // on the first refused connection.
   useEffect(() => {
-    void checkBackend()
+    let cancelled = false
+    let attempts = 0
+    const connect = async () => {
+      await checkBackend()
+      attempts += 1
+      const online = useStore.getState().backendOnline
+      if (!cancelled && !online && attempts < 6) setTimeout(() => void connect(), 10000)
+    }
+    void connect()
+    return () => {
+      cancelled = true
+    }
   }, [checkBackend])
 
   return (

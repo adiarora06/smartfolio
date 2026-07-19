@@ -42,6 +42,21 @@ export function AnalyzeStockScreen() {
     setHorizon(String(stock.days))
   }, [stock.symbol, stock.days])
 
+  // Cold-start UX: if a run takes >2.5s the free-tier server is likely waking.
+  const [slowHint, setSlowHint] = useState(false)
+  useEffect(() => {
+    if (!running) {
+      setSlowHint(false)
+      return
+    }
+    const timer = setTimeout(() => setSlowHint(true), 2500)
+    return () => clearTimeout(timer)
+  }, [running])
+
+  const run = () => {
+    if (!running && ticker.trim()) void runStock(ticker, Number(horizon))
+  }
+
   return (
     <section className="screen active" id="stock">
       <AppHero
@@ -66,7 +81,12 @@ export function AnalyzeStockScreen() {
         <div className="body formgrid">
           <label>
             Ticker
-            <input value={ticker} onChange={(e) => setTicker(e.target.value)} />
+            <input
+              value={ticker}
+              onChange={(e) => setTicker(e.target.value.toUpperCase())}
+              onKeyDown={(e) => e.key === 'Enter' && run()}
+              placeholder="e.g. NVDA"
+            />
           </label>
           <label>
             Horizon days
@@ -76,19 +96,22 @@ export function AnalyzeStockScreen() {
               max={365}
               value={horizon}
               onChange={(e) => setHorizon(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && run()}
             />
           </label>
-          <button
-            className="primary"
-            disabled={running}
-            onClick={() => runStock(ticker, Number(horizon))}
-          >
+          <button className="primary" disabled={running || !ticker.trim()} onClick={run}>
             {running ? 'Running…' : 'Run Analysis'}
           </button>
           <button disabled={running} onClick={resetStock}>
             Reset AAPL
           </button>
         </div>
+        {slowHint && running && (
+          <div className="body" style={{ paddingTop: 0, color: 'var(--muted)', fontSize: 12.5 }}>
+            Waking the live engine — the free-tier server sleeps when idle, the first run can
+            take up to ~30s. Results stay instant after that.
+          </div>
+        )}
       </Panel>
 
       <section className="terminal">

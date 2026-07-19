@@ -1,6 +1,6 @@
 // AI advisor — conversational Q&A over portfolio + current stock context.
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../../store/useStore'
 import { Panel, PanelHead, AppHero } from '../../shared/ui'
 
@@ -16,10 +16,28 @@ export function AdvisorScreen() {
   const advisorPending = useStore((s) => s.advisorPending)
   const ask = useStore((s) => s.ask)
   const [draft, setDraft] = useState('')
+  const chatRef = useRef<HTMLDivElement>(null)
+
+  // Keep the newest message in view as the conversation grows.
+  useEffect(() => {
+    const el = chatRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [chat, advisorPending])
+
+  const canSend = draft.trim().length > 0 && !advisorPending
 
   const send = () => {
-    ask(draft)
+    if (!canSend) return
+    void ask(draft)
     setDraft('')
+  }
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enter sends; Shift+Enter inserts a newline.
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      send()
+    }
   }
 
   return (
@@ -32,7 +50,7 @@ export function AdvisorScreen() {
         <Panel>
           <PanelHead title="Conversation" />
           <div className="body">
-            <div className="chat">
+            <div className="chat" ref={chatRef}>
               {chat.map((m, i) => (
                 <div className={`msg ${m.role === 'user' ? 'user' : 'ai'}`} key={i}>
                   {m.text}
@@ -46,12 +64,14 @@ export function AdvisorScreen() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginTop: 12 }}>
               <textarea
-                placeholder="Ask about my portfolio or a stock..."
+                placeholder="Ask about my portfolio or a stock... (Enter to send)"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={onKeyDown}
+                disabled={advisorPending}
               />
-              <button className="primary" onClick={send}>
-                Send
+              <button className="primary" onClick={send} disabled={!canSend}>
+                {advisorPending ? 'Thinking…' : 'Send'}
               </button>
             </div>
           </div>
@@ -60,7 +80,7 @@ export function AdvisorScreen() {
           <PanelHead title="Shortcuts" />
           <div className="body" style={{ display: 'grid', gap: 8 }}>
             {SHORTCUTS.map(([prompt, label]) => (
-              <button key={label} onClick={() => ask(prompt)}>
+              <button key={label} onClick={() => void ask(prompt)} disabled={advisorPending}>
                 {label}
               </button>
             ))}

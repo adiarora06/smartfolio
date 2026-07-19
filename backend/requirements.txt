@@ -7,3 +7,5 @@ aiosqlite>=0.20
 anthropic>=0.40
 openai>=1.40
 asyncpg>=0.29
+slowapi>=0.1.9
+sentry-sdk[fastapi]>=2.0

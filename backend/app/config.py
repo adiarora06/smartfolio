@@ -51,6 +51,10 @@ class Settings:
     # before the template fallback kicks in.
     llm_timeout: float = float(os.environ.get("LLM_TIMEOUT", "10"))
 
+    # Error tracking. Set SENTRY_DSN (free tier: sentry.io) to activate;
+    # blank -> no-op, zero overhead.
+    sentry_dsn: str = os.environ.get("SENTRY_DSN", "").strip()
+
     # Persistence. SQLite file by default (works with zero setup); point at
     # Neon/Postgres via DATABASE_URL (e.g. postgresql+asyncpg://...).
     database_url: str = _normalize_db_url(

@@ -65,13 +65,15 @@ export interface HealthResponse {
   service: string
   version: string
   liveMarketData: boolean
+  marketDataProvider: string
   llm: boolean
   llmModel: string | null
+  llmProvider: string
   database: string
 }
 
-export function apiHealth(): Promise<HealthResponse> {
-  return request<HealthResponse>('/health')
+export function apiHealth(opts?: RequestOpts): Promise<HealthResponse> {
+  return request<HealthResponse>('/health', undefined, opts)
 }
 
 /** Full pipeline run. Sends investor context so the Portfolio Agent can run
