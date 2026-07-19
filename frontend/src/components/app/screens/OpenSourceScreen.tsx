@@ -3,30 +3,40 @@
 // All system internals (agent network, agent graph, pipeline flow, design
 // rules) live here, deliberately out of the customer-facing screens. The
 // everyday workflow shows results; this tab shows the machinery.
+//
+// The graph mirrors the REAL backend trace emitted by app/orchestrator.py —
+// the same seven steps the Analyze Stock "Audit Log" tab renders. Keep the two
+// in sync: if the orchestrator's emit() sequence changes, update this file.
 
+import { useState } from 'react'
 import { useStore } from '../../../store/useStore'
 import { AppHero, Panel, PanelHead } from '../../shared/ui'
 
 const REPO_URL = 'https://github.com/adiarora06/smartfolio'
 
+// Pipeline order matches orchestrator.py exactly.
 const AGENT_DETAILS: Array<[name: string, role: string]> = [
-  ['Profile Agent', 'Collects investor context: age, income, horizon, liquidity, goals.'],
-  ['Risk Agent', 'Scores risk tolerance and risk capacity into a target profile.'],
-  ['Portfolio Agent', 'Analyzes allocation, concentration, and target gaps.'],
+  ['Ticker Intake Agent', 'Normalizes the symbol and clamps the horizon to 7–365 days.'],
+  ['Market Data Tool', 'Resolves the live price (Finnhub / Alpha Vantage) with an offline reference backstop.'],
   ['Stock Forecast Agent', 'Builds bear / median / bull paths with a confidence score.'],
   ['Backtest Agent', 'Evaluates sample windows: hit rate, mean error, drawdown proxy.'],
-  ['Recommendation Agent', 'Turns deterministic findings into next-step suggestions.'],
-  ['Compliance Agent', 'Keeps every output educational — no advice, no guarantees.'],
+  ['Portfolio Agent', 'Runs the what-if: how the position would shift portfolio weight and sector concentration.'],
+  ['Memo Writer', 'AI explanation layer — narrates the memo via LLM (gpt-4o-mini) or a deterministic template.'],
+  ['Compliance Agent', 'Validates every output as educational — no advice, no guarantees; serves the template if narration fails.'],
 ]
 
 const PIPELINE: string[] = [
-  'Ticker Intake normalizes the symbol and horizon.',
+  'Ticker Intake normalizes the symbol and clamps the horizon.',
   'Market Data Tool resolves the price (live provider or offline reference).',
   'Stock Forecast Agent creates median, bear, and bull paths.',
   'Backtest Agent evaluates sample windows.',
   'Portfolio Agent checks concentration against your holdings.',
+  'Memo Writer narrates the result (LLM when configured, template otherwise).',
   'Compliance Agent frames the output as educational analysis.',
 ]
+
+// Role lookup for the graph node tooltips/selection (keyed by label).
+const ROLE_BY_LABEL: Record<string, string> = Object.fromEntries(AGENT_DETAILS)
 
 interface GraphNode {
   label: string
@@ -35,28 +45,26 @@ interface GraphNode {
   kind: 'agent' | 'tool' | 'guard'
 }
 
-// Layered DAG: profile flow (top) and market flow (bottom) converge on the
-// Portfolio Agent, then Recommendation, then the Compliance guardrail.
+// Snake layout of the real linear pipeline: top row flows left→right, drops
+// down at the right edge, bottom row flows right→left to the Compliance guard.
 const NODES: GraphNode[] = [
-  { label: 'Profile Agent', x: 15, y: 40, kind: 'agent' },
-  { label: 'Risk Agent', x: 210, y: 40, kind: 'agent' },
-  { label: 'Portfolio Agent', x: 405, y: 40, kind: 'agent' },
-  { label: 'Recommendation Agent', x: 600, y: 40, kind: 'agent' },
-  { label: 'Market Data Tool', x: 15, y: 200, kind: 'tool' },
-  { label: 'Stock Forecast Agent', x: 210, y: 200, kind: 'agent' },
-  { label: 'Backtest Agent', x: 405, y: 200, kind: 'agent' },
-  { label: 'Compliance Agent', x: 600, y: 200, kind: 'guard' },
+  { label: 'Ticker Intake Agent', x: 15, y: 40, kind: 'agent' },
+  { label: 'Market Data Tool', x: 210, y: 40, kind: 'tool' },
+  { label: 'Stock Forecast Agent', x: 405, y: 40, kind: 'agent' },
+  { label: 'Backtest Agent', x: 600, y: 40, kind: 'agent' },
+  { label: 'Portfolio Agent', x: 600, y: 200, kind: 'agent' },
+  { label: 'Memo Writer', x: 405, y: 200, kind: 'agent' },
+  { label: 'Compliance Agent', x: 210, y: 200, kind: 'guard' },
 ]
 
 // Edge lines between node borders (coordinates match NODES above; w=145 h=44).
 const EDGES: Array<[x1: number, y1: number, x2: number, y2: number]> = [
-  [160, 62, 206, 62], // Profile -> Risk
-  [355, 62, 401, 62], // Risk -> Portfolio
-  [550, 62, 596, 62], // Portfolio -> Recommendation
-  [160, 222, 206, 222], // Market Data -> Forecast
-  [355, 222, 401, 222], // Forecast -> Backtest
-  [477, 196, 477, 88], // Backtest -> Portfolio (converge)
-  [672, 88, 672, 196], // Recommendation -> Compliance (guardrail last)
+  [160, 62, 206, 62], // Ticker Intake -> Market Data
+  [355, 62, 401, 62], // Market Data -> Stock Forecast
+  [550, 62, 596, 62], // Stock Forecast -> Backtest
+  [672, 88, 672, 196], // Backtest -> Portfolio (drop down)
+  [600, 222, 554, 222], // Portfolio -> Memo Writer (right to left)
+  [405, 222, 359, 222], // Memo Writer -> Compliance (guardrail last)
 ]
 
 const NODE_STYLE: Record<GraphNode['kind'], { stroke: string; fill: string }> = {
@@ -65,7 +73,13 @@ const NODE_STYLE: Record<GraphNode['kind'], { stroke: string; fill: string }> = 
   guard: { stroke: 'rgba(245,158,11,.6)', fill: 'rgba(245,158,11,.09)' },
 }
 
-function AgentGraph() {
+function AgentGraph({
+  selected,
+  onSelect,
+}: {
+  selected: string | null
+  onSelect: (label: string) => void
+}) {
   return (
     <svg className="svgbox" viewBox="0 0 760 288" role="img" aria-label="Agent network graph">
       <defs>
@@ -85,30 +99,39 @@ function AgentGraph() {
           markerEnd="url(#arrow)"
         />
       ))}
-      {NODES.map((n) => (
-        <g key={n.label}>
-          <rect
-            x={n.x}
-            y={n.y}
-            width={145}
-            height={44}
-            rx={10}
-            fill={NODE_STYLE[n.kind].fill}
-            stroke={NODE_STYLE[n.kind].stroke}
-            strokeWidth="1.4"
-          />
-          <text
-            x={n.x + 72.5}
-            y={n.y + 27}
-            textAnchor="middle"
-            fill="#fff"
-            fontSize="11.5"
-            fontWeight="700"
+      {NODES.map((n) => {
+        const isSel = selected === n.label
+        return (
+          <g
+            key={n.label}
+            onClick={() => onSelect(n.label)}
+            style={{ cursor: 'pointer' }}
           >
-            {n.label}
-          </text>
-        </g>
-      ))}
+            <title>{ROLE_BY_LABEL[n.label]}</title>
+            <rect
+              x={n.x}
+              y={n.y}
+              width={145}
+              height={44}
+              rx={10}
+              fill={isSel ? NODE_STYLE[n.kind].stroke : NODE_STYLE[n.kind].fill}
+              stroke={NODE_STYLE[n.kind].stroke}
+              strokeWidth={isSel ? 2.4 : 1.4}
+            />
+            <text
+              x={n.x + 72.5}
+              y={n.y + 27}
+              textAnchor="middle"
+              fill="#fff"
+              fontSize="11.5"
+              fontWeight="700"
+              style={{ pointerEvents: 'none' }}
+            >
+              {n.label}
+            </text>
+          </g>
+        )
+      })}
     </svg>
   )
 }
@@ -125,6 +148,8 @@ function LegendSwatch({ color, label }: { color: string; label: string }) {
 export function OpenSourceScreen() {
   const backendOnline = useStore((s) => s.backendOnline)
   const agentStatus = backendOnline ? 'Active · API' : 'Active · local mirror'
+  // Clicking a graph node selects it and highlights its row in the agent list.
+  const [selected, setSelected] = useState<string | null>(null)
 
   return (
     <section className="screen active" id="opensource">
@@ -141,12 +166,13 @@ export function OpenSourceScreen() {
           <div>
             <h2>Agent graph</h2>
             <span style={{ color: '#93c5fd' }}>
-              Profile and market flows converge on the Portfolio Agent; Compliance guards every output.
+              The real pipeline: intake → market data → forecast → backtest → portfolio what-if → AI
+              memo → compliance guard. Click a node to see its role.
             </span>
           </div>
           <span>{agentStatus}</span>
         </div>
-        <AgentGraph />
+        <AgentGraph selected={selected} onSelect={(label) => setSelected(label)} />
         <div style={{ color: '#93c5fd', fontSize: 12 }}>
           <LegendSwatch color="rgba(94,234,212,.7)" label="Agent" />
           <LegendSwatch color="rgba(96,165,250,.75)" label="Tool" />
@@ -156,20 +182,33 @@ export function OpenSourceScreen() {
 
       <div className="grid2">
         <Panel>
-          <PanelHead title="Active agents" subtitle="The seven-agent network behind every analysis." />
+          <PanelHead title="Active agents" subtitle="The seven-step network behind every analysis." />
           <div className="body">
             <ul className="list">
-              {AGENT_DETAILS.map(([name, role]) => (
-                <li key={name}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                    <strong>{name}</strong>
-                    <span style={{ color: 'var(--green)', fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap' }}>
-                      ● {agentStatus}
-                    </span>
-                  </div>
-                  <span style={{ color: 'var(--muted)', fontSize: 13 }}>{role}</span>
-                </li>
-              ))}
+              {AGENT_DETAILS.map(([name, role]) => {
+                const isSel = selected === name
+                return (
+                  <li
+                    key={name}
+                    onClick={() => setSelected(name)}
+                    style={{
+                      cursor: 'pointer',
+                      borderRadius: 8,
+                      padding: isSel ? '6px 8px' : undefined,
+                      background: isSel ? 'rgba(94,234,212,.08)' : undefined,
+                      outline: isSel ? '1px solid rgba(94,234,212,.4)' : undefined,
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                      <strong>{name}</strong>
+                      <span style={{ color: 'var(--green)', fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap' }}>
+                        ● {agentStatus}
+                      </span>
+                    </div>
+                    <span style={{ color: 'var(--muted)', fontSize: 13 }}>{role}</span>
+                  </li>
+                )
+              })}
             </ul>
           </div>
         </Panel>
