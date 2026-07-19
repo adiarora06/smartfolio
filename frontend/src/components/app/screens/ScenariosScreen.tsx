@@ -21,7 +21,7 @@ export function ScenariosScreen() {
 
   return (
     <section className="screen active" id="scenarios">
-      <AppHero title="Scenario lab" subtitle="Adjust assumptions and rebalancing intensity." />
+      <AppHero title="Scenario lab" subtitle="Drag the sliders — projections update live." />
       <div className="grid2">
         <Panel>
           <PanelHead title="Controls" />

@@ -61,7 +61,7 @@ export function AnalyzeStockScreen() {
     <section className="screen active" id="stock">
       <AppHero
         title="Analyze Stock"
-        subtitle="A separate OpenVC-style stock terminal: forecast, backtest, topology, audit log, memory, and portfolio handoff."
+        subtitle="Forecast, backtest, audit trail, and portfolio impact — for any ticker."
         actions={
           <>
             <button onClick={addStockToPortfolio}>Add To Portfolio</button>
@@ -74,10 +74,7 @@ export function AnalyzeStockScreen() {
       />
 
       <Panel>
-        <PanelHead
-          title="Stock Analysis Terminal"
-          subtitle="Run a deterministic prototype analysis for any ticker."
-        />
+        <PanelHead title="Stock Analysis Terminal" subtitle="Type a ticker, press Enter." />
         <div className="body formgrid">
           <label>
             Ticker

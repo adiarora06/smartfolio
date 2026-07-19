@@ -2,7 +2,6 @@
 
 import { useStore } from '../../../store/useStore'
 import { usePortfolioAnalysis } from '../../../hooks/usePortfolioAnalysis'
-import { describeInsights } from '../../../lib/ai/insights'
 import { fmt, pct, title } from '../../../lib/format'
 import { AppHero, MetricCard, MetricGrid, Panel, PanelHead } from '../../shared/ui'
 import { AllocationBars } from '../../shared/AllocationBars'
@@ -14,17 +13,37 @@ export function OverviewScreen() {
   const stock = useStore((s) => s.stock)
   const setScreen = useStore((s) => s.setScreen)
 
-  const { flags, recommendations } = describeInsights(analysis)
+  // Stat-first insight items straight from the structured findings — the
+  // number leads, the words stay short.
   const insightItems: InsightItem[] = [
-    ...flags.map((text) => ({ text, warn: true })),
-    ...recommendations.slice(0, 3).map((text) => ({ text })),
+    ...analysis.concentrations.map((f) => ({
+      stat: pct(f.weight),
+      text:
+        f.kind === 'single_stock'
+          ? `${f.label} — single stock`
+          : f.kind === 'stock_aggregate'
+            ? 'in individual stocks'
+            : `${title(f.label)} sector`,
+      warn: true,
+    })),
+    ...analysis.recommendations.slice(0, 3).map((s) => ({
+      text:
+        s.kind === 'increase'
+          ? `Add ${title(s.asset ?? '')}`
+          : s.kind === 'reduce'
+            ? `Trim ${title(s.asset ?? '')}`
+            : 'Shift into broad funds over time',
+    })),
   ]
+  if (!analysis.concentrations.length) {
+    insightItems.unshift({ stat: '0', text: 'concentration flags — well diversified' })
+  }
 
   return (
     <section className="screen active" id="overview">
       <AppHero
         title="SmartFolio command center"
-        subtitle="Manage profile, portfolio, scenarios, connected data sources, and Analyze Stock."
+        subtitle="Your portfolio at a glance — value, risk, allocation, next actions."
         actions={
           <>
             <button onClick={() => setScreen('stock')}>Analyze Stock</button>
@@ -44,13 +63,13 @@ export function OverviewScreen() {
 
       <div className="grid2">
         <Panel>
-          <PanelHead title="Target Allocation" subtitle="Current allocation compared with risk target." />
+          <PanelHead title="Target Allocation" subtitle="Now vs your risk target." />
           <div className="body">
             <AllocationBars analysis={analysis} />
           </div>
         </Panel>
         <Panel>
-          <PanelHead title="AI Insight Queue" subtitle="Portfolio risks and next actions." />
+          <PanelHead title="AI Insight Queue" subtitle="What needs attention first." />
           <div className="body">
             <InsightList items={insightItems} />
           </div>

@@ -44,7 +44,7 @@ export function AdvisorScreen() {
     <section className="screen active" id="advisor">
       <AppHero
         title="AI advisor"
-        subtitle="Ask about diversification, stock analysis, rebalancing, and connected apps."
+        subtitle="Ask anything — answers grounded in your actual numbers."
       />
       <div className="grid2">
         <Panel>

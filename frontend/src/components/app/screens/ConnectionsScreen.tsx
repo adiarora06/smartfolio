@@ -42,7 +42,7 @@ export function ConnectionsScreen() {
     <section className="screen active" id="connections">
       <AppHero
         title="Connections"
-        subtitle="Brokerages, market data, CSV import, MCP tools, and A2A agents."
+        subtitle="One live connection, five planned integrations."
         actions={<button onClick={() => void exportJson()}>Export JSON</button>}
       />
       <Panel>

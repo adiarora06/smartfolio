@@ -2,6 +2,7 @@
 
 import { useStore } from '../../store/useStore'
 import { SkipToDemoButton } from '../layout/SkipToDemoButton'
+import { DonutChart } from '../shared/DonutChart'
 
 const FEATURES: Array<[string, string]> = [
   ['Guided setup', 'Collects user age, income, risk tolerance, goals, and liquidity needs.'],
@@ -26,38 +27,16 @@ const ALLOCATION: Array<[label: string, pct: number, color: string]> = [
   ['VXUS', 6, '#f472b6'],
 ]
 
-/** Donut chart of the demo allocation — same technique as the app's charts. */
+/** Donut of the demo allocation — the shared chart with dark-card colors. */
 function AllocationDonut() {
-  const R = 40
-  const C = 2 * Math.PI * R
-  let cumulative = 0
   return (
-    <svg width="140" height="140" viewBox="0 0 120 120" role="img" aria-label="Portfolio allocation donut chart">
-      {ALLOCATION.map(([label, pct, color]) => {
-        const offset = (cumulative / 100) * C
-        cumulative += pct
-        return (
-          <circle
-            key={label}
-            cx="60"
-            cy="60"
-            r={R}
-            fill="none"
-            stroke={color}
-            strokeWidth="14"
-            strokeDasharray={`${(pct / 100) * C - 1.5} ${C}`}
-            strokeDashoffset={-offset}
-            transform="rotate(-90 60 60)"
-          />
-        )
-      })}
-      <text x="60" y="56" textAnchor="middle" fill="#fff" fontSize="15" fontWeight="800">
-        $25k
-      </text>
-      <text x="60" y="72" textAnchor="middle" fill="#93c5fd" fontSize="9" fontWeight="700">
-        6 HOLDINGS
-      </text>
-    </svg>
+    <DonutChart
+      segments={ALLOCATION.map(([label, pct, color]) => ({ label, pct, color }))}
+      centerTitle="$25k"
+      centerSub="6 HOLDINGS"
+      centerColor="#fff"
+      subColor="#93c5fd"
+    />
   )
 }
 
