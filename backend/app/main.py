@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from .api import router
 from .config import settings
@@ -30,12 +31,13 @@ DEFAULT_CORS_ORIGINS = ",".join(
 async def lifespan(app: FastAPI):
     await init_db()
     yield
+    await resolver.aclose()
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title="SmartFolio API",
-        version="0.3.2",
+        version="0.4.0",
         description=(
             "Deterministic portfolio and stock analysis services plus an AI explanation "
             "layer for SmartFolio. All outputs are educational analysis, not financial advice."
@@ -50,6 +52,12 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    # Analysis responses (forecast + events + memo) are sizeable JSON — compress.
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+    @app.get("/", include_in_schema=False)
+    def root() -> dict:
+        return {"service": "smartfolio-api", "docs": "/docs", "health": "/health"}
 
     @app.get("/health")
     def health() -> dict:

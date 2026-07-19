@@ -8,10 +8,9 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Header
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, BackgroundTasks, Header
 
-from .db import get_session, save_stock_run
+from .db import SessionLocal, save_stock_run
 from .orchestrator import run_stock_analysis
 from .schemas import (
     AdvisorAskRequest,
@@ -36,20 +35,27 @@ def portfolio_analyze(req: PortfolioAnalyzeRequest) -> PortfolioAnalyzeResponse:
     return PortfolioAnalyzeResponse(analysis=analysis, insights=describe_insights(analysis))
 
 
+async def _persist_run(workspace_id: str, resp: StockAnalyzeResponse) -> None:
+    """Background persistence with its own session (runs after the response)."""
+    async with SessionLocal() as session:
+        await save_stock_run(session, workspace_id, resp)
+
+
 @router.post("/stocks/analyze", response_model=StockAnalyzeResponse)
 async def stocks_analyze(
     req: StockAnalyzeRequest,
+    background: BackgroundTasks,
     x_workspace_id: Optional[str] = Header(default=None, alias="X-Workspace-Id"),
-    session: AsyncSession = Depends(get_session),
 ) -> StockAnalyzeResponse:
     """Full pipeline run: forecast + what-if impact + real agent trace + memo.
 
     When an X-Workspace-Id header is present, the run is persisted so it shows
-    up in the workspace's analysis history (GET /analyses/{id}).
+    up in the workspace's analysis history (GET /analyses/{id}). Persistence is
+    a background task — the client never waits on the DB write.
     """
     resp = await run_stock_analysis(req)
     if x_workspace_id:
-        await save_stock_run(session, x_workspace_id, resp)
+        background.add_task(_persist_run, x_workspace_id, resp)
     return resp
 
 

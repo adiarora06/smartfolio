@@ -96,8 +96,19 @@ class MemoRow(Base):
 
 # Neon (and most managed Postgres) require SSL; asyncpg takes it via connect_args,
 # not the URL query string (which we strip in config._normalize_db_url).
-_connect_args = {"ssl": True} if settings.is_postgres else {}
-engine = create_async_engine(settings.database_url, connect_args=_connect_args)
+# pool_pre_ping is essential with Neon: autosuspend kills idle connections, and
+# without the ping the first request after a quiet period 500s on a dead socket.
+if settings.is_postgres:
+    engine = create_async_engine(
+        settings.database_url,
+        connect_args={"ssl": True},
+        pool_pre_ping=True,
+        pool_recycle=300,
+        pool_size=5,
+        max_overflow=5,
+    )
+else:
+    engine = create_async_engine(settings.database_url)
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 
