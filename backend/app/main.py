@@ -18,10 +18,12 @@ from fastapi.middleware.gzip import GZipMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
+from .a2a import router as a2a_router
 from .api import router
 from .config import settings
 from .db import init_db
 from .marketdata.resolver import resolver
+from .plaid import router as plaid_router
 from .ratelimit import limiter
 from .workspaces import router as workspaces_router
 
@@ -52,7 +54,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(
         title="SmartFolio API",
-        version="0.6.0",
+        version="0.7.0",
         description=(
             "Deterministic portfolio and stock analysis services plus an AI explanation "
             "layer for SmartFolio. All outputs are educational analysis, not financial advice."
@@ -117,11 +119,14 @@ def create_app() -> FastAPI:
             "llmFallback": bool(settings.openai_api_key and settings.anthropic_api_key),
             "hasOpenAIKey": bool(settings.openai_api_key),
             "hasAnthropicKey": bool(settings.anthropic_api_key),
+            "plaid": settings.plaid_enabled,
             "database": "postgres" if settings.is_postgres else "sqlite",
         }
 
     app.include_router(router)
     app.include_router(workspaces_router)
+    app.include_router(plaid_router)
+    app.include_router(a2a_router)
     return app
 
 

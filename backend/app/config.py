@@ -55,6 +55,12 @@ class Settings:
     # blank -> no-op, zero overhead.
     sentry_dsn: str = os.environ.get("SENTRY_DSN", "").strip()
 
+    # Plaid brokerage sync. Free sandbox keys: https://dashboard.plaid.com
+    # No keys -> the Connections card stays a demo toggle.
+    plaid_client_id: str = os.environ.get("PLAID_CLIENT_ID", "").strip()
+    plaid_secret: str = os.environ.get("PLAID_SECRET", "").strip()
+    plaid_env: str = os.environ.get("PLAID_ENV", "sandbox").strip().lower()
+
     # Persistence. SQLite file by default (works with zero setup); point at
     # Neon/Postgres via DATABASE_URL (e.g. postgresql+asyncpg://...).
     database_url: str = _normalize_db_url(
@@ -72,6 +78,10 @@ class Settings:
     @property
     def llm_enabled(self) -> bool:
         return bool(self.anthropic_api_key or self.openai_api_key)
+
+    @property
+    def plaid_enabled(self) -> bool:
+        return bool(self.plaid_client_id and self.plaid_secret)
 
 
 settings = Settings()

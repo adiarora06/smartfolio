@@ -125,6 +125,27 @@ def test_oversized_question_rejected(client):
     assert r.status_code == 422
 
 
+def test_a2a_agent_card(client):
+    """The well-known A2A discovery document is live and well-formed."""
+    for path in ("/.well-known/agent.json", "/a2a/agent-card"):
+        r = client.get(path)
+        assert r.status_code == 200
+        card = r.json()
+        assert card["name"] == "SmartFolio Analyst"
+        assert {s["id"] for s in card["skills"]} == {
+            "analyze_stock",
+            "analyze_portfolio",
+            "ask_advisor",
+        }
+
+
+def test_plaid_unconfigured_returns_503(client):
+    """Without PLAID keys the endpoints refuse cleanly, not crash."""
+    assert client.post("/plaid/link-token").status_code == 503
+    r = client.post("/plaid/holdings", json={"publicToken": "public-sandbox-x"})
+    assert r.status_code == 503
+
+
 def test_analysis_persisted_via_header(client):
     ws = client.post("/workspaces").json()["id"]
     r = client.post(

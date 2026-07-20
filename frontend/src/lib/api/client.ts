@@ -70,6 +70,7 @@ export interface HealthResponse {
   llmModel: string | null
   llmProvider: string
   database: string
+  plaid: boolean
 }
 
 export function apiHealth(opts?: RequestOpts): Promise<HealthResponse> {
@@ -182,4 +183,23 @@ export function apiListAnalyses(workspaceId: string, limit = 20): Promise<Analys
 /** A full stored run — same shape the live analyze endpoint returns. */
 export function apiGetAnalysis(analysisId: string): Promise<StockAnalyzeResponse> {
   return request<StockAnalyzeResponse>(`/analyses/${analysisId}`)
+}
+
+// --- Plaid brokerage sync ----------------------------------------------------
+
+export function apiPlaidLinkToken(): Promise<{ linkToken: string }> {
+  return post<{ linkToken: string }>('/plaid/link-token', {})
+}
+
+export interface PlaidImportResult {
+  institution: string | null
+  holdings: Holding[]
+}
+
+export function apiPlaidImportHoldings(publicToken: string): Promise<PlaidImportResult> {
+  return post<PlaidImportResult>(
+    '/plaid/holdings',
+    { publicToken },
+    { timeoutMs: SLOW_TIMEOUT_MS },
+  )
 }

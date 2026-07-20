@@ -73,13 +73,13 @@ export const demoHoldings = (): Holding[] =>
 
 type ConnectionTuple = [name: string, type: string, on: boolean]
 
+// Planned-integration demo toggles. Plaid and the A2A agent card are NOT
+// here — they are real integrations with dedicated cards in ConnectionsScreen.
 const CONNECTION_TUPLES: ConnectionTuple[] = [
-  ['Plaid Brokerage', 'Broker aggregator', false],
   ['Broker CSV Import', 'File import', true],
   ['Market Data API', 'Prices and fundamentals', true],
   ['Stock Forecast Engine', 'Ticker analysis', true],
   ['MCP Tool Server', 'AI tools', false],
-  ['Google A2A Agents', 'Agent network', false],
 ]
 
 export const defaultConnections = (): Connection[] =>

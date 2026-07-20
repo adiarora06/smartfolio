@@ -143,6 +143,8 @@ interface AppState {
 
   // connections
   toggleConnection: (index: number) => void
+  /** Replace holdings with a brokerage import (Plaid) and show the result. */
+  importHoldings: (holdings: Holding[]) => void
 
   // advisor
   ask: (text: string) => Promise<void>
@@ -333,6 +335,11 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => ({
       connections: s.connections.map((c, i) => (i === index ? { ...c, on: !c.on } : c)),
     })),
+
+  importHoldings: (holdings) => {
+    if (!holdings.length) return
+    set({ holdings, screen: 'portfolio' })
+  },
 
   ask: async (text) => {
     const q = text.trim()
