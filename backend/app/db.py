@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import AsyncIterator, Optional
 
-from sqlalchemy import JSON, Float, ForeignKey, Integer, String, Text, select
+from sqlalchemy import JSON, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,

@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from . import __version__
+
 router = APIRouter(tags=["a2a"])
 
 
@@ -28,7 +30,7 @@ def agent_card() -> dict:
         ),
         "url": "https://smartfolio-api-yjcj.onrender.com",
         "provider": {"organization": "SmartFolio"},
-        "version": "0.7.0",
+        "version": __version__,
         "documentationUrl": "https://github.com/adiarora06/smartfolio",
         "capabilities": {"streaming": False, "pushNotifications": False},
         "defaultInputModes": ["application/json"],

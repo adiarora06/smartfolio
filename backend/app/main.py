@@ -18,6 +18,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
+from . import __version__
 from .a2a import router as a2a_router
 from .api import router
 from .config import settings
@@ -54,7 +55,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(
         title="SmartFolio API",
-        version="0.7.0",
+        version=__version__,
         description=(
             "Deterministic portfolio and stock analysis services plus an AI explanation "
             "layer for SmartFolio. All outputs are educational analysis, not financial advice."

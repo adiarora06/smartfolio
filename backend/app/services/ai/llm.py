@@ -14,7 +14,7 @@ Hard rules enforced here:
 from __future__ import annotations
 
 import json
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 from anthropic import AsyncAnthropic
 from openai import AsyncOpenAI
