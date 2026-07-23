@@ -126,16 +126,18 @@ class AlphaVantageProvider:
     ) -> Optional[Dict[str, Any]]:
         """Raw daily payload. Cached by the caller; parsed by `parse_series`.
 
-        `outputsize=full` is a multi-megabyte payload (decades of candles), so
-        it gets the longer deep timeout — the default 12s budget was cutting it
-        off on free-tier hosting and silently degrading the whole deep path.
+        `outputsize=compact` (~100 sessions) on purpose: `full` is a PREMIUM
+        feature on today's free tier — requesting it returns a politely-worded
+        rejection, not data (verified live). A hundred closes still measures
+        volatility honestly; the depth needed for momentum and the walk-forward
+        backtest comes from Yahoo (yahoo.py), with this as the fallback.
         """
         return await self._get(
             client,
             {
                 "function": "TIME_SERIES_DAILY",
                 "symbol": symbol,
-                "outputsize": "full",
+                "outputsize": "compact",
             },
             timeout=settings.market_data_deep_timeout,
         )

@@ -36,7 +36,8 @@ from .alphavantage import (
 from .base import MarketContext, MarketDataProvider, MarketSnapshot, merge
 from .finnhub import FinnhubProvider, parse_finnhub_fundamentals
 from .offline import offline_snapshot
-from .series import compute_stats
+from .series import PriceSeries, compute_stats
+from .yahoo import fetch_daily as yahoo_fetch_daily, parse_rows_series
 
 
 def _build_provider() -> Optional[MarketDataProvider]:
@@ -212,18 +213,27 @@ class MarketDataResolver:
 
         deep = self.deep_provider
 
+        async def fetch_history() -> Optional[Dict[str, Any]]:
+            """Yahoo first (free, keyless, 3y depth), AV compact as fallback.
+
+            Yahoo is a different host with no burst limit, so it skips the AV
+            spacing lock; only the AV fallback pays that cost.
+            """
+            try:
+                payload = await yahoo_fetch_daily(client, symbol)
+            except Exception:
+                payload = None
+            if payload is not None:
+                return payload
+            return await self._spaced_deep_call(
+                lambda: deep.daily_series(client, symbol)
+            )
+
         # History, fundamentals and news still resolve via one gather (cache
-        # hits stay concurrent), but any that go LIVE are serialized and spaced
-        # by _spaced_deep_call — Alpha Vantage's free tier throttles bursts.
+        # hits stay concurrent), but any AV calls that go LIVE are serialized
+        # and spaced by _spaced_deep_call — the free tier throttles bursts.
         daily_payload, overview_payload, sentiment_payload = await asyncio.gather(
-            self._cached_fetch(
-                symbol,
-                "daily",
-                lambda: self._spaced_deep_call(
-                    lambda: deep.daily_series(client, symbol)
-                ),
-                ctx,
-            ),
+            self._cached_fetch(symbol, "daily", fetch_history, ctx),
             self._cached_fetch(
                 symbol,
                 "overview",
@@ -243,7 +253,14 @@ class MarketDataResolver:
         )
 
         if daily_payload:
-            series = parse_series(symbol, daily_payload)
+            # Dispatch on the payload's own tag — the shared "daily" cache can
+            # hold either provider's shape, including rows cached before a
+            # provider switch.
+            series: Optional[PriceSeries]
+            if daily_payload.get("provider"):
+                series = parse_rows_series(symbol, daily_payload)
+            else:
+                series = parse_series(symbol, daily_payload)
             if series is not None:
                 ctx.series = series
                 ctx.stats = compute_stats(series)
@@ -253,7 +270,7 @@ class MarketDataResolver:
                 if ctx.snapshot.source == "offline" and series.latest:
                     ctx.snapshot.price = series.latest
                     ctx.snapshot.as_of = series.as_of
-                    ctx.snapshot.source = deep.name
+                    ctx.snapshot.source = daily_payload.get("provider") or deep.name
                 else:
                     _reconcile_price(ctx, series.latest, series.as_of)
 

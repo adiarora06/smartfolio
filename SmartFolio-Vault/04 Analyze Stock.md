@@ -90,30 +90,38 @@ inputs, and data-integrity warnings.
 
 Stores saved stock memos for later retrieval.
 
-## Data Sources — hybrid Finnhub + Alpha Vantage
+## Data Sources — hybrid Finnhub + Alpha Vantage + Yahoo
 
-The two free tiers are complementary, so the resolver uses **both**:
+The free tiers are complementary, so the resolver uses **all three**:
 
 | Provider | Role | Free-tier reality |
 | --- | --- | --- |
 | **Finnhub** | live quote (spot price) + fundamentals fallback | 60 req/min, but **no** historical candles |
-| **Alpha Vantage** | daily history, fundamentals, news sentiment | history + fundamentals, but **~25 req/day** |
+| **Alpha Vantage** | fundamentals, news sentiment; compact-history fallback | ~25 req/day; `TIME_SERIES_DAILY outputsize=full` is now **premium** (free tier caps at ~100 sessions) |
+| **Yahoo chart API** | daily history (3 years, keyless) | unofficial but stable; the endpoint yfinance wraps |
 
-Finnhub answers the frequent quote calls (its strength); Alpha Vantage's scarce
-budget is spent only on the daily history + fundamentals Finnhub free can't
-provide. Set `MARKET_DATA_PROVIDER=finnhub` + `MARKET_DATA_API_KEY` (Finnhub)
-and `ALPHAVANTAGE_API_KEY` to run the hybrid. When only one key is present the
-resolver degrades to that provider alone.
+Finnhub answers the frequent quote calls; Yahoo supplies the multi-year history
+that momentum and the walk-forward backtest need; Alpha Vantage's scarce budget
+is spent only on fundamentals + news (2 requests/ticker, not 3). Set
+`MARKET_DATA_PROVIDER=finnhub` + `MARKET_DATA_API_KEY` (Finnhub) and
+`ALPHAVANTAGE_API_KEY` to run the hybrid. When keys are missing the resolver
+degrades to whatever remains. (Stooq was evaluated as the history source but
+now sits behind a JavaScript anti-bot wall no server-side client can pass.)
 
 Endpoints, each cached and degrading independently:
 
 | Endpoint | Provider | Feeds | Cache TTL |
 | --- | --- | --- | --- |
 | `/quote` | Finnhub | spot price | 15 min |
-| `TIME_SERIES_DAILY` | Alpha Vantage | volatility, momentum, drawdown, backtest | 1 day |
+| `/v8/finance/chart` (3y daily) | Yahoo | volatility, momentum, drawdown, backtest | 1 day |
+| `TIME_SERIES_DAILY` (compact) | Alpha Vantage | history **fallback** when Yahoo fails | 1 day |
 | `OVERVIEW` | Alpha Vantage | quality, beta, analyst target, valuation | 7 days |
 | `/stock/metric` + `/stock/profile2` | Finnhub | **fundamentals fallback** when AV is throttled | 7 days |
 | `NEWS_SENTIMENT` | Alpha Vantage | sentiment drift tilt | 6 hours |
+
+Live Alpha Vantage calls are serialized with ~1.3s spacing — its free tier
+throttles bursts, and firing three concurrent requests got all three rejected
+in production.
 
 Payloads are cached in Postgres (not just memory) so the budget survives the
 restarts a free-tier host does constantly. An expired payload beats no payload:

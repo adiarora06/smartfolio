@@ -140,6 +140,61 @@ def test_history_still_runs_when_only_alphavantage_key_is_present():
     assert ctx.fundamentals is not None
 
 
+def _yahoo_rows_payload(n=400, start=200.0, step=0.3):
+    day = datetime.date(2025, 1, 1)
+    rows, price = [], start
+    for _ in range(n):
+        rows.append([day.isoformat(), round(price, 4)])
+        price += step
+        day += datetime.timedelta(days=1)
+    return {"provider": "yahoo", "rows": rows}
+
+
+def test_yahoo_history_preferred_over_alphavantage(monkeypatch):
+    """Daily history should come from Yahoo (free, keyless, 3y depth) without
+    spending any of Alpha Vantage's ~25/day budget; AV compact is the fallback."""
+    finnhub, av = FakeFinnhub(), FakeAV(overview=True)
+
+    async def fake_yahoo(client, symbol):
+        return _yahoo_rows_payload()
+
+    monkeypatch.setattr(resolver_mod, "yahoo_fetch_daily", fake_yahoo)
+    ctx = asyncio.run(_hybrid_resolver(finnhub, av).resolve("HYB4"))
+
+    assert av.daily_calls == 0  # Yahoo answered; AV budget untouched
+    assert ctx.stats is not None
+    assert ctx.stats.observations == 400
+    # 400 ascending sessions -> momentum is computable, which 100 AV rows can't do.
+    assert ctx.stats.momentum_12_1 is not None
+
+
+def test_alphavantage_compact_is_the_history_fallback(monkeypatch):
+    """When Yahoo fails (unofficial API — it will, sometimes), history falls
+    through to Alpha Vantage rather than disappearing."""
+    finnhub, av = FakeFinnhub(), FakeAV(overview=True)
+
+    async def broken_yahoo(client, symbol):
+        raise RuntimeError("yahoo changed something again")
+
+    monkeypatch.setattr(resolver_mod, "yahoo_fetch_daily", broken_yahoo)
+    ctx = asyncio.run(_hybrid_resolver(finnhub, av).resolve("HYB5"))
+
+    assert av.daily_calls == 1
+    assert ctx.stats is not None  # AV's 90-row payload still measured vol
+
+
+def test_parse_rows_series_roundtrip():
+    from app.marketdata.yahoo import parse_rows_series
+
+    payload = _yahoo_rows_payload(n=60)
+    series = parse_rows_series("X", payload)
+    assert series is not None and len(series) == 60
+    assert series.closes[0] < series.closes[-1]
+    # Garbage shapes must parse to None, not raise.
+    assert parse_rows_series("X", {"provider": "yahoo"}) is None
+    assert parse_rows_series("X", {"provider": "yahoo", "rows": [[1]] * 40}) is None
+
+
 def test_live_deep_calls_are_spaced_not_burst():
     """Regression: Alpha Vantage's free tier throttles bursts (~1 req/sec).
     Firing daily+overview+sentiment concurrently got all three throttled in
