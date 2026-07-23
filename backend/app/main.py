@@ -113,7 +113,15 @@ def create_app() -> FastAPI:
             "service": "smartfolio-api",
             "version": app.version,
             "liveMarketData": resolver.live_enabled,
-            "marketDataProvider": resolver.provider.name if resolver.provider else "offline",
+            "marketDataProvider": resolver.quote_provider_name,
+            # Deep analysis = real history + fundamentals behind the forecast,
+            # not just a live price on top of reference assumptions.
+            "deepAnalysis": resolver.deep_enabled,
+            "deepDataProvider": resolver.deep_provider_name,
+            # Hybrid = quotes and deep data come from different providers
+            # (e.g. Finnhub quotes + Alpha Vantage history/fundamentals).
+            "hybridMarketData": resolver.hybrid,
+            "newsSentiment": settings.sentiment_enabled,
             "llm": settings.llm_enabled,
             "llmModel": settings.llm_model if settings.llm_enabled else None,
             "llmProvider": settings.llm_provider,

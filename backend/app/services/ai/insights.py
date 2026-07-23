@@ -66,7 +66,38 @@ def describe_impact(impact: PortfolioImpact, symbol: str) -> List[str]:
         if impact.triggers_sector_flag
         else "."
     )
-    return [first, second]
+    out = [first, second]
+
+    if impact.vol_after > 0:
+        direction = "up" if impact.vol_delta > 0 else "down"
+        out.append(
+            f"Estimated portfolio volatility moves {direction} from "
+            f"{pct(impact.vol_before)} to {pct(impact.vol_after)} annualized, "
+            f"and portfolio beta from {impact.beta_before:.2f} to {impact.beta_after:.2f}."
+        )
+        # The weight/risk gap is the finding a weights-only view cannot show.
+        if impact.risk_contribution > impact.new_weight * 1.25:
+            out.append(
+                f"At {pct(impact.new_weight)} of value the position would carry "
+                f"{pct(impact.risk_contribution)} of total portfolio risk — its "
+                f"volatility makes it a larger risk position than a weight view suggests."
+            )
+        out.append(
+            f"A 95% confidence loss estimate over the same horizon moves from "
+            f"{pct(impact.var95_before)} to {pct(impact.var95_after)} of portfolio value."
+        )
+        if impact.max_weight_for_profile > 0:
+            out.append(
+                f"Staying inside the {pct(impact.vol_ceiling)} volatility ceiling for this "
+                f"risk profile implies a position of at most "
+                f"{pct(impact.max_weight_for_profile)} of the portfolio."
+            )
+        out.append(
+            "Return per unit of risk improves on these assumptions."
+            if impact.improves_risk_adjusted_return
+            else "Return per unit of risk does not improve on these assumptions."
+        )
+    return out
 
 
 def describe_insights(analysis: PortfolioAnalysis) -> PortfolioInsights:

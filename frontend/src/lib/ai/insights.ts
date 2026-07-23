@@ -55,7 +55,40 @@ export function describeImpact(impact: PortfolioImpact, symbol: string): string[
   const second =
     `${title(impact.sector)} exposure would move to ${pct(impact.sectorWeightAfter)}` +
     (impact.triggersSectorFlag ? ', crossing the sector concentration threshold.' : '.')
-  return [first, second]
+  const out = [first, second]
+
+  if (impact.volAfter > 0) {
+    const direction = impact.volDelta > 0 ? 'up' : 'down'
+    out.push(
+      `Estimated portfolio volatility moves ${direction} from ${pct(impact.volBefore)} to ` +
+        `${pct(impact.volAfter)} annualized, and portfolio beta from ` +
+        `${impact.betaBefore.toFixed(2)} to ${impact.betaAfter.toFixed(2)}.`,
+    )
+    // The weight/risk gap is the finding a weights-only view cannot show.
+    if (impact.riskContribution > impact.newWeight * 1.25) {
+      out.push(
+        `At ${pct(impact.newWeight)} of value the position would carry ` +
+          `${pct(impact.riskContribution)} of total portfolio risk — its volatility makes it ` +
+          `a larger risk position than a weight view suggests.`,
+      )
+    }
+    out.push(
+      `A 95% confidence loss estimate over the same horizon moves from ` +
+        `${pct(impact.var95Before)} to ${pct(impact.var95After)} of portfolio value.`,
+    )
+    if (impact.maxWeightForProfile > 0) {
+      out.push(
+        `Staying inside the ${pct(impact.volCeiling)} volatility ceiling for this risk profile ` +
+          `implies a position of at most ${pct(impact.maxWeightForProfile)} of the portfolio.`,
+      )
+    }
+    out.push(
+      impact.improvesRiskAdjustedReturn
+        ? 'Return per unit of risk improves on these assumptions.'
+        : 'Return per unit of risk does not improve on these assumptions.',
+    )
+  }
+  return out
 }
 
 export interface PortfolioInsights {

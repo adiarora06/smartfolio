@@ -66,6 +66,12 @@ export interface HealthResponse {
   version: string
   liveMarketData: boolean
   marketDataProvider: string
+  /** Deep-data provider (history + fundamentals), null when quote-only. */
+  deepDataProvider?: string | null
+  /** True when quotes and deep data come from different providers. */
+  hybridMarketData?: boolean
+  deepAnalysis?: boolean
+  newsSentiment?: boolean
   llm: boolean
   llmModel: string | null
   llmProvider: string
