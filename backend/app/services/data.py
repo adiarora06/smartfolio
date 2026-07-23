@@ -50,16 +50,20 @@ FALLBACK_SECTORS = ("technology", "healthcare", "financial_services", "industria
 AUDIT_TRACE = (
     "Ticker normalized",
     "Market data resolved",
-    "Forecast generated",
-    "Backtest sampled",
+    "Parameters estimated",
+    "Forecast cone generated",
+    "Walk-forward backtest run",
+    "Portfolio risk decomposed",
     "Memo written",
 )
 
 TOPOLOGY_TRACE = (
     "Ticker Intake Agent normalizes symbol and horizon.",
-    "Market Data Tool provides price, volatility, sector, and quality inputs.",
-    "Forecast Agent creates median, bear, and bull paths.",
-    "Backtest Agent evaluates sample windows.",
-    "Portfolio Agent checks concentration risk.",
+    "Market Data Tool resolves quote, daily history, fundamentals, and news tone.",
+    "Parameter Estimation Agent fits annualized volatility and a shrunk drift.",
+    "Stock Forecast Agent produces the lognormal quantile cone.",
+    "Backtest Agent replays the estimator across past origins for calibration.",
+    "Portfolio Agent decomposes risk contribution under a single-index model.",
+    "Memo Writer narrates the result (template in local mode).",
     "Compliance Agent frames output as educational analysis.",
 )

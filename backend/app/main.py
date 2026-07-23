@@ -114,6 +114,10 @@ def create_app() -> FastAPI:
             "version": app.version,
             "liveMarketData": resolver.live_enabled,
             "marketDataProvider": resolver.provider.name if resolver.provider else "offline",
+            # Deep analysis = real history + fundamentals behind the forecast,
+            # not just a live price on top of reference assumptions.
+            "deepAnalysis": resolver.deep_enabled,
+            "newsSentiment": settings.sentiment_enabled,
             "llm": settings.llm_enabled,
             "llmModel": settings.llm_model if settings.llm_enabled else None,
             "llmProvider": settings.llm_provider,

@@ -17,5 +17,22 @@ services:
         value: alphavantage
       - key: MARKET_DATA_API_KEY
         sync: false # set your free key in the dashboard (secret)
+        # NOTE: GLOBAL_QUOTE/OVERVIEW are served to any key string, but
+        # TIME_SERIES_DAILY is quota-gated (~25 req/day free). Without a valid
+        # key with remaining quota the deep path (measured volatility +
+        # walk-forward backtest) stays off and the app uses reference values.
+      - key: DEEP_ANALYSIS
+        value: "1" # 1 = pull daily history + fundamentals; 0 = quote-only
+      - key: NEWS_SENTIMENT
+        value: "1" # 1 = include news-tone drift signal; 0 = skip (saves 1 req/ticker)
+      - key: DATABASE_URL
+        sync: false # Postgres (e.g. Neon) — REQUIRED for the market-data cache to
+                    # survive restarts; falls back to ephemeral sqlite if unset
+      - key: PLAID_CLIENT_ID
+        sync: false # free sandbox key: https://dashboard.plaid.com
+      - key: PLAID_SECRET
+        sync: false # free sandbox key (secret)
+      - key: PLAID_ENV
+        value: sandbox # sandbox | development | production
       - key: SMARTFOLIO_CORS_ORIGINS
         sync: false # set to your Vercel URL, e.g. https://smartfolio.vercel.app

@@ -84,6 +84,25 @@ class StockRunRow(Base):
     created_at: Mapped[str] = mapped_column(String(32), default=_now)
 
 
+class MarketCacheRow(Base):
+    """Raw provider payloads, cached across restarts.
+
+    Alpha Vantage's free tier allows ~25 requests/day, and a Render free-tier
+    instance restarts whenever it idles out — an in-memory cache would burn the
+    whole daily budget re-fetching the same tickers. Keyed by
+    "SYMBOL:function"; the payload is stored verbatim so the parsers stay pure
+    and a parser fix does not require a re-fetch.
+    """
+
+    __tablename__ = "market_cache"
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    symbol: Mapped[str] = mapped_column(String(16), index=True)
+    function: Mapped[str] = mapped_column(String(32))
+    payload: Mapped[dict] = mapped_column(JSON)
+    fetched_at: Mapped[str] = mapped_column(String(32), default=_now)
+    expires_at: Mapped[str] = mapped_column(String(32), index=True)
+
+
 class MemoRow(Base):
     __tablename__ = "memos"
     id: Mapped[str] = mapped_column(String(32), primary_key=True)

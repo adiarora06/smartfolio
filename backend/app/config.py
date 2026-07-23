@@ -38,8 +38,24 @@ class Settings:
     market_data_api_key: str = os.environ.get("MARKET_DATA_API_KEY", "").strip()
     # Cache live quotes for this many seconds to protect free-tier request budgets.
     market_data_cache_ttl: float = float(os.environ.get("MARKET_DATA_CACHE_TTL", "900"))
-    # Per-request network timeout to a market-data provider (seconds).
-    market_data_timeout: float = float(os.environ.get("MARKET_DATA_TIMEOUT", "6"))
+    # Per-request network timeout to a market-data provider (seconds). Deep
+    # analysis pulls a multi-year daily series, which is a far larger payload
+    # than a quote, so it gets its own (longer) budget.
+    market_data_timeout: float = float(os.environ.get("MARKET_DATA_TIMEOUT", "12"))
+
+    # Deep analysis: pull daily history + fundamentals, not just a quote. Costs
+    # ~3 provider requests per uncached ticker against Alpha Vantage's ~25/day
+    # free tier, which the Postgres-backed cache in marketdata/cache.py spreads
+    # across restarts. Set DEEP_ANALYSIS=0 to run quote-only.
+    deep_analysis: str = os.environ.get("DEEP_ANALYSIS", "1").strip()
+    # News sentiment is the least load-bearing input and the easiest to drop
+    # when the request budget is tight.
+    sentiment: str = os.environ.get("NEWS_SENTIMENT", "1").strip()
+
+    # Walk-forward backtest: how many past origins to replay, and the minimum
+    # observations required before the engine will report one at all.
+    backtest_origins: int = int(os.environ.get("BACKTEST_ORIGINS", "24"))
+    backtest_min_observations: int = int(os.environ.get("BACKTEST_MIN_OBS", "180"))
 
     # LLM routing (AI explanation layer). No key -> deterministic templates.
     llm_provider: str = os.environ.get("LLM_PROVIDER", "anthropic").strip().lower()
@@ -74,6 +90,14 @@ class Settings:
     @property
     def live_market_data_enabled(self) -> bool:
         return bool(self.market_data_api_key)
+
+    @property
+    def deep_analysis_enabled(self) -> bool:
+        return self.live_market_data_enabled and self.deep_analysis not in {"0", "false", "no"}
+
+    @property
+    def sentiment_enabled(self) -> bool:
+        return self.deep_analysis_enabled and self.sentiment not in {"0", "false", "no"}
 
     @property
     def llm_enabled(self) -> bool:

@@ -46,30 +46,71 @@ async def run_stock_analysis(req: StockAnalyzeRequest) -> StockAnalyzeResponse:
     horizon = max(7.0, min(365.0, horizon))
     emit("Ticker Intake Agent", f"{symbol} normalized, {horizon:g}-day horizon", t)
 
-    # Market Data Tool — live provider chain with offline backstop.
+    # Market Data Tool — quote, daily history, fundamentals, and news tone,
+    # each cached independently and each degrading on its own.
     t = perf_counter()
-    snapshot = await resolver.resolve(symbol)
+    ctx = await resolver.resolve(symbol)
+    snapshot = ctx.snapshot
     detail = f"price {currency(snapshot.price or 0)} via {snapshot.source}"
     if snapshot.as_of:
         detail += f", as of {snapshot.as_of}"
+    if ctx.stats is not None:
+        detail += f"; {ctx.stats.observations} daily closes"
+    if ctx.fundamentals is not None:
+        detail += "; fundamentals loaded"
+    if ctx.sentiment is not None:
+        detail += f"; {ctx.sentiment_articles} news items"
+    if ctx.stale_inputs:
+        detail += f"; stale: {', '.join(ctx.stale_inputs)}"
     emit("Market Data Tool", detail, t)
 
-    # Stock Forecast Agent — deterministic bands over the snapshot.
+    # Stock Forecast Agent — lognormal quantile cone over the measured inputs.
     t = perf_counter()
-    forecast = analyze_stock(symbol, horizon, snapshot)
+    forecast = analyze_stock(symbol, horizon, ctx)
     emit(
         "Stock Forecast Agent",
-        f"median target {currency(forecast.median_target)}, confidence {pct(forecast.confidence)}",
+        (
+            f"median target {currency(forecast.median_target)}, "
+            f"25-75 band {currency(forecast.q25_target)}-{currency(forecast.q75_target)}, "
+            f"P(gain) {pct(forecast.prob_gain)}"
+        ),
         t,
     )
 
-    # Backtest Agent — prototype sample windows.
+    # Parameter Estimation Agent — the drift/vol fit behind the cone.
     t = perf_counter()
-    emit(
-        "Backtest Agent",
-        f"{forecast.backtest.windows} sample windows, hit rate {pct(forecast.backtest.hit)}",
-        t,
-    )
+    if forecast.inputs is not None:
+        inputs = forecast.inputs
+        emit(
+            "Parameter Estimation Agent",
+            (
+                f"sigma {pct(inputs.sigma)} ({'measured' if inputs.vol_measured else 'assumed'}), "
+                f"mu {pct(inputs.mu)} from {len(inputs.signals)} signal(s) "
+                f"shrunk {pct(1 - inputs.shrinkage)} toward the market prior"
+            ),
+            t,
+        )
+
+    # Backtest Agent — real walk-forward when the history supports one.
+    t = perf_counter()
+    bt = forecast.backtest
+    if bt.measured:
+        emit(
+            "Backtest Agent",
+            (
+                f"{bt.windows} walk-forward windows {bt.first_origin}..{bt.last_origin}; "
+                f"band coverage {pct(bt.coverage50 or 0)}/50 and {pct(bt.coverage90 or 0)}/90, "
+                f"directional {pct(bt.hit)}"
+            ),
+            t,
+        )
+    else:
+        emit(
+            "Backtest Agent",
+            "insufficient price history to replay the engine — backtest skipped",
+            t,
+            "skipped",
+        )
 
     # Portfolio Agent — the what-if against the sent holdings.
     t = perf_counter()
@@ -79,7 +120,11 @@ async def run_stock_analysis(req: StockAnalyzeRequest) -> StockAnalyzeResponse:
     if impact is not None:
         emit(
             "Portfolio Agent",
-            f"what-if: {symbol} would be {pct(impact.new_weight)} of the portfolio",
+            (
+                f"what-if: {symbol} would be {pct(impact.new_weight)} of value but "
+                f"{pct(impact.risk_contribution)} of risk; portfolio vol "
+                f"{pct(impact.vol_before)} -> {pct(impact.vol_after)}"
+            ),
             t,
         )
     else:

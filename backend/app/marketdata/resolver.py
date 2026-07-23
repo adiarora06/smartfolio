@@ -1,43 +1,41 @@
-"""Resolver — offline base + optional live overlay, with a small TTL cache.
+"""Resolver — assembles a MarketContext from cache, live providers, and the
+offline reference table, in that order of preference.
+
+Design rules:
+- Every endpoint is fetched through the cache, so a repeat ticker costs zero
+  provider requests. This is what makes a ~25/day free tier usable.
+- Every endpoint degrades on its own. A throttled OVERVIEW leaves fundamentals
+  empty; the history still produces a real volatility estimate and the engine
+  still runs.
+- An expired payload beats no payload. When the provider is throttled we fall
+  back to the stale cache row and record it in `stale_inputs` so the response
+  can say so rather than quietly presenting week-old data as fresh.
 
 Perf notes:
 - One shared httpx.AsyncClient (keep-alive pool) instead of a client per
-  request — saves a TLS handshake on every live quote.
-- Per-symbol locks coalesce concurrent fetches for the same ticker so a burst
-  of users costs one provider call, not N (protects free-tier budgets).
+  request — saves a TLS handshake on every live call.
+- Per-symbol locks coalesce concurrent fetches so a burst of users costs one
+  set of provider calls, not N.
 """
 from __future__ import annotations
 
 import asyncio
-import time
-from typing import Dict, Optional, Tuple
+from typing import Any, Awaitable, Callable, Dict, Optional
 
 import httpx
 
 from ..config import settings
-from .alphavantage import AlphaVantageProvider
-from .base import MarketDataProvider, MarketSnapshot, merge
+from . import cache
+from .alphavantage import (
+    AlphaVantageProvider,
+    parse_fundamentals,
+    parse_sentiment,
+    parse_series,
+)
+from .base import MarketContext, MarketDataProvider, MarketSnapshot, merge
 from .finnhub import FinnhubProvider
 from .offline import offline_snapshot
-
-
-class _TTLCache:
-    def __init__(self, ttl: float) -> None:
-        self.ttl = ttl
-        self._store: Dict[str, Tuple[float, MarketSnapshot]] = {}
-
-    def get(self, key: str) -> Optional[MarketSnapshot]:
-        entry = self._store.get(key)
-        if not entry:
-            return None
-        expires, value = entry
-        if time.time() > expires:
-            self._store.pop(key, None)
-            return None
-        return value
-
-    def set(self, key: str, value: MarketSnapshot) -> None:
-        self._store[key] = (time.time() + self.ttl, value)
+from .series import compute_stats
 
 
 def _build_provider() -> Optional[MarketDataProvider]:
@@ -51,13 +49,19 @@ def _build_provider() -> Optional[MarketDataProvider]:
 class MarketDataResolver:
     def __init__(self) -> None:
         self.provider = _build_provider()
-        self.cache = _TTLCache(settings.market_data_cache_ttl)
         self._client: Optional[httpx.AsyncClient] = None
         self._locks: Dict[str, asyncio.Lock] = {}
 
     @property
     def live_enabled(self) -> bool:
         return self.provider is not None
+
+    @property
+    def deep_enabled(self) -> bool:
+        """Whether the active provider can serve history and fundamentals."""
+        return settings.deep_analysis_enabled and isinstance(
+            self.provider, AlphaVantageProvider
+        )
 
     def _get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
@@ -71,31 +75,165 @@ class MarketDataResolver:
         if self._client is not None and not self._client.is_closed:
             await self._client.aclose()
 
-    async def resolve(self, ticker: str) -> MarketSnapshot:
-        symbol = ticker.strip().upper() or "AAPL"
-        cached = self.cache.get(symbol)
-        if cached is not None:
-            return cached
+    async def _cached_fetch(
+        self,
+        symbol: str,
+        function: str,
+        fetch: Callable[[], Awaitable[Optional[Dict[str, Any]]]],
+        ctx: MarketContext,
+    ) -> Optional[Dict[str, Any]]:
+        """Cache -> live -> stale cache. Records provenance on `ctx`."""
+        hit = await cache.get(symbol, function)
+        if hit is not None:
+            ctx.sources.append(f"{function}:cache")
+            return hit
+        try:
+            payload = await fetch()
+        except Exception:
+            payload = None
+        if payload is not None:
+            await cache.put(symbol, function, payload)
+            ctx.sources.append(f"{function}:live")
+            return payload
+        # Provider gave us nothing (throttled, unknown symbol, network error).
+        expired = await cache.stale(symbol, function)
+        if expired is not None:
+            ctx.sources.append(f"{function}:stale")
+            ctx.stale_inputs.append(function)
+            return expired
+        return None
 
-        # Coalesce concurrent fetches for the same symbol into one provider call.
+    async def resolve(self, ticker: str) -> MarketContext:
+        symbol = ticker.strip().upper() or "AAPL"
         lock = self._locks.setdefault(symbol, asyncio.Lock())
         async with lock:
-            cached = self.cache.get(symbol)  # another waiter may have filled it
-            if cached is not None:
-                return cached
+            return await self._resolve_locked(symbol)
 
-            snapshot = offline_snapshot(symbol)
-            if self.provider is not None:
-                try:
-                    live = await self.provider.snapshot(self._get_client(), symbol)
-                    snapshot = merge(snapshot, live)
-                except Exception:
-                    # Any network/parse failure -> keep the offline base. Never break.
-                    pass
+    async def _resolve_locked(self, symbol: str) -> MarketContext:
+        base = offline_snapshot(symbol)
+        ctx = MarketContext(snapshot=base)
 
-            self.cache.set(symbol, snapshot)
-            return snapshot
+        if self.provider is None:
+            ctx.sources.append("offline:reference")
+            return ctx
+
+        client = self._get_client()
+        provider = self.provider
+
+        quote_payload = await self._cached_fetch(
+            symbol,
+            "quote",
+            lambda: self._fetch_quote(client, provider, symbol),
+            ctx,
+        )
+        live_snapshot: Optional[MarketSnapshot] = None
+        if quote_payload:
+            live_snapshot = MarketSnapshot(
+                symbol=symbol,
+                price=quote_payload.get("price"),
+                as_of=quote_payload.get("asOf"),
+                source=quote_payload.get("source", provider.name),
+            )
+        ctx.snapshot = merge(base, live_snapshot)
+
+        if not self.deep_enabled or not isinstance(provider, AlphaVantageProvider):
+            if not ctx.sources:
+                ctx.sources.append("offline:reference")
+            return ctx
+
+        # History and fundamentals are independent — fetch concurrently so a
+        # slow OVERVIEW does not serialize behind the (larger) daily payload.
+        daily_payload, overview_payload, sentiment_payload = await asyncio.gather(
+            self._cached_fetch(
+                symbol, "daily", lambda: provider.daily_series(client, symbol), ctx
+            ),
+            self._cached_fetch(
+                symbol, "overview", lambda: provider.overview(client, symbol), ctx
+            ),
+            self._cached_fetch(
+                symbol, "sentiment", lambda: provider.news_sentiment(client, symbol), ctx
+            )
+            if settings.sentiment_enabled
+            else _none(),
+        )
+
+        if daily_payload:
+            series = parse_series(symbol, daily_payload)
+            if series is not None:
+                ctx.series = series
+                ctx.stats = compute_stats(series)
+                # The daily close is the authoritative price when no separate
+                # quote arrived — it is the same series the statistics measure,
+                # so the spot and the volatility stay mutually consistent.
+                if ctx.snapshot.source == "offline" and series.latest:
+                    ctx.snapshot.price = series.latest
+                    ctx.snapshot.as_of = series.as_of
+                    ctx.snapshot.source = provider.name
+                else:
+                    _reconcile_price(ctx, series.latest, series.as_of)
+
+        if overview_payload:
+            fundamentals = parse_fundamentals(symbol, overview_payload)
+            ctx.fundamentals = fundamentals
+            if fundamentals.name:
+                ctx.snapshot.name = fundamentals.name
+            if fundamentals.sector:
+                ctx.snapshot.sector = fundamentals.sector
+
+        if sentiment_payload:
+            parsed = parse_sentiment(symbol, sentiment_payload)
+            if parsed is not None:
+                ctx.sentiment, ctx.sentiment_articles = parsed
+
+        if not ctx.sources:
+            ctx.sources.append("offline:reference")
+        return ctx
+
+    async def _fetch_quote(
+        self, client: httpx.AsyncClient, provider: MarketDataProvider, symbol: str
+    ) -> Optional[Dict[str, Any]]:
+        """Normalize a provider snapshot into a cacheable dict."""
+        snap = await provider.snapshot(client, symbol)
+        if snap is None or snap.price is None:
+            return None
+        return {"price": snap.price, "asOf": snap.as_of, "source": snap.source}
 
 
-# Module-level singleton (provider + cache live for the process lifetime).
+# A quote more than this far from the latest daily close is not an intraday
+# move — it is a structural mismatch (an unadjusted split, a bad tick, or a
+# symbol collision between endpoints).
+PRICE_DIVERGENCE_LIMIT = 0.25
+
+
+def _reconcile_price(
+    ctx: MarketContext, last_close: Optional[float], as_of: Optional[str]
+) -> None:
+    """Guard against anchoring the cone on a price the statistics disagree with.
+
+    Volatility, momentum and drawdown are all measured from the daily series.
+    If the quote endpoint returns something far from that series' last close,
+    pairing them produces a forecast whose spread and whose anchor describe
+    different instruments. We keep the series close — the value the whole
+    statistical model is built on — and surface the divergence rather than
+    silently picking one.
+    """
+    quote = ctx.snapshot.price
+    if not quote or not last_close or last_close <= 0:
+        return
+    divergence = abs(quote / last_close - 1.0)
+    if divergence <= PRICE_DIVERGENCE_LIMIT:
+        return
+    ctx.warnings.append(
+        f"quote {quote:,.4g} diverges {divergence:.0%} from the latest daily close "
+        f"{last_close:,.4g}; using the close the statistics are measured on"
+    )
+    ctx.snapshot.price = last_close
+    ctx.snapshot.as_of = as_of
+
+
+async def _none() -> None:
+    return None
+
+
+# Module-level singleton (provider + client pool live for the process lifetime).
 resolver = MarketDataResolver()
