@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 
+from ..config import settings
 from .base import MarketSnapshot
 from .fundamentals import Fundamentals
 from .series import PriceSeries
@@ -81,9 +82,16 @@ class AlphaVantageProvider:
         self.api_key = api_key
 
     async def _get(
-        self, client: httpx.AsyncClient, params: Dict[str, str]
+        self,
+        client: httpx.AsyncClient,
+        params: Dict[str, str],
+        timeout: Optional[float] = None,
     ) -> Optional[Dict[str, Any]]:
-        resp = await client.get(API_URL, params={**params, "apikey": self.api_key})
+        resp = await client.get(
+            API_URL,
+            params={**params, "apikey": self.api_key},
+            timeout=timeout if timeout is not None else httpx.USE_CLIENT_DEFAULT,
+        )
         resp.raise_for_status()
         payload = resp.json()
         if not isinstance(payload, dict) or is_throttled(payload):
@@ -116,7 +124,12 @@ class AlphaVantageProvider:
     async def daily_series(
         self, client: httpx.AsyncClient, symbol: str
     ) -> Optional[Dict[str, Any]]:
-        """Raw daily payload. Cached by the caller; parsed by `parse_series`."""
+        """Raw daily payload. Cached by the caller; parsed by `parse_series`.
+
+        `outputsize=full` is a multi-megabyte payload (decades of candles), so
+        it gets the longer deep timeout — the default 12s budget was cutting it
+        off on free-tier hosting and silently degrading the whole deep path.
+        """
         return await self._get(
             client,
             {
@@ -124,6 +137,7 @@ class AlphaVantageProvider:
                 "symbol": symbol,
                 "outputsize": "full",
             },
+            timeout=settings.market_data_deep_timeout,
         )
 
     # --- Fundamentals -----------------------------------------------------

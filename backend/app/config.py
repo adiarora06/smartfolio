@@ -48,10 +48,11 @@ class Settings:
     alphavantage_api_key: str = os.environ.get("ALPHAVANTAGE_API_KEY", "").strip()
     # Cache live quotes for this many seconds to protect free-tier request budgets.
     market_data_cache_ttl: float = float(os.environ.get("MARKET_DATA_CACHE_TTL", "900"))
-    # Per-request network timeout to a market-data provider (seconds). Deep
-    # analysis pulls a multi-year daily series, which is a far larger payload
-    # than a quote, so it gets its own (longer) budget.
+    # Per-request network timeout to a market-data provider (seconds).
     market_data_timeout: float = float(os.environ.get("MARKET_DATA_TIMEOUT", "12"))
+    # The full daily-series payload is multi-megabyte (years of candles) and
+    # noticeably slow on free-tier hosting — it gets its own longer budget.
+    market_data_deep_timeout: float = float(os.environ.get("MARKET_DATA_DEEP_TIMEOUT", "30"))
 
     # Deep analysis: pull daily history + fundamentals, not just a quote. Costs
     # ~3 provider requests per uncached ticker against Alpha Vantage's ~25/day

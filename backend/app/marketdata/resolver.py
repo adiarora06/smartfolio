@@ -20,6 +20,7 @@ Perf notes:
 from __future__ import annotations
 
 import asyncio
+import time
 from typing import Any, Awaitable, Callable, Dict, Optional
 
 import httpx
@@ -73,6 +74,28 @@ class MarketDataResolver:
         self.deep_provider = _build_deep_provider(self.provider)
         self._client: Optional[httpx.AsyncClient] = None
         self._locks: Dict[str, asyncio.Lock] = {}
+        # Alpha Vantage's free tier rejects rapid bursts (their throttle notice
+        # asks for ~1 request/second), and firing daily+overview+sentiment
+        # concurrently got all three throttled in production. Live deep calls
+        # are therefore serialized through this lock with a minimum spacing;
+        # cache hits never touch it, so repeat tickers stay fast.
+        self._deep_call_lock = asyncio.Lock()
+        self._last_deep_call = 0.0
+
+    DEEP_CALL_SPACING = 1.3  # seconds between live deep-provider requests
+
+    async def _spaced_deep_call(
+        self, fetch: Callable[[], Awaitable[Optional[Dict[str, Any]]]]
+    ) -> Optional[Dict[str, Any]]:
+        """Run a live deep-provider fetch, keeping calls >= DEEP_CALL_SPACING apart."""
+        async with self._deep_call_lock:
+            wait = self._last_deep_call + self.DEEP_CALL_SPACING - time.monotonic()
+            if wait > 0:
+                await asyncio.sleep(wait)
+            try:
+                return await fetch()
+            finally:
+                self._last_deep_call = time.monotonic()
 
     @property
     def live_enabled(self) -> bool:
@@ -189,17 +212,31 @@ class MarketDataResolver:
 
         deep = self.deep_provider
 
-        # History, fundamentals and news are independent — fetch concurrently so
-        # a slow OVERVIEW does not serialize behind the (larger) daily payload.
+        # History, fundamentals and news still resolve via one gather (cache
+        # hits stay concurrent), but any that go LIVE are serialized and spaced
+        # by _spaced_deep_call — Alpha Vantage's free tier throttles bursts.
         daily_payload, overview_payload, sentiment_payload = await asyncio.gather(
             self._cached_fetch(
-                symbol, "daily", lambda: deep.daily_series(client, symbol), ctx
+                symbol,
+                "daily",
+                lambda: self._spaced_deep_call(
+                    lambda: deep.daily_series(client, symbol)
+                ),
+                ctx,
             ),
             self._cached_fetch(
-                symbol, "overview", lambda: deep.overview(client, symbol), ctx
+                symbol,
+                "overview",
+                lambda: self._spaced_deep_call(lambda: deep.overview(client, symbol)),
+                ctx,
             ),
             self._cached_fetch(
-                symbol, "sentiment", lambda: deep.news_sentiment(client, symbol), ctx
+                symbol,
+                "sentiment",
+                lambda: self._spaced_deep_call(
+                    lambda: deep.news_sentiment(client, symbol)
+                ),
+                ctx,
             )
             if settings.sentiment_enabled
             else _none(),

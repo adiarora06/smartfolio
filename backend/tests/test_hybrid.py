@@ -140,6 +140,34 @@ def test_history_still_runs_when_only_alphavantage_key_is_present():
     assert ctx.fundamentals is not None
 
 
+def test_live_deep_calls_are_spaced_not_burst():
+    """Regression: Alpha Vantage's free tier throttles bursts (~1 req/sec).
+    Firing daily+overview+sentiment concurrently got all three throttled in
+    production, silently degrading the deep path to reference values. Live
+    deep calls must be serialized with a minimum spacing."""
+    import time as _time
+
+    r = MarketDataResolver()
+    r.DEEP_CALL_SPACING = 0.15  # keep the test fast; the invariant is spacing>0
+    call_times: list[float] = []
+
+    async def fake_fetch():
+        call_times.append(_time.monotonic())
+        return {"ok": True}
+
+    async def run():
+        await asyncio.gather(
+            r._spaced_deep_call(fake_fetch),
+            r._spaced_deep_call(fake_fetch),
+            r._spaced_deep_call(fake_fetch),
+        )
+
+    asyncio.run(run())
+    assert len(call_times) == 3
+    gaps = [b - a for a, b in zip(call_times, call_times[1:])]
+    assert all(gap >= 0.14 for gap in gaps), f"live calls burst together: gaps={gaps}"
+
+
 def test_health_reports_hybrid_shape(monkeypatch):
     """/health must advertise both providers so the UI can show the split."""
     finnhub, av = FakeFinnhub(), FakeAV()
