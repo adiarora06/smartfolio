@@ -25,6 +25,7 @@ TTL_SECONDS: Dict[str, float] = {
     "quote": 900,  # 15 min
     "daily": 86_400,  # 1 day
     "overview": 604_800,  # 7 days
+    "finnhub_fundamentals": 604_800,  # 7 days (fallback fundamentals source)
     "sentiment": 21_600,  # 6 hours
 }
 DEFAULT_TTL = 3600.0

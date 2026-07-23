@@ -33,12 +33,13 @@ from .alphavantage import (
     parse_series,
 )
 from .base import MarketContext, MarketDataProvider, MarketSnapshot, merge
-from .finnhub import FinnhubProvider
+from .finnhub import FinnhubProvider, parse_finnhub_fundamentals
 from .offline import offline_snapshot
 from .series import compute_stats
 
 
 def _build_provider() -> Optional[MarketDataProvider]:
+    """The QUOTE provider — the fast, high-quota live-price source."""
     if not settings.live_market_data_enabled:
         return None
     if settings.market_data_provider == "finnhub":
@@ -46,22 +47,63 @@ def _build_provider() -> Optional[MarketDataProvider]:
     return AlphaVantageProvider(settings.market_data_api_key)
 
 
+def _build_deep_provider(
+    quote_provider: Optional[MarketDataProvider],
+) -> Optional[AlphaVantageProvider]:
+    """The DEEP provider (daily history + fundamentals + news) — always Alpha
+    Vantage, since it is the only free source of daily candles.
+
+    Reuses the quote provider when that is already Alpha Vantage with the same
+    key; otherwise builds a dedicated AV client from the hybrid key. This is
+    what lets Finnhub answer quotes while AV answers history/fundamentals.
+    """
+    if not settings.deep_analysis_enabled:
+        return None
+    key = settings.deep_api_key
+    if not key:
+        return None
+    if isinstance(quote_provider, AlphaVantageProvider) and quote_provider.api_key == key:
+        return quote_provider
+    return AlphaVantageProvider(key)
+
+
 class MarketDataResolver:
     def __init__(self) -> None:
         self.provider = _build_provider()
+        self.deep_provider = _build_deep_provider(self.provider)
         self._client: Optional[httpx.AsyncClient] = None
         self._locks: Dict[str, asyncio.Lock] = {}
 
     @property
     def live_enabled(self) -> bool:
-        return self.provider is not None
+        return self.provider is not None or self.deep_provider is not None
 
     @property
     def deep_enabled(self) -> bool:
-        """Whether the active provider can serve history and fundamentals."""
-        return settings.deep_analysis_enabled and isinstance(
-            self.provider, AlphaVantageProvider
+        """Whether a provider can serve history and fundamentals.
+
+        The DEEP_ANALYSIS=0 kill switch is enforced in `_build_deep_provider`
+        (it returns None), so the provider simply being present already implies
+        deep analysis is enabled — no need to re-consult settings here.
+        """
+        return self.deep_provider is not None
+
+    @property
+    def hybrid(self) -> bool:
+        """True when quotes and deep data come from different providers."""
+        return (
+            self.deep_provider is not None
+            and self.provider is not None
+            and self.provider is not self.deep_provider
         )
+
+    @property
+    def quote_provider_name(self) -> str:
+        return self.provider.name if self.provider else "offline"
+
+    @property
+    def deep_provider_name(self) -> Optional[str]:
+        return self.deep_provider.name if self.deep_provider else None
 
     def _get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
@@ -113,45 +155,51 @@ class MarketDataResolver:
         base = offline_snapshot(symbol)
         ctx = MarketContext(snapshot=base)
 
-        if self.provider is None:
+        if self.provider is None and self.deep_provider is None:
             ctx.sources.append("offline:reference")
             return ctx
 
         client = self._get_client()
-        provider = self.provider
+        # Quote comes from the primary provider; if there is none (AV-only
+        # config), the deep provider doubles as the quote source.
+        quote_provider = self.provider or self.deep_provider
 
-        quote_payload = await self._cached_fetch(
-            symbol,
-            "quote",
-            lambda: self._fetch_quote(client, provider, symbol),
-            ctx,
-        )
-        live_snapshot: Optional[MarketSnapshot] = None
-        if quote_payload:
-            live_snapshot = MarketSnapshot(
-                symbol=symbol,
-                price=quote_payload.get("price"),
-                as_of=quote_payload.get("asOf"),
-                source=quote_payload.get("source", provider.name),
+        if quote_provider is not None:
+            quote_payload = await self._cached_fetch(
+                symbol,
+                "quote",
+                lambda: self._fetch_quote(client, quote_provider, symbol),
+                ctx,
             )
-        ctx.snapshot = merge(base, live_snapshot)
+            if quote_payload:
+                ctx.snapshot = merge(
+                    base,
+                    MarketSnapshot(
+                        symbol=symbol,
+                        price=quote_payload.get("price"),
+                        as_of=quote_payload.get("asOf"),
+                        source=quote_payload.get("source", quote_provider.name),
+                    ),
+                )
 
-        if not self.deep_enabled or not isinstance(provider, AlphaVantageProvider):
+        if not self.deep_enabled or self.deep_provider is None:
             if not ctx.sources:
                 ctx.sources.append("offline:reference")
             return ctx
 
-        # History and fundamentals are independent — fetch concurrently so a
-        # slow OVERVIEW does not serialize behind the (larger) daily payload.
+        deep = self.deep_provider
+
+        # History, fundamentals and news are independent — fetch concurrently so
+        # a slow OVERVIEW does not serialize behind the (larger) daily payload.
         daily_payload, overview_payload, sentiment_payload = await asyncio.gather(
             self._cached_fetch(
-                symbol, "daily", lambda: provider.daily_series(client, symbol), ctx
+                symbol, "daily", lambda: deep.daily_series(client, symbol), ctx
             ),
             self._cached_fetch(
-                symbol, "overview", lambda: provider.overview(client, symbol), ctx
+                symbol, "overview", lambda: deep.overview(client, symbol), ctx
             ),
             self._cached_fetch(
-                symbol, "sentiment", lambda: provider.news_sentiment(client, symbol), ctx
+                symbol, "sentiment", lambda: deep.news_sentiment(client, symbol), ctx
             )
             if settings.sentiment_enabled
             else _none(),
@@ -168,17 +216,28 @@ class MarketDataResolver:
                 if ctx.snapshot.source == "offline" and series.latest:
                     ctx.snapshot.price = series.latest
                     ctx.snapshot.as_of = series.as_of
-                    ctx.snapshot.source = provider.name
+                    ctx.snapshot.source = deep.name
                 else:
                     _reconcile_price(ctx, series.latest, series.as_of)
 
         if overview_payload:
             fundamentals = parse_fundamentals(symbol, overview_payload)
-            ctx.fundamentals = fundamentals
-            if fundamentals.name:
-                ctx.snapshot.name = fundamentals.name
-            if fundamentals.sector:
-                ctx.snapshot.sector = fundamentals.sector
+            self._apply_fundamentals(ctx, fundamentals)
+        elif self.provider is not None and hasattr(self.provider, "fundamentals"):
+            # Alpha Vantage had no fundamentals (throttled or missing) but the
+            # quote provider (Finnhub) exposes its own free metrics — use them
+            # so both providers contribute rather than leaving fundamentals bare.
+            quote_provider = self.provider
+            finnhub_payload = await self._cached_fetch(
+                symbol,
+                "finnhub_fundamentals",
+                lambda: quote_provider.fundamentals(client, symbol),
+                ctx,
+            )
+            if finnhub_payload:
+                self._apply_fundamentals(
+                    ctx, parse_finnhub_fundamentals(symbol, finnhub_payload)
+                )
 
         if sentiment_payload:
             parsed = parse_sentiment(symbol, sentiment_payload)
@@ -188,6 +247,14 @@ class MarketDataResolver:
         if not ctx.sources:
             ctx.sources.append("offline:reference")
         return ctx
+
+    @staticmethod
+    def _apply_fundamentals(ctx: MarketContext, fundamentals) -> None:
+        ctx.fundamentals = fundamentals
+        if fundamentals.name:
+            ctx.snapshot.name = fundamentals.name
+        if fundamentals.sector:
+            ctx.snapshot.sector = fundamentals.sector
 
     async def _fetch_quote(
         self, client: httpx.AsyncClient, provider: MarketDataProvider, symbol: str

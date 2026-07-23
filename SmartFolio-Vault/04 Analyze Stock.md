@@ -90,27 +90,40 @@ inputs, and data-integrity warnings.
 
 Stores saved stock memos for later retrieval.
 
-## Data Sources
+## Data Sources — hybrid Finnhub + Alpha Vantage
 
-Alpha Vantage, each endpoint cached and degrading independently:
+The two free tiers are complementary, so the resolver uses **both**:
 
-| Endpoint | Feeds | Cache TTL |
+| Provider | Role | Free-tier reality |
 | --- | --- | --- |
-| `GLOBAL_QUOTE` | spot price | 15 min |
-| `TIME_SERIES_DAILY` | volatility, momentum, drawdown, backtest | 1 day |
-| `OVERVIEW` | quality score, beta, analyst target, valuation | 7 days |
-| `NEWS_SENTIMENT` | sentiment drift tilt | 6 hours |
+| **Finnhub** | live quote (spot price) + fundamentals fallback | 60 req/min, but **no** historical candles |
+| **Alpha Vantage** | daily history, fundamentals, news sentiment | history + fundamentals, but **~25 req/day** |
 
-**The free tier is ~25 requests/day**, and a deep analysis costs three of them
-per uncached ticker. Payloads are cached in Postgres (not just memory) so the
-budget survives the restarts a free-tier host does constantly. An expired
-payload beats no payload: when the provider is throttled the stale row is served
-and reported as stale.
+Finnhub answers the frequent quote calls (its strength); Alpha Vantage's scarce
+budget is spent only on the daily history + fundamentals Finnhub free can't
+provide. Set `MARKET_DATA_PROVIDER=finnhub` + `MARKET_DATA_API_KEY` (Finnhub)
+and `ALPHAVANTAGE_API_KEY` to run the hybrid. When only one key is present the
+resolver degrades to that provider alone.
 
-Note: `GLOBAL_QUOTE` and `OVERVIEW` are served to any key string;
-`TIME_SERIES_DAILY` is quota-gated. Without a valid key with remaining quota,
-volatility falls back to the reference table and the backtest does not run —
-the UI reports this rather than hiding it.
+Endpoints, each cached and degrading independently:
+
+| Endpoint | Provider | Feeds | Cache TTL |
+| --- | --- | --- | --- |
+| `/quote` | Finnhub | spot price | 15 min |
+| `TIME_SERIES_DAILY` | Alpha Vantage | volatility, momentum, drawdown, backtest | 1 day |
+| `OVERVIEW` | Alpha Vantage | quality, beta, analyst target, valuation | 7 days |
+| `/stock/metric` + `/stock/profile2` | Finnhub | **fundamentals fallback** when AV is throttled | 7 days |
+| `NEWS_SENTIMENT` | Alpha Vantage | sentiment drift tilt | 6 hours |
+
+Payloads are cached in Postgres (not just memory) so the budget survives the
+restarts a free-tier host does constantly. An expired payload beats no payload:
+when a provider is throttled the stale row is served and reported as stale. When
+Alpha Vantage's OVERVIEW is unavailable, Finnhub's free metrics fill in the
+fundamentals so both providers contribute. `/health` reports `marketDataProvider`,
+`deepDataProvider`, and `hybridMarketData` so the split is visible.
+
+Without any deep key, volatility falls back to the reference table and the
+backtest does not run — the UI reports this rather than hiding it.
 
 ## Data Integrity
 

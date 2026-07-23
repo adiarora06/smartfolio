@@ -32,10 +32,20 @@ def _normalize_db_url(url: str) -> str:
 
 
 class Settings:
-    # Market data. provider is one of: "alphavantage", "finnhub".
+    # Market data. provider is one of: "alphavantage", "finnhub". This is the
+    # QUOTE provider — the fast, high-quota source for the live spot price.
     # No key -> offline-only (today's behavior).
     market_data_provider: str = os.environ.get("MARKET_DATA_PROVIDER", "alphavantage").strip().lower()
     market_data_api_key: str = os.environ.get("MARKET_DATA_API_KEY", "").strip()
+
+    # Hybrid deep-data key. Finnhub's free tier serves fast quotes but no
+    # historical candles; Alpha Vantage's free tier serves daily history +
+    # fundamentals but only ~25 requests/day. Setting ALPHAVANTAGE_API_KEY
+    # alongside a Finnhub MARKET_DATA_API_KEY runs BOTH: Finnhub answers the
+    # frequent quote calls, and Alpha Vantage's scarce budget is spent only on
+    # the history + fundamentals Finnhub can't provide. When the quote provider
+    # is already alphavantage this is unnecessary (the deep path reuses that key).
+    alphavantage_api_key: str = os.environ.get("ALPHAVANTAGE_API_KEY", "").strip()
     # Cache live quotes for this many seconds to protect free-tier request budgets.
     market_data_cache_ttl: float = float(os.environ.get("MARKET_DATA_CACHE_TTL", "900"))
     # Per-request network timeout to a market-data provider (seconds). Deep
@@ -92,8 +102,22 @@ class Settings:
         return bool(self.market_data_api_key)
 
     @property
+    def deep_api_key(self) -> str:
+        """The Alpha Vantage key for the deep path (history + fundamentals).
+
+        An explicit ALPHAVANTAGE_API_KEY wins (the hybrid case: Finnhub quotes
+        + AV deep). Otherwise, when the quote provider is itself Alpha Vantage,
+        the deep path reuses the primary key. Anything else -> no deep key.
+        """
+        if self.alphavantage_api_key:
+            return self.alphavantage_api_key
+        if self.market_data_provider == "alphavantage":
+            return self.market_data_api_key
+        return ""
+
+    @property
     def deep_analysis_enabled(self) -> bool:
-        return self.live_market_data_enabled and self.deep_analysis not in {"0", "false", "no"}
+        return bool(self.deep_api_key) and self.deep_analysis not in {"0", "false", "no"}
 
     @property
     def sentiment_enabled(self) -> bool:
