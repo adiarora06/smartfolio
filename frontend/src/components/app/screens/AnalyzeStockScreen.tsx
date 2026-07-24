@@ -274,7 +274,74 @@ function ForecastPane() {
           <li key={i}>{line}</li>
         ))}
       </ul>
+      <NewsSection />
     </>
+  )
+}
+
+const SENTIMENT_TONE: Record<string, string> = {
+  bullish: '#5eead4',
+  'somewhat-bullish': '#5eead4',
+  bearish: '#f87171',
+  'somewhat-bearish': '#f87171',
+}
+
+/** Relevant News — the 3 most relevant recent headlines about the ticker.
+ *  Live-only (needs the news provider); shows an explicit note otherwise. */
+function NewsSection() {
+  const stock = useStore((s) => s.stock)
+  const news = stock.news ?? []
+
+  return (
+    <div>
+      <SectionLabel>Relevant News</SectionLabel>
+      {news.length ? (
+        <ul className="list termList">
+          {news.map((n, i) => {
+            const tone = n.sentimentLabel
+              ? SENTIMENT_TONE[n.sentimentLabel.toLowerCase()] ?? '#93c5fd'
+              : '#93c5fd'
+            return (
+              <li key={n.url ?? i}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                  {n.url ? (
+                    <a
+                      href={n.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontWeight: 600, color: '#e2e8f0' }}
+                    >
+                      {n.title}
+                    </a>
+                  ) : (
+                    <strong>{n.title}</strong>
+                  )}
+                  {n.sentimentLabel && (
+                    <span style={{ color: tone, fontSize: 12, whiteSpace: 'nowrap' }}>
+                      {title(n.sentimentLabel.replace(/-/g, ' '))}
+                    </span>
+                  )}
+                </div>
+                <span style={{ color: '#93c5fd', fontSize: 12 }}>
+                  {[n.source, n.published].filter(Boolean).join(' · ')}
+                </span>
+                {n.summary && (
+                  <span style={{ display: 'block', fontSize: 12.5, marginTop: 2 }}>
+                    {n.summary}
+                  </span>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      ) : (
+        <p style={{ color: 'var(--muted)', fontSize: 12.5 }}>
+          {stock.source && stock.source !== 'offline'
+            ? 'No recent tagged headlines for this ticker right now.'
+            : 'Live headlines appear here when the analysis runs against the connected news provider.'}
+        </p>
+      )}
+    </div>
   )
 }
 

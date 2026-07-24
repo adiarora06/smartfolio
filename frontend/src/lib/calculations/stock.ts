@@ -136,6 +136,7 @@ export function analyzeStock(ticker = 'AAPL', days = 30): StockForecast {
     annualizedVol: sigma,
     sentiment: null,
     sentimentArticles: 0,
+    news: [],
     paths,
     backtest: {
       // No price history in the browser, so there is nothing to replay.

@@ -52,6 +52,13 @@ Fan chart with two shaded bands (5–95 and 25–75) around the median, opening
 from a single point at today's price. Metrics: price, median target, 50% band,
 P(gain), P(beat market), P(-20% drawdown).
 
+**Relevant News** subsection below the memo: the 3 most relevant recent
+headlines about the ticker, ranked by the article's own per-ticker relevance
+score (same weight the sentiment tilt uses), each with source, date, sentiment
+label, and a clipped summary. Parsed from the same `NEWS_SENTIMENT` payload the
+sentiment tilt reads (`parse_articles` in `alphavantage.py`) — no extra API
+call. Live-only: falls back to an explicit "no headlines" note offline.
+
 ### Portfolio Impact
 
 Answers the product's core question. Two parts, because they routinely disagree:
