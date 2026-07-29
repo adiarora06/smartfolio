@@ -16,6 +16,7 @@ import {
   type PortfolioAnalyzeResult,
 } from '../../../lib/api/client'
 import { AppHero, Panel, PanelHead } from '../../shared/ui'
+import { openExternal, shareText } from '../../../lib/native'
 
 declare global {
   interface Window {
@@ -119,13 +120,13 @@ export function ConnectionsScreen() {
       source = 'local'
     }
     const payload = { source, profile, holdings, connections, stock, ...result }
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'smartfolio-export.json'
-    a.click()
-    URL.revokeObjectURL(url)
+    // Native gets the system share sheet; the browser keeps Web Share, then a
+    // download. The old download-only path silently did nothing on iOS.
+    await shareText({
+      title: 'SmartFolio export',
+      text: JSON.stringify(payload, null, 2),
+      filename: 'smartfolio-export.json',
+    })
   }
 
   return (
@@ -155,7 +156,7 @@ export function ConnectionsScreen() {
               </span>
               <button
                 onClick={() =>
-                  window.open(`${API_URL}/.well-known/agent.json`, '_blank', 'noopener')
+                  void openExternal(`${API_URL}/.well-known/agent.json`)
                 }
               >
                 View Agent Card

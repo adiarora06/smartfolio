@@ -3,6 +3,7 @@
 
 import { useEffect } from 'react'
 import { useStore } from './store/useStore'
+import { hideSplash } from './lib/native'
 import { TopBar } from './components/layout/TopBar'
 import { LandingPage } from './components/landing/LandingPage'
 import { SetupFlow } from './components/setup/SetupFlow'
@@ -11,6 +12,13 @@ import { AppShell } from './components/app/AppShell'
 export default function App() {
   const page = useStore((s) => s.page)
   const checkBackend = useStore((s) => s.checkBackend)
+
+  // Dismiss the native launch splash as soon as React has painted. The UI is
+  // already interactive at this point because the deterministic engine runs
+  // locally — the backend warm-up below only upgrades it.
+  useEffect(() => {
+    void hideSplash()
+  }, [])
 
   // Detect the FastAPI backend on load; the app runs on the local
   // deterministic mirror when it is unreachable. Free-tier hosts sleep when

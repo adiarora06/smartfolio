@@ -250,3 +250,30 @@ html {
 
   .stockMetrics { grid-template-columns: 1fr 1fr; }
 }
+
+/* --- Analyze Stock terminal --------------------------------------------- */
+
+.termHead { display: flex; justify-content: space-between; gap: 12px; }
+.termBadge { white-space: nowrap; }
+
+@media (max-width: 720px) {
+  /* Badge under the title instead of fighting it for the same line. */
+  .termHead { flex-direction: column; gap: 4px; }
+  .termBadge { white-space: normal; color: #93c5fd; font-size: 12px; }
+  .termHead h2 { font-size: 20px; }
+
+  /* Two inputs + two buttons stacked full-width consumed a whole screen
+     before the results. Paired rows keep the controls above the fold. */
+  #stock .formgrid { grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* Seven tabs cannot fit; scroll them horizontally like iOS segmented
+     controls rather than wrapping into three ragged rows. */
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { flex: 0 0 auto; white-space: nowrap; }
+}

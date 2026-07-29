@@ -11,6 +11,7 @@
 import { useState } from 'react'
 import { useStore } from '../../../store/useStore'
 import { AppHero, Panel, PanelHead } from '../../shared/ui'
+import { openExternal } from '../../../lib/native'
 
 const REPO_URL = 'https://github.com/adiarora06/smartfolio'
 
@@ -157,7 +158,7 @@ export function OpenSourceScreen() {
         title="Open source"
         subtitle="How SmartFolio works under the hood — the agent network, data flow, and design rules. Kept out of the everyday workflow on purpose."
         actions={
-          <button onClick={() => window.open(REPO_URL, '_blank', 'noopener')}>View on GitHub</button>
+          <button onClick={() => void openExternal(REPO_URL)}>View on GitHub</button>
         }
       />
 

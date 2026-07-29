@@ -39,6 +39,7 @@ import { analyzeStock } from '../lib/calculations/stock'
 import { computeImpact } from '../lib/calculations/impact'
 import { buildSavedMemo } from '../lib/ai/memo'
 import { answerAdvisor } from '../lib/ai/advisor'
+import { isNative, successFeedback } from '../lib/native'
 import {
   apiAnalyzeStock,
   apiAskAdvisor,
@@ -156,7 +157,12 @@ const initialHoldings = local.holdings?.length ? local.holdings : demoHoldings()
 const initialStock = analyzeStock('AAPL', 30)
 
 export const useStore = create<AppState>((set, get) => ({
-  page: 'landing',
+  // The web build opens on the marketing landing page. The native app opens
+  // straight into the working dashboard: an installed app has no one left to
+  // pitch, and launching into marketing copy is exactly what Guideline 4.2
+  // reads as a repackaged website. Set as initial state (not in an effect) so
+  // there is no landing-page flash on launch.
+  page: isNative ? 'app' : 'landing',
   screen: 'overview',
   setupStep: 0,
   stockTab: 'forecast',
@@ -294,6 +300,9 @@ export const useStore = create<AppState>((set, get) => ({
       })
     } finally {
       set({ running: false })
+      // A pipeline run is the app's one long action; on device a success tap
+      // is the difference between "did that work?" and obvious completion.
+      void successFeedback()
     }
   },
   resetStock: () => {

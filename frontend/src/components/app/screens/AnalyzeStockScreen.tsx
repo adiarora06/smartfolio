@@ -115,7 +115,9 @@ export function AnalyzeStockScreen() {
       </Panel>
 
       <section className="terminal">
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+        {/* Class, not an inline style, so the mobile layer can stack this —
+            the rating/source badge collided with the title at phone width. */}
+        <div className="termHead">
           <div>
             <h2>{stock.symbol} Forecast</h2>
             <span style={{ color: '#93c5fd' }}>
@@ -134,7 +136,7 @@ export function AnalyzeStockScreen() {
               )}
             </div>
           </div>
-          <span>
+          <span className="termBadge">
             {stock.rating} · {stockSource === 'api' ? 'API' : 'Local'}
             {narrator === 'llm' ? ' · LLM memo' : ''}
           </span>
