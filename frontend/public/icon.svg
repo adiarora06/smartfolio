@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- SmartFolio mark: the forecast cone — a distribution opening from today's
+       price, which is the app's core visual metaphor (see ForecastChart).
+       Centered composition so it still reads at 40px on a home screen. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#101b33"/>
+      <stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <!-- Outer band (5th–95th percentile) -->
+  <path d="M196 512 L836 268 L836 756 Z" fill="#60a5fa" opacity="0.20"/>
+  <!-- Inner band (interquartile) -->
+  <path d="M196 512 L836 384 L836 640 Z" fill="#5eead4" opacity="0.26"/>
+
+  <!-- Median path -->
+  <polyline points="196,512 356,470 516,486 676,420 836,442"
+            fill="none" stroke="#5eead4" stroke-width="38"
+            stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Anchor (today) and terminal (median target) -->
+  <circle cx="196" cy="512" r="34" fill="#ffffff"/>
+  <circle cx="836" cy="442" r="34" fill="#5eead4"/>
+</svg>
