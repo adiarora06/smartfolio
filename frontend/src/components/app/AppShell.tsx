@@ -1,11 +1,16 @@
 // The authenticated app: sidebar (nav + disclaimer) and the active screen.
 // System internals (agent network, graph, pipeline) live in the Open Source
 // screen — not in the customer-facing sidebar.
+//
+// Responsive navigation: the sidebar drives desktop, and under 720px it is
+// hidden in favor of <TabBar /> (a fixed bottom tab bar). Both read the same
+// `screen` value from the store, so neither owns navigation state.
 
 import { useStore } from '../../store/useStore'
 import { Disclaimer } from '../layout/Disclaimer'
 import { SideNav } from './SideNav'
 import { SystemStatus } from './SystemStatus'
+import { TabBar } from './TabBar'
 import { OverviewScreen } from './screens/OverviewScreen'
 import { PortfolioScreen } from './screens/PortfolioScreen'
 import { AnalyzeStockScreen } from './screens/AnalyzeStockScreen'
@@ -34,6 +39,7 @@ export function AppShell() {
           {screen === 'opensource' && <OpenSourceScreen />}
         </main>
       </div>
+      <TabBar />
     </section>
   )
 }

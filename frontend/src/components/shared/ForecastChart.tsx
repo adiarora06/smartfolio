@@ -10,7 +10,7 @@
 // scenario lines. Reading it: half the modelled outcomes fall inside the dark
 // band, nine in ten inside the light one.
 
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { fmt, pct } from '../../lib/format'
 import type { StockForecast } from '../../types'
 
@@ -24,6 +24,10 @@ const PLOT_H = H - PAD.top - PAD.bottom
 export function ForecastChart({ forecast }: { forecast: StockForecast }) {
   const gradientId = useId()
   const [hover, setHover] = useState<number | null>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
+  // Touch has no hover: a finger must be down to scrub. Mouse keeps its
+  // hover-to-track behavior, so both pointer types feel native.
+  const scrubbing = useRef(false)
 
   const points = forecast.paths
   if (points.length < 2) return null
@@ -55,9 +59,40 @@ export function ForecastChart({ forecast }: { forecast: StockForecast }) {
   const active = hover === null ? points.length - 1 : hover
   const cursor = points[active]
 
+  /** Map a pointer's client x onto the nearest path index. */
+  const indexFromPointer = (clientX: number): number => {
+    const svg = svgRef.current
+    if (!svg) return active
+    const box = svg.getBoundingClientRect()
+    if (!box.width) return active
+    // Client px -> viewBox units (the SVG scales to its container).
+    const vbX = ((clientX - box.left) / box.width) * W
+    const ratio = (vbX - PAD.left) / PLOT_W
+    const i = Math.round(ratio * (points.length - 1))
+    return Math.max(0, Math.min(points.length - 1, i))
+  }
+
+  const onPointerDown = (e: React.PointerEvent<SVGRectElement>) => {
+    scrubbing.current = true
+    // Keep receiving moves even if the finger slides off the rect.
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+    setHover(indexFromPointer(e.clientX))
+  }
+
+  const onPointerMove = (e: React.PointerEvent<SVGRectElement>) => {
+    if (e.pointerType === 'mouse' || scrubbing.current) {
+      setHover(indexFromPointer(e.clientX))
+    }
+  }
+
+  const endScrub = () => {
+    scrubbing.current = false
+  }
+
   return (
     <figure style={{ margin: 0 }}>
       <svg
+        ref={svgRef}
         className="svgbox"
         viewBox={`0 0 ${W} ${H}`}
         role="img"
@@ -146,18 +181,21 @@ export function ForecastChart({ forecast }: { forecast: StockForecast }) {
           +{Math.round(forecast.days)}d
         </text>
 
-        {/* Invisible hit targets, drawn last so they sit above the bands. */}
-        {points.map((_, i) => (
-          <rect
-            key={i}
-            x={x(i) - PLOT_W / (points.length - 1) / 2}
-            y={PAD.top}
-            width={PLOT_W / (points.length - 1)}
-            height={PLOT_H}
-            fill="transparent"
-            onMouseEnter={() => setHover(i)}
-          />
-        ))}
+        {/* One overlay instead of per-point rects: a single hit area lets a
+            finger drag continuously across the cone. `touch-action: pan-y`
+            keeps vertical page scrolling while claiming horizontal drags. */}
+        <rect
+          x={PAD.left}
+          y={PAD.top}
+          width={PLOT_W}
+          height={PLOT_H}
+          fill="transparent"
+          style={{ touchAction: 'pan-y', cursor: 'crosshair' }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endScrub}
+          onPointerCancel={endScrub}
+        />
       </svg>
 
       <figcaption

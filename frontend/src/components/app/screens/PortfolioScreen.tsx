@@ -2,12 +2,13 @@
 // headline metrics, an allocation donut, and per-holding weight bars that all
 // recalculate live as you type.
 
+import { useState } from 'react'
 import { useStore } from '../../../store/useStore'
 import { usePortfolioAnalysis } from '../../../hooks/usePortfolioAnalysis'
 import { fmt, pct, title } from '../../../lib/format'
 import { AppHero, MetricCard, MetricGrid, Panel, PanelHead } from '../../shared/ui'
 import { DonutChart, type DonutSegment } from '../../shared/DonutChart'
-import type { AssetClass, HoldingType } from '../../../types'
+import type { AssetClass, Holding, HoldingType } from '../../../types'
 
 const ASSET_OPTIONS: Array<[AssetClass, string]> = [
   ['us_equity', 'US Equity'],
@@ -33,6 +34,107 @@ const ASSET_COLORS: Record<string, string> = {
 /** Asset-class display name ("US Equity", not the title-cased "Us Equity"). */
 const assetLabel = (k: string) =>
   k === 'us_equity' ? 'US Equity' : k === 'intl_equity' ? 'Intl Equity' : title(k)
+
+/** Phone layout for one holding: identity + value always visible, the rest
+ *  behind a disclosure. Replaces the 7-column table, which reflowed into
+ *  unlabeled inputs on a narrow screen. */
+function HoldingCard({
+  holding,
+  index,
+  total,
+}: {
+  holding: Holding
+  index: number
+  total: number
+}) {
+  const updateHolding = useStore((s) => s.updateHolding)
+  const removeHolding = useStore((s) => s.removeHolding)
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="hcard">
+      <div className="hcardTop">
+        <div>
+          <div className="hcardSym">{holding.symbol || '—'}</div>
+          <div className="hcardSub">
+            {holding.name || 'Unnamed'} · {pct(holding.value / (total || 1))}
+          </div>
+        </div>
+        <div className="hcardVal">{fmt.format(holding.value)}</div>
+        <button
+          className="hcardDisclose"
+          aria-expanded={open}
+          aria-label={open ? 'Collapse holding' : 'Edit holding'}
+          onClick={() => setOpen((v) => !v)}
+        >
+          {open ? '×' : 'Edit'}
+        </button>
+      </div>
+
+      {open && (
+        <div className="hcardBody">
+          <label>
+            Symbol
+            <input
+              value={holding.symbol}
+              onChange={(e) => updateHolding(index, 'symbol', e.target.value.toUpperCase())}
+            />
+          </label>
+          <label>
+            Name
+            <input
+              value={holding.name}
+              onChange={(e) => updateHolding(index, 'name', e.target.value)}
+            />
+          </label>
+          <label>
+            Value
+            <input
+              type="number"
+              inputMode="decimal"
+              value={holding.value}
+              onChange={(e) => updateHolding(index, 'value', Number(e.target.value))}
+            />
+          </label>
+          <label>
+            Type
+            <select
+              value={holding.type}
+              onChange={(e) => updateHolding(index, 'type', e.target.value as HoldingType)}
+            >
+              {TYPE_OPTIONS.map((t) => (
+                <option value={t} key={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Asset class
+            <select
+              value={holding.asset}
+              onChange={(e) => updateHolding(index, 'asset', e.target.value as AssetClass)}
+            >
+              {ASSET_OPTIONS.map(([value, label]) => (
+                <option value={value} key={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Sector
+            <input
+              value={holding.sector}
+              onChange={(e) => updateHolding(index, 'sector', e.target.value)}
+            />
+          </label>
+          <button onClick={() => removeHolding(index)}>Remove holding</button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function PortfolioScreen() {
   const holdings = useStore((s) => s.holdings)
@@ -213,6 +315,14 @@ export function PortfolioScreen() {
                   />
                   <button onClick={() => removeHolding(i)}>Remove</button>
                 </div>
+              ))}
+            </div>
+
+            {/* Phone layout. Both trees render; the mobile CSS layer shows one
+                (.table above 720px, .hcards below). */}
+            <div className="hcards">
+              {holdings.map((h, i) => (
+                <HoldingCard key={i} holding={h} index={i} total={total} />
               ))}
             </div>
           </div>

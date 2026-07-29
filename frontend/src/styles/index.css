@@ -31,3 +31,222 @@
 .list li.warn .insightStat{color:#b45309}
 .allocSplit{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center}
 @media(max-width:900px){.allocSplit{grid-template-columns:1fr}}
+
+/* ==========================================================================
+   MOBILE / NATIVE LAYER
+   Appended rather than merged into the minified base above: these rules are
+   overrides, and keeping them in one block makes the native-app surface
+   auditable. Breakpoint 720px matches the base file's phone breakpoint.
+   ========================================================================== */
+
+/* --- Touch hygiene (all viewports) ------------------------------------- */
+
+/* Hover styles must not stick after a tap. The base file declares
+   button:hover unguarded, so neutralize it on hover-less pointers. */
+@media (hover: none) {
+  button:hover { border-color: var(--line); background: #fff; }
+  button.primary:hover { background: var(--teal); }
+  button.dark:hover { background: var(--dark); }
+}
+
+/* iOS auto-zooms any focused field whose computed size is under 16px. */
+input, select, textarea { font-size: 16px; }
+
+/* Apple HIG minimum is 44pt; the base file sets 42px. */
+button, input, select, textarea { min-height: 44px; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Nested scrollers must not chain to the page/webview. */
+.chat, .table { overscroll-behavior: contain; }
+
+/* --- Safe areas + native shell ----------------------------------------- */
+
+.top { padding-top: env(safe-area-inset-top); }
+
+/* Capacitor sets no URL bar, so dvh == vh there; dvh still fixes mobile
+   Safari, where the base file's 100vh includes the collapsing chrome. */
+.hero { min-height: auto; }
+
+@media (min-width: 721px) {
+  .hero { min-height: calc(100dvh - 94px); }
+}
+
+/* --- Phone layout ------------------------------------------------------- */
+
+@media (max-width: 720px) {
+  /* .miniMetrics is the one grid with no phone override in the base file. */
+  .miniMetrics { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .miniMetrics .mini { padding: 8px; }
+  .miniMetrics .mini strong { font-size: 15px; }
+  .miniMetrics .mini span { font-size: 10px; }
+
+  .hero h1 { font-size: 32px; }
+  .hero p { font-size: 16px; }
+
+  /* backdrop-filter is a real per-frame paint cost on mobile Safari. */
+  .top { backdrop-filter: none; background: rgba(255, 255, 255, 0.98); }
+
+  /* Landing/setup chrome only — inside the app the tab bar navigates. */
+  .shell { padding: 14px 14px 0; }
+
+  .appHero { padding: 16px; }
+  .appHero h1 { font-size: 24px; }
+
+  .terminal { padding: 12px; border-radius: 12px; }
+  .svgbox { height: 200px; }
+}
+
+/* --- Bottom tab bar (replaces the sidebar on phones) -------------------- */
+
+.tabbar { display: none; }
+
+@media (max-width: 720px) {
+  .appShell { display: block; }
+  /* The sidebar stacked ABOVE content on phones — 7 nav buttons, a status
+     chip and a disclaimer before any real content. The tab bar replaces it;
+     its contents move to the header and the More tab. */
+  .appShell > aside { display: none; }
+
+  .tabbar {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .tabbar button {
+    display: grid;
+    justify-items: center;
+    gap: 3px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    min-height: 52px;
+    padding: 7px 2px;
+    font-size: 10.5px;
+    font-weight: 800;
+    color: var(--muted);
+    line-height: 1.15;
+  }
+  .tabbar button svg { width: 22px; height: 22px; }
+  .tabbar button.active { color: var(--teal); background: transparent; }
+
+  /* Clear the fixed bar (plus the home indicator). */
+  .appShell > main {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+}
+
+/* --- Holdings as cards (phones) ---------------------------------------- */
+/* The base .thead/.row grid is 7 columns; at <=720px the base file hides
+   .thead and reflows .row to 2 columns, leaving unlabeled inputs. These
+   rules drive the labeled card layout in PortfolioScreen instead. */
+
+.hcards { display: none; }
+
+@media (max-width: 720px) {
+  .table { display: none; }
+  .hcards { display: grid; gap: 10px; }
+
+  .hcard {
+    display: grid;
+    gap: 10px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+    background: var(--soft);
+  }
+  .hcardTop {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 10px;
+  }
+  .hcardSym { font-weight: 900; font-size: 16px; }
+  .hcardSub { color: var(--muted); font-size: 12px; }
+  .hcardVal { font-weight: 850; font-variant-numeric: tabular-nums; }
+  .hcardBody { display: grid; gap: 10px; }
+  .hcardBody label { font-size: 12px; }
+  .hcardDisclose {
+    min-height: 44px;
+    min-width: 44px;
+    border-radius: 10px;
+    padding: 0 10px;
+  }
+}
+
+/* --- "More" bottom sheet (phones) --------------------------------------- */
+
+.sheetScrim, .sheet { display: none; }
+
+@media (max-width: 720px) {
+  .sheetScrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 31;
+    background: rgba(15, 23, 42, 0.35);
+  }
+
+  .sheet {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(56px + env(safe-area-inset-bottom));
+    z-index: 32;
+    background: var(--card);
+    border-top: 1px solid var(--line);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.18);
+    max-height: 70dvh;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  .sheetGrip {
+    width: 38px;
+    height: 4px;
+    border-radius: 99px;
+    background: var(--line);
+    margin: 9px auto 4px;
+  }
+  .sheetBody { display: grid; gap: 8px; padding: 8px 14px 16px; }
+  .sheetBody > button { justify-content: flex-start; text-align: left; }
+  .sheetBody > button.active {
+    background: rgba(15, 118, 110, 0.09);
+    border-color: rgba(15, 118, 110, 0.45);
+  }
+}
+
+/* --- In-app density (phones) -------------------------------------------- */
+
+@media (max-width: 720px) {
+  /* Inside the app the tab bar navigates, so the landing links are dead
+     weight on every screen. Brand stays for identity; Home moves to More. */
+  .top.inApp .topnav { display: none; }
+  .top.inApp .topin { padding: 8px 14px; }
+  .top.inApp .mark { width: 32px; height: 32px; border-radius: 9px; }
+  .top.inApp .brand strong { font-size: 15px; }
+  .top.inApp .brand span { display: none; }
+
+  /* The base file drops .metrics to one column; four stacked cards is a lot
+     of scrolling for four numbers. 2x2 reads in one glance. */
+  .metrics { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .metric { padding: 12px; }
+  .metric strong { font-size: 19px; }
+  .metric span { font-size: 11px; }
+  .metric small { font-size: 11px; }
+
+  .stockMetrics { grid-template-columns: 1fr 1fr; }
+}

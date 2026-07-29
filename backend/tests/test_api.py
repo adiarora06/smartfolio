@@ -17,6 +17,30 @@ HOLDINGS = [
 ]
 
 
+def test_native_origin_allowed_alongside_configured(client):
+    """The iOS webview origin must survive SMARTFOLIO_CORS_ORIGINS being set.
+
+    That env var *replaces* the defaults, so the native scheme is unioned in
+    separately. Regression guard: if it moves into DEFAULT_CORS_ORIGINS, any
+    deploy that sets the env var (production does) locks the app out.
+    """
+    r = client.get(
+        "/health",
+        headers={"Origin": "capacitor://localhost"},
+    )
+    assert r.status_code == 200
+    assert r.headers.get("access-control-allow-origin") == "capacitor://localhost"
+
+
+def test_web_origin_still_allowed(client):
+    r = client.get("/health", headers={"Origin": "https://smartfolio-lemon.vercel.app"})
+    assert r.status_code == 200
+    assert (
+        r.headers.get("access-control-allow-origin")
+        == "https://smartfolio-lemon.vercel.app"
+    )
+
+
 def test_root(client):
     r = client.get("/")
     assert r.status_code == 200
