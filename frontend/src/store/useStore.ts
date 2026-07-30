@@ -159,6 +159,10 @@ const initialProfile = local.profile ?? { ...DEFAULT_PROFILE }
 const initialHoldings = local.holdings?.length ? local.holdings : demoHoldings()
 const initialStock = analyzeStock('AAPL', 30)
 
+/** Current path, or '' where there is no DOM (Node tests, SSR). */
+const initialPathname = (): string =>
+  typeof window === 'undefined' ? '' : window.location.pathname
+
 export const useStore = create<AppState>((set, get) => ({
   // The web build opens on the marketing landing page. Two exceptions:
   //   - native: an installed app has no one left to pitch, and launching into
@@ -169,7 +173,9 @@ export const useStore = create<AppState>((set, get) => ({
   //     hands out are not actually openable.
   // Set as initial state (not in an effect) so neither case flashes the
   // landing page first.
-  page: isNative || screenFromPath(window.location.pathname) ? 'app' : 'landing',
+  // The store is created at module scope, so this runs on import — guard the
+  // window access or importing the store throws under Node (tests, SSR).
+  page: isNative || screenFromPath(initialPathname()) ? 'app' : 'landing',
   screen: 'overview',
   setupStep: 0,
   stockTab: 'forecast',

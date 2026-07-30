@@ -1,6 +1,10 @@
 """API surface tests — every route's happy path plus the failure contracts."""
 from __future__ import annotations
 
+from fastapi.testclient import TestClient
+
+from app.main import create_app
+
 PROFILE = {
     "age": 30,
     "income": 90000,
@@ -17,19 +21,42 @@ HOLDINGS = [
 ]
 
 
-def test_native_origin_allowed_alongside_configured(client):
-    """The iOS webview origin must survive SMARTFOLIO_CORS_ORIGINS being set.
-
-    That env var *replaces* the defaults, so the native scheme is unioned in
-    separately. Regression guard: if it moves into DEFAULT_CORS_ORIGINS, any
-    deploy that sets the env var (production does) locks the app out.
-    """
+def test_native_origin_allowed_by_default(client):
+    """The iOS webview origin is allowed under the default configuration."""
     r = client.get(
         "/health",
         headers={"Origin": "capacitor://localhost"},
     )
     assert r.status_code == 200
     assert r.headers.get("access-control-allow-origin") == "capacitor://localhost"
+
+
+def test_native_origins_survive_configured_override(monkeypatch):
+    """The native schemes must survive SMARTFOLIO_CORS_ORIGINS being set.
+
+    That env var *replaces* the defaults, so the native schemes are unioned in
+    separately. This is the test that actually exercises that path: the
+    default-config tests above would still pass if the union were dropped and
+    the schemes were merely added to DEFAULT_CORS_ORIGINS — but production
+    sets the env var, so that arrangement would lock the app out.
+    """
+    monkeypatch.setenv("SMARTFOLIO_CORS_ORIGINS", "https://example.com")
+
+    # create_app() reads the env var, so build a fresh app under the override.
+    with TestClient(create_app()) as c:
+        for origin in (
+            "capacitor://localhost",
+            "ionic://localhost",
+            "https://example.com",
+        ):
+            r = c.get("/health", headers={"Origin": origin})
+            assert r.status_code == 200, origin
+            assert r.headers.get("access-control-allow-origin") == origin, origin
+
+        # The old default is gone — proof the env var really did replace it,
+        # which is what makes the union necessary in the first place.
+        r = c.get("/health", headers={"Origin": "https://smartfolio-lemon.vercel.app"})
+        assert r.headers.get("access-control-allow-origin") is None
 
 
 def test_web_origin_still_allowed(client):

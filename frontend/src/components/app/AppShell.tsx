@@ -83,6 +83,9 @@ function useIsWide(): boolean {
     () => typeof window !== 'undefined' && window.matchMedia('(min-width: 992px)').matches,
   )
   useEffect(() => {
+    // Same guard as the lazy initializer above — without it, mounting under
+    // Node (tests, SSR) throws on window.matchMedia.
+    if (typeof window === 'undefined') return
     const mq = window.matchMedia('(min-width: 992px)')
     const onChange = (e: MediaQueryListEvent) => setWide(e.matches)
     mq.addEventListener('change', onChange)
