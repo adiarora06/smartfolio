@@ -101,41 +101,26 @@ html {
 }
 
 /* --- Holdings as cards (phones) ---------------------------------------- */
-/* The base .thead/.row grid is 7 columns; at <=720px the base file hides
-   .thead and reflows .row to 2 columns, leaving unlabeled inputs. These
-   rules drive the labeled card layout in PortfolioScreen instead. */
+/* Holdings. The base .thead/.row grid is 7 columns and reflowed into
+   unlabeled inputs on a phone, so below 720px it is replaced by an Ionic
+   list (swipe-to-delete, native pickers) — see HoldingCard. */
 
 .hcards { display: none; }
 
 @media (max-width: 720px) {
   .table { display: none; }
-  .hcards { display: grid; gap: 10px; }
+  .hcards { display: block; }
 
-  .hcard {
-    display: grid;
-    gap: 10px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 12px;
-    background: var(--soft);
-  }
-  .hcardTop {
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    align-items: center;
-    gap: 10px;
-  }
+  .hcards ion-item { --padding-start: 4px; --inner-padding-end: 4px; }
   .hcardSym { font-weight: 900; font-size: 16px; }
-  .hcardSub { color: var(--muted); font-size: 12px; }
   .hcardVal { font-weight: 850; font-variant-numeric: tabular-nums; }
-  .hcardBody { display: grid; gap: 10px; }
-  .hcardBody label { font-size: 12px; }
-  .hcardDisclose {
-    min-height: 44px;
-    min-width: 44px;
-    border-radius: 10px;
-    padding: 0 10px;
+
+  /* Expanded editor sits inset under its row so it reads as a detail pane. */
+  .hcardBody {
+    background: var(--soft);
+    border-left: 3px solid var(--ion-color-primary);
   }
+  .hcardBody ion-item { --background: transparent; }
 }
 
 /* --- Analyze Stock terminal --------------------------------------------- */
@@ -300,10 +285,12 @@ ion-content > .terminal {
 
 /* Split-pane main column. Ionic sizes its main child; this wrapper exists so
    the tabs tree has a direct-child host carrying contentId="main". */
+/* Ionic positions ion-tabs absolutely inside this box, so it only needs to be
+   a correctly sized positioned ancestor — adding flex here made the tabs
+   layout smaller than the viewport. */
 .splitMain {
   position: relative;
   flex: 1 1 auto;
   height: 100%;
   min-width: 0;
-  contain: layout size style;
 }

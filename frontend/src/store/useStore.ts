@@ -40,7 +40,7 @@ import { computeImpact } from '../lib/calculations/impact'
 import { buildSavedMemo } from '../lib/ai/memo'
 import { answerAdvisor } from '../lib/ai/advisor'
 import { isNative, successFeedback } from '../lib/native'
-import { navigateTo } from '../lib/nav'
+import { navigateTo, screenFromPath } from '../lib/nav'
 import {
   apiAnalyzeStock,
   apiAskAdvisor,
@@ -160,12 +160,16 @@ const initialHoldings = local.holdings?.length ? local.holdings : demoHoldings()
 const initialStock = analyzeStock('AAPL', 30)
 
 export const useStore = create<AppState>((set, get) => ({
-  // The web build opens on the marketing landing page. The native app opens
-  // straight into the working dashboard: an installed app has no one left to
-  // pitch, and launching into marketing copy is exactly what Guideline 4.2
-  // reads as a repackaged website. Set as initial state (not in an effect) so
-  // there is no landing-page flash on launch.
-  page: isNative ? 'app' : 'landing',
+  // The web build opens on the marketing landing page. Two exceptions:
+  //   - native: an installed app has no one left to pitch, and launching into
+  //     marketing copy is exactly what Guideline 4.2 reads as a repackaged
+  //     website, so it opens straight into the dashboard;
+  //   - a deep link to an app route (/portfolio, /stock, …) must land on that
+  //     screen rather than the landing page — otherwise the URLs the router
+  //     hands out are not actually openable.
+  // Set as initial state (not in an effect) so neither case flashes the
+  // landing page first.
+  page: isNative || screenFromPath(window.location.pathname) ? 'app' : 'landing',
   screen: 'overview',
   setupStep: 0,
   stockTab: 'forecast',

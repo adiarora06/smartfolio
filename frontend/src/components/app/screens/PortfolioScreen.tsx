@@ -6,6 +6,18 @@ import { useState } from 'react'
 import { useStore } from '../../../store/useStore'
 import { usePortfolioAnalysis } from '../../../hooks/usePortfolioAnalysis'
 import { fmt, pct, title } from '../../../lib/format'
+import {
+  IonInput,
+  IonItem,
+  IonItemOption,
+  IonItemOptions,
+  IonItemSliding,
+  IonLabel,
+  IonList,
+  IonNote,
+  IonSelect,
+  IonSelectOption,
+} from '@ionic/react'
 import { MetricCard, MetricGrid, Panel, PanelHead } from '../../shared/ui'
 import { AppPage } from '../../shared/AppPage'
 import { DonutChart, type DonutSegment } from '../../shared/DonutChart'
@@ -53,87 +65,101 @@ function HoldingCard({
   const [open, setOpen] = useState(false)
 
   return (
-    <div className="hcard">
-      <div className="hcardTop">
-        <div>
-          <div className="hcardSym">{holding.symbol || '—'}</div>
-          <div className="hcardSub">
-            {holding.name || 'Unnamed'} · {pct(holding.value / (total || 1))}
-          </div>
-        </div>
-        <div className="hcardVal">{fmt.format(holding.value)}</div>
-        <button
-          className="hcardDisclose"
-          aria-expanded={open}
-          aria-label={open ? 'Collapse holding' : 'Edit holding'}
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? '×' : 'Edit'}
-        </button>
-      </div>
+    <>
+      {/* Swipe left to delete — the iOS list gesture, so no persistent
+          Remove button competing with the data for width. */}
+      <IonItemSliding>
+        <IonItem button detail={false} onClick={() => setOpen((v) => !v)}>
+          <IonLabel>
+            <h2 className="hcardSym">{holding.symbol || '—'}</h2>
+            <p>
+              {holding.name || 'Unnamed'} · {pct(holding.value / (total || 1))}
+            </p>
+          </IonLabel>
+          <IonNote slot="end" className="hcardVal">
+            {fmt.format(holding.value)}
+          </IonNote>
+        </IonItem>
+
+        <IonItemOptions side="end">
+          <IonItemOption color="danger" onClick={() => removeHolding(index)}>
+            Delete
+          </IonItemOption>
+        </IonItemOptions>
+      </IonItemSliding>
 
       {open && (
         <div className="hcardBody">
-          <label>
-            Symbol
-            <input
+          <IonItem>
+            <IonInput
+              label="Symbol"
+              labelPlacement="stacked"
               value={holding.symbol}
-              onChange={(e) => updateHolding(index, 'symbol', e.target.value.toUpperCase())}
+              onIonInput={(e) =>
+                updateHolding(index, 'symbol', (e.detail.value ?? '').toUpperCase())
+              }
             />
-          </label>
-          <label>
-            Name
-            <input
+          </IonItem>
+          <IonItem>
+            <IonInput
+              label="Name"
+              labelPlacement="stacked"
               value={holding.name}
-              onChange={(e) => updateHolding(index, 'name', e.target.value)}
+              onIonInput={(e) => updateHolding(index, 'name', e.detail.value ?? '')}
             />
-          </label>
-          <label>
-            Value
-            <input
+          </IonItem>
+          <IonItem>
+            <IonInput
+              label="Value"
+              labelPlacement="stacked"
               type="number"
-              inputMode="decimal"
+              inputmode="decimal"
               value={holding.value}
-              onChange={(e) => updateHolding(index, 'value', Number(e.target.value))}
+              onIonInput={(e) => updateHolding(index, 'value', Number(e.detail.value ?? 0))}
             />
-          </label>
-          <label>
-            Type
-            <select
+          </IonItem>
+          {/* IonSelect opens the native-style picker instead of a <select>. */}
+          <IonItem>
+            <IonSelect
+              label="Type"
+              labelPlacement="stacked"
+              interface="action-sheet"
               value={holding.type}
-              onChange={(e) => updateHolding(index, 'type', e.target.value as HoldingType)}
+              onIonChange={(e) => updateHolding(index, 'type', e.detail.value as HoldingType)}
             >
               {TYPE_OPTIONS.map((t) => (
-                <option value={t} key={t}>
+                <IonSelectOption value={t} key={t}>
                   {t}
-                </option>
+                </IonSelectOption>
               ))}
-            </select>
-          </label>
-          <label>
-            Asset class
-            <select
+            </IonSelect>
+          </IonItem>
+          <IonItem>
+            <IonSelect
+              label="Asset class"
+              labelPlacement="stacked"
+              interface="action-sheet"
               value={holding.asset}
-              onChange={(e) => updateHolding(index, 'asset', e.target.value as AssetClass)}
+              onIonChange={(e) => updateHolding(index, 'asset', e.detail.value as AssetClass)}
             >
               {ASSET_OPTIONS.map(([value, label]) => (
-                <option value={value} key={value}>
+                <IonSelectOption value={value} key={value}>
                   {label}
-                </option>
+                </IonSelectOption>
               ))}
-            </select>
-          </label>
-          <label>
-            Sector
-            <input
+            </IonSelect>
+          </IonItem>
+          <IonItem lines="none">
+            <IonInput
+              label="Sector"
+              labelPlacement="stacked"
               value={holding.sector}
-              onChange={(e) => updateHolding(index, 'sector', e.target.value)}
+              onIonInput={(e) => updateHolding(index, 'sector', e.detail.value ?? '')}
             />
-          </label>
-          <button onClick={() => removeHolding(index)}>Remove holding</button>
+          </IonItem>
         </div>
       )}
-    </div>
+    </>
   )
 }
 
@@ -319,11 +345,11 @@ export function PortfolioScreen() {
 
             {/* Phone layout. Both trees render; the mobile CSS layer shows one
                 (.table above 720px, .hcards below). */}
-            <div className="hcards">
+            <IonList className="hcards" lines="full">
               {holdings.map((h, i) => (
                 <HoldingCard key={i} holding={h} index={i} total={total} />
               ))}
-            </div>
+            </IonList>
           </div>
       </Panel>
     </AppPage>
