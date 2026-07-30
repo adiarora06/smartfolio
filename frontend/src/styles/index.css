@@ -100,54 +100,6 @@ html {
   .svgbox { height: 200px; }
 }
 
-/* --- Bottom tab bar (replaces the sidebar on phones) -------------------- */
-
-.tabbar { display: none; }
-
-@media (max-width: 720px) {
-  .appShell { display: block; }
-  /* The sidebar stacked ABOVE content on phones — 7 nav buttons, a status
-     chip and a disclaimer before any real content. The tab bar replaces it;
-     its contents move to the header and the More tab. */
-  .appShell > aside { display: none; }
-
-  .tabbar {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 30;
-    background: rgba(255, 255, 255, 0.97);
-    backdrop-filter: blur(12px);
-    border-top: 1px solid var(--line);
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  .tabbar button {
-    display: grid;
-    justify-items: center;
-    gap: 3px;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    min-height: 52px;
-    padding: 7px 2px;
-    font-size: 10.5px;
-    font-weight: 800;
-    color: var(--muted);
-    line-height: 1.15;
-  }
-  .tabbar button svg { width: 22px; height: 22px; }
-  .tabbar button.active { color: var(--teal); background: transparent; }
-
-  /* Clear the fixed bar (plus the home indicator). */
-  .appShell > main {
-    padding-bottom: calc(64px + env(safe-area-inset-bottom));
-  }
-}
-
 /* --- Holdings as cards (phones) ---------------------------------------- */
 /* The base .thead/.row grid is 7 columns; at <=720px the base file hides
    .thead and reflows .row to 2 columns, leaving unlabeled inputs. These
@@ -186,71 +138,6 @@ html {
   }
 }
 
-/* --- "More" bottom sheet (phones) --------------------------------------- */
-
-.sheetScrim, .sheet { display: none; }
-
-@media (max-width: 720px) {
-  .sheetScrim {
-    display: block;
-    position: fixed;
-    inset: 0;
-    z-index: 31;
-    background: rgba(15, 23, 42, 0.35);
-  }
-
-  .sheet {
-    display: block;
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: calc(56px + env(safe-area-inset-bottom));
-    z-index: 32;
-    background: var(--card);
-    border-top: 1px solid var(--line);
-    border-radius: 16px 16px 0 0;
-    box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.18);
-    max-height: 70dvh;
-    overflow: auto;
-    overscroll-behavior: contain;
-  }
-  .sheetGrip {
-    width: 38px;
-    height: 4px;
-    border-radius: 99px;
-    background: var(--line);
-    margin: 9px auto 4px;
-  }
-  .sheetBody { display: grid; gap: 8px; padding: 8px 14px 16px; }
-  .sheetBody > button { justify-content: flex-start; text-align: left; }
-  .sheetBody > button.active {
-    background: rgba(15, 118, 110, 0.09);
-    border-color: rgba(15, 118, 110, 0.45);
-  }
-}
-
-/* --- In-app density (phones) -------------------------------------------- */
-
-@media (max-width: 720px) {
-  /* Inside the app the tab bar navigates, so the landing links are dead
-     weight on every screen. Brand stays for identity; Home moves to More. */
-  .top.inApp .topnav { display: none; }
-  .top.inApp .topin { padding: 8px 14px; }
-  .top.inApp .mark { width: 32px; height: 32px; border-radius: 9px; }
-  .top.inApp .brand strong { font-size: 15px; }
-  .top.inApp .brand span { display: none; }
-
-  /* The base file drops .metrics to one column; four stacked cards is a lot
-     of scrolling for four numbers. 2x2 reads in one glance. */
-  .metrics { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .metric { padding: 12px; }
-  .metric strong { font-size: 19px; }
-  .metric span { font-size: 11px; }
-  .metric small { font-size: 11px; }
-
-  .stockMetrics { grid-template-columns: 1fr 1fr; }
-}
-
 /* --- Analyze Stock terminal --------------------------------------------- */
 
 .termHead { display: flex; justify-content: space-between; gap: 12px; }
@@ -264,7 +151,9 @@ html {
 
   /* Two inputs + two buttons stacked full-width consumed a whole screen
      before the results. Paired rows keep the controls above the fold. */
-  #stock .formgrid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  /* Scoped to ion-content so the setup flow (web surface) keeps its own
+     single-column form. The old #stock id vanished with the AppPage refactor. */
+  ion-content .formgrid { grid-template-columns: 1fr 1fr; gap: 10px; }
 
   /* Seven tabs cannot fit; scroll them horizontally like iOS segmented
      controls rather than wrapping into three ragged rows. */
@@ -276,4 +165,145 @@ html {
   }
   .tabs::-webkit-scrollbar { display: none; }
   .tabs button { flex: 0 0 auto; white-space: nowrap; }
+}
+
+/* ==========================================================================
+   IONIC INTEGRATION
+   Ionic owns the app chrome (nav bar, tab bar, scroll container) now, so the
+   panel/grid styles below only need to lay out *inside* IonContent. The old
+   .screen wrapper and custom tab bar are gone.
+   ========================================================================== */
+
+/* Screens used to be display:grid via `.screen.active`; they are IonContent
+   children now, so re-establish the vertical rhythm. */
+ion-content .metrics,
+ion-content .grid2,
+ion-content .panel,
+ion-content .terminal,
+ion-content .connGrid {
+  margin-bottom: 14px;
+}
+
+ion-content > .panel:last-child,
+ion-content > .terminal:last-child {
+  margin-bottom: 0;
+}
+
+/* Horizontal gutter matching ion-card's inset. */
+ion-content .metrics,
+ion-content .grid2,
+ion-content > .panel,
+ion-content > .terminal {
+  margin-left: 12px;
+  margin-right: 12px;
+}
+
+/* Subtitle + action row under the collapsing large title. */
+.pageIntro {
+  padding: 0 16px 4px;
+}
+.pageSubtitle {
+  margin: 0 0 10px;
+  color: var(--ion-color-step-500);
+  font-size: 15px;
+  line-height: 1.45;
+}
+.pageActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+/* The web surface (landing + setup) keeps the original document styling; it is
+   deliberately not an Ionic page. IonApp would otherwise trap its scroll. */
+.webSurface {
+  height: 100%;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Desktop: the split-pane sidebar navigates, so hide the tab bar. Matches
+   Ionic's `lg` breakpoint (992px) used by IonSplitPane when="lg". */
+@media (min-width: 992px) {
+  ion-tab-bar { display: none; }
+}
+
+/* Phone: the More screen's trailing disclaimer note. */
+.disclaimerNote {
+  display: block;
+  padding: 4px 20px 24px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* Holdings cards are the phone layout; on desktop the table returns. */
+@media (min-width: 721px) {
+  .hcards { display: none; }
+  .table { display: block; }
+}
+
+/* --- Phone density inside IonContent ------------------------------------ */
+/* (The former .top.inApp rules are gone with the web TopBar: in app mode the
+   Ionic nav bar owns the header, so there is nothing left to compact.) */
+
+@media (max-width: 720px) {
+  /* Four stacked full-width cards is a lot of scrolling for four numbers. */
+  ion-content .metrics { grid-template-columns: 1fr 1fr; gap: 10px; }
+  ion-content .metric { padding: 12px; }
+  ion-content .metric strong { font-size: 19px; }
+  ion-content .metric span { font-size: 11px; }
+  ion-content .metric small { font-size: 11px; }
+
+  ion-content .stockMetrics { grid-template-columns: 1fr 1fr; }
+
+  /* A hamburger next to a tab bar is redundant; the menu is disabled below
+     the split-pane breakpoint (see AppShell), so the button auto-hides. */
+  ion-menu-button { display: none; }
+}
+
+/* IonRange stack in the scenario controls. */
+.rangeStack {
+  display: grid;
+  gap: 4px;
+}
+.rangeStack ion-range {
+  --bar-height: 5px;
+  --knob-size: 26px;
+  padding-inline: 0;
+}
+
+/* The Analyze segmented control sits inside the dark terminal panel. */
+.terminal ion-segment {
+  --background: rgba(255, 255, 255, 0.07);
+}
+.terminal ion-segment-button {
+  --color: #bfdbfe;
+  --color-checked: #ffffff;
+  /* iOS mode names this --indicator-color (the sliding pill). It defaults to
+     near-white, which rendered the white checked label invisible. */
+  --indicator-color: #0f766e;
+  --indicator-box-shadow: none;
+  min-width: 116px;
+}
+
+/* Three projection horizons: 3-across on desktop, 3 tight columns on phone
+   (they are short numbers, so they still fit where 4 metric cards would not). */
+.metrics3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 720px) {
+  ion-content .metrics3 { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  ion-content .metrics3 .metric { padding: 10px 8px; }
+  ion-content .metrics3 .metric strong { font-size: 15px; }
+  ion-content .metrics3 .metric span { font-size: 10px; }
+  ion-content .metrics3 .metric small { font-size: 10px; }
+}
+
+/* Split-pane main column. Ionic sizes its main child; this wrapper exists so
+   the tabs tree has a direct-child host carrying contentId="main". */
+.splitMain {
+  position: relative;
+  flex: 1 1 auto;
+  height: 100%;
+  min-width: 0;
+  contain: layout size style;
 }

@@ -1,7 +1,13 @@
-// Top-level shell. Routes between the three top-level pages based on store state.
-// (A single-source-of-truth `page` value replaces the prototype's show/hide DOM.)
+// Top-level shell.
+//
+// `page` still switches between the three top-level surfaces, because landing
+// and setup are marketing/onboarding flows rather than app screens — they want
+// page scroll, not an IonPage with a nav bar. Everything under `app` is Ionic
+// and route-driven (see AppShell).
 
 import { useEffect } from 'react'
+import { IonApp } from '@ionic/react'
+import { IonReactRouter } from '@ionic/react-router'
 import { useStore } from './store/useStore'
 import { hideSplash } from './lib/native'
 import { TopBar } from './components/layout/TopBar'
@@ -40,13 +46,21 @@ export default function App() {
   }, [checkBackend])
 
   return (
-    <>
-      <TopBar />
-      <div className="shell">
-        {page === 'landing' && <LandingPage />}
-        {page === 'setup' && <SetupFlow />}
-        {page === 'app' && <AppShell />}
-      </div>
-    </>
+    <IonApp>
+      <IonReactRouter>
+        {page === 'app' ? (
+          <AppShell />
+        ) : (
+          // Marketing surfaces keep the plain document flow and the web top bar.
+          <div className="webSurface">
+            <TopBar />
+            <div className="shell">
+              {page === 'landing' && <LandingPage />}
+              {page === 'setup' && <SetupFlow />}
+            </div>
+          </div>
+        )}
+      </IonReactRouter>
+    </IonApp>
   )
 }

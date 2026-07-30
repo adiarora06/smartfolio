@@ -6,7 +6,8 @@ import { useState } from 'react'
 import { useStore } from '../../../store/useStore'
 import { usePortfolioAnalysis } from '../../../hooks/usePortfolioAnalysis'
 import { fmt, pct, title } from '../../../lib/format'
-import { AppHero, MetricCard, MetricGrid, Panel, PanelHead } from '../../shared/ui'
+import { MetricCard, MetricGrid, Panel, PanelHead } from '../../shared/ui'
+import { AppPage } from '../../shared/AppPage'
 import { DonutChart, type DonutSegment } from '../../shared/DonutChart'
 import type { AssetClass, Holding, HoldingType } from '../../../types'
 
@@ -178,18 +179,16 @@ export function PortfolioScreen() {
     .slice(0, 6)
 
   return (
-    <section className="screen active" id="portfolio">
-      <AppHero
-        title="Portfolio"
-        subtitle="Edit holdings — everything recalculates instantly."
-        actions={
-          <>
-            <button onClick={addHolding}>Add Holding</button>
-            <button onClick={resetHoldings}>Reset Demo</button>
-          </>
-        }
-      />
-
+    <AppPage
+      title="Portfolio"
+      subtitle="Edit holdings — everything recalculates instantly."
+      actions={
+        <>
+          <button onClick={addHolding}>Add Holding</button>
+          <button onClick={resetHoldings}>Reset Demo</button>
+        </>
+      }
+    >
       <MetricGrid>
         <MetricCard
           label="Total Value"
@@ -327,6 +326,6 @@ export function PortfolioScreen() {
             </div>
           </div>
       </Panel>
-    </section>
+    </AppPage>
   )
 }

@@ -40,6 +40,7 @@ import { computeImpact } from '../lib/calculations/impact'
 import { buildSavedMemo } from '../lib/ai/memo'
 import { answerAdvisor } from '../lib/ai/advisor'
 import { isNative, successFeedback } from '../lib/native'
+import { navigateTo } from '../lib/nav'
 import {
   apiAnalyzeStock,
   apiAskAdvisor,
@@ -123,6 +124,8 @@ interface AppState {
   goToPage: (page: Page) => void
   openDemo: () => void
   setScreen: (screen: Screen) => void
+  /** Set `screen` without navigating (router -> store sync only). */
+  syncScreen: (screen: Screen) => void
   setStockTab: (tab: StockTab) => void
   nextSetupStep: () => void
   prevSetupStep: () => void
@@ -236,7 +239,15 @@ export const useStore = create<AppState>((set, get) => ({
 
   goToPage: (page) => set({ page }),
   openDemo: () => set({ page: 'app', screen: 'overview' }),
-  setScreen: (screen) => set({ screen }),
+  // Navigate *and* set state. The route change is what produces the native
+  // push transition; ScreenSync then confirms `screen` from the URL, so
+  // swipe-back and browser-back stay consistent with this value.
+  setScreen: (screen) => {
+    set({ screen })
+    navigateTo(screen)
+  },
+  /** State-only setter used by ScreenSync — must not navigate (would loop). */
+  syncScreen: (screen) => set({ screen }),
   setStockTab: (stockTab) => set({ stockTab }),
   nextSetupStep: () =>
     set((s) =>

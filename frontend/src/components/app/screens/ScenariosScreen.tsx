@@ -5,7 +5,9 @@ import { useState } from 'react'
 import { usePortfolioAnalysis } from '../../../hooks/usePortfolioAnalysis'
 import { projectScenario, type ScenarioProjection } from '../../../lib/calculations/scenario'
 import { fmt, pct } from '../../../lib/format'
-import { AppHero, Panel, PanelHead } from '../../shared/ui'
+import { IonNote, IonRange } from '@ionic/react'
+import { Panel, PanelHead } from '../../shared/ui'
+import { AppPage } from '../../shared/AppPage'
 
 /** Two-line SVG projection chart: with contributions vs growth only. */
 function ProjectionChart({ projection }: { projection: ScenarioProjection }) {
@@ -58,47 +60,50 @@ export function ScenariosScreen() {
   const projection = projectScenario(analysis, { contribution, returnAdj, rebalance })
 
   return (
-    <section className="screen active" id="scenarios">
-      <AppHero title="Scenario lab" subtitle="Drag the sliders — projections update live." />
+    <AppPage title="Scenarios" subtitle="Drag the sliders — projections update live.">
       <div className="grid2">
         <Panel>
           <PanelHead title="Controls" />
-          <div className="body">
-            <label>
-              Monthly contribution <span>{fmt.format(contribution)}</span>
-              <input
-                type="range"
-                min={0}
-                max={5000}
-                step={50}
-                value={contribution}
-                onChange={(e) => setContribution(Number(e.target.value))}
-              />
-            </label>
-            <br />
-            <label>
-              Return adjustment <span>{(returnAdj >= 0 ? '+' : '') + pct(returnAdj)}</span>
-              <input
-                type="range"
-                min={-8}
-                max={8}
-                step={0.5}
-                value={returnPts}
-                onChange={(e) => setReturnPts(Number(e.target.value))}
-              />
-            </label>
-            <br />
-            <label>
-              Rebalance intensity <span>{pct(rebalance, 0)}</span>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={5}
-                value={rebalPts}
-                onChange={(e) => setRebalPts(Number(e.target.value))}
-              />
-            </label>
+          {/* IonRange rather than <input type=range>: bigger touch target,
+              iOS-styled knob, and a live pin while dragging. */}
+          <div className="body rangeStack">
+            <IonRange
+              label="Monthly contribution"
+              labelPlacement="stacked"
+              min={0}
+              max={5000}
+              step={50}
+              value={contribution}
+              onIonInput={(e) => setContribution(Number(e.detail.value))}
+            >
+              <IonNote slot="end">{fmt.format(contribution)}</IonNote>
+            </IonRange>
+
+            <IonRange
+              label="Return adjustment"
+              labelPlacement="stacked"
+              min={-8}
+              max={8}
+              step={0.5}
+              value={returnPts}
+              onIonInput={(e) => setReturnPts(Number(e.detail.value))}
+            >
+              <IonNote slot="end">
+                {(returnAdj >= 0 ? '+' : '') + pct(returnAdj)}
+              </IonNote>
+            </IonRange>
+
+            <IonRange
+              label="Rebalance intensity"
+              labelPlacement="stacked"
+              min={0}
+              max={100}
+              step={5}
+              value={rebalPts}
+              onIonInput={(e) => setRebalPts(Number(e.detail.value))}
+            >
+              <IonNote slot="end">{pct(rebalance, 0)}</IonNote>
+            </IonRange>
           </div>
         </Panel>
         <Panel>
@@ -116,7 +121,9 @@ export function ScenariosScreen() {
           />
           <div className="body" style={{ display: 'grid', gap: 14 }}>
             <ProjectionChart projection={projection} />
-            <div className="metrics" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
+            {/* No inline grid override: an inline style beats the responsive
+                rule and pushed the three horizons off-screen on a phone. */}
+            <div className="metrics metrics3">
               {projection.points.map(({ years, value }) => (
                 <div className="metric" key={years}>
                   <span>
@@ -130,6 +137,6 @@ export function ScenariosScreen() {
           </div>
         </Panel>
       </div>
-    </section>
+    </AppPage>
   )
 }

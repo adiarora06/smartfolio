@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../../store/useStore'
-import { Panel, PanelHead, AppHero } from '../../shared/ui'
+import { Panel, PanelHead } from '../../shared/ui'
+import { AppPage } from '../../shared/AppPage'
 
 const SHORTCUTS: Array<[prompt: string, label: string]> = [
   ['What is my biggest diversification issue?', 'Biggest risk'],
@@ -41,11 +42,7 @@ export function AdvisorScreen() {
   }
 
   return (
-    <section className="screen active" id="advisor">
-      <AppHero
-        title="AI advisor"
-        subtitle="Ask anything — answers grounded in your actual numbers."
-      />
+    <AppPage title="Advisor" subtitle="Ask anything — answers grounded in your actual numbers.">
       <div className="grid2">
         <Panel>
           <PanelHead title="Conversation" />
@@ -87,6 +84,6 @@ export function AdvisorScreen() {
           </div>
         </Panel>
       </div>
-    </section>
+    </AppPage>
   )
 }

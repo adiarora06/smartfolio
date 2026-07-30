@@ -10,7 +10,8 @@
 
 import { useState } from 'react'
 import { useStore } from '../../../store/useStore'
-import { AppHero, Panel, PanelHead } from '../../shared/ui'
+import { Panel, PanelHead } from '../../shared/ui'
+import { AppPage } from '../../shared/AppPage'
 import { openExternal } from '../../../lib/native'
 
 const REPO_URL = 'https://github.com/adiarora06/smartfolio'
@@ -153,15 +154,11 @@ export function OpenSourceScreen() {
   const [selected, setSelected] = useState<string | null>(null)
 
   return (
-    <section className="screen active" id="opensource">
-      <AppHero
-        title="Open source"
-        subtitle="How SmartFolio works under the hood — the agent network, data flow, and design rules. Kept out of the everyday workflow on purpose."
-        actions={
-          <button onClick={() => void openExternal(REPO_URL)}>View on GitHub</button>
-        }
-      />
-
+    <AppPage
+      title="Open Source"
+      subtitle="How SmartFolio works under the hood — the agent pipeline, data flow, and design rules."
+      actions={<button onClick={() => void openExternal(REPO_URL)}>View on GitHub</button>}
+    >
       <section className="terminal">
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
           <div>
@@ -231,6 +228,6 @@ export function OpenSourceScreen() {
           </div>
         </Panel>
       </div>
-    </section>
+    </AppPage>
   )
 }

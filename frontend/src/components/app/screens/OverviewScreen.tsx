@@ -3,7 +3,8 @@
 import { useStore } from '../../../store/useStore'
 import { usePortfolioAnalysis } from '../../../hooks/usePortfolioAnalysis'
 import { fmt, pct, title } from '../../../lib/format'
-import { AppHero, MetricCard, MetricGrid, Panel, PanelHead } from '../../shared/ui'
+import { MetricCard, MetricGrid, Panel, PanelHead } from '../../shared/ui'
+import { AppPage } from '../../shared/AppPage'
 import { AllocationBars } from '../../shared/AllocationBars'
 import { InsightList, type InsightItem } from '../../shared/InsightList'
 
@@ -12,6 +13,13 @@ export function OverviewScreen() {
   const holdings = useStore((s) => s.holdings)
   const stock = useStore((s) => s.stock)
   const setScreen = useStore((s) => s.setScreen)
+  const checkBackend = useStore((s) => s.checkBackend)
+
+  // Pull-to-refresh re-probes the backend, which is the meaningful refresh
+  // here: the portfolio numbers are derived locally and already live.
+  const refresh = async () => {
+    await checkBackend()
+  }
 
   // Stat-first insight items straight from the structured findings — the
   // number leads, the words stay short.
@@ -40,20 +48,19 @@ export function OverviewScreen() {
   }
 
   return (
-    <section className="screen active" id="overview">
-      <AppHero
-        title="SmartFolio command center"
-        subtitle="Your portfolio at a glance — value, risk, allocation, next actions."
-        actions={
-          <>
-            <button onClick={() => setScreen('stock')}>Analyze Stock</button>
-            <button className="primary" onClick={() => setScreen('connections')}>
-              Connect Apps
-            </button>
-          </>
-        }
-      />
-
+    <AppPage
+      title="Overview"
+      subtitle="Your portfolio at a glance — value, risk, allocation, next actions."
+      onRefresh={refresh}
+      actions={
+        <>
+          <button onClick={() => setScreen('stock')}>Analyze Stock</button>
+          <button className="primary" onClick={() => setScreen('connections')}>
+            Connect Apps
+          </button>
+        </>
+      }
+    >
       <MetricGrid>
         <MetricCard label="Portfolio Value" value={fmt.format(analysis.value)} sub={`${holdings.length} holdings`} />
         <MetricCard label="Risk Profile" value={title(analysis.riskProfileName)} sub={`Score ${analysis.riskScore.toFixed(4)}`} />
@@ -75,6 +82,6 @@ export function OverviewScreen() {
           </div>
         </Panel>
       </div>
-    </section>
+    </AppPage>
   )
 }

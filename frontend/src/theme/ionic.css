@@ -1,0 +1,121 @@
+/* Ionic theming — map Ionic's design tokens onto SmartFolio's palette.
+   Without this the app looks like stock Ionic; with it, the native components
+   inherit the same teal/slate identity as the web build. Values mirror the
+   :root variables in styles/index.css. */
+
+:root {
+  /* Brand (teal) — primary actions, active tabs, focus. */
+  --ion-color-primary: #0f766e;
+  --ion-color-primary-rgb: 15, 118, 110;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #0b5f59;
+  --ion-color-primary-tint: #2a8a82;
+
+  /* Secondary (blue) — target/reference series in charts and bars. */
+  --ion-color-secondary: #1d4ed8;
+  --ion-color-secondary-rgb: 29, 78, 216;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-shade: #1a45be;
+  --ion-color-secondary-tint: #3460dc;
+
+  /* Warning (amber) — concentration flags, stale data. */
+  --ion-color-warning: #b45309;
+  --ion-color-warning-rgb: 180, 83, 9;
+  --ion-color-warning-contrast: #ffffff;
+  --ion-color-warning-shade: #9e4908;
+  --ion-color-warning-tint: #bc6422;
+
+  --ion-color-success: #15803d;
+  --ion-color-success-rgb: 21, 128, 61;
+  --ion-color-danger: #b91c1c;
+  --ion-color-danger-rgb: 185, 28, 28;
+
+  /* Surfaces. Ionic drives page/card/toolbar backgrounds from these. */
+  --ion-background-color: #f4f7fb;
+  --ion-background-color-rgb: 244, 247, 251;
+  --ion-text-color: #101828;
+  --ion-text-color-rgb: 16, 24, 40;
+
+  --ion-card-background: #ffffff;
+  --ion-item-background: #ffffff;
+  --ion-toolbar-background: rgba(255, 255, 255, 0.94);
+  --ion-tab-bar-background: rgba(255, 255, 255, 0.96);
+  --ion-border-color: #d9e3ee;
+
+  /* Ionic's stepped greys, tuned to the slate ramp we already use. */
+  --ion-color-step-50: #eef2f8;
+  --ion-color-step-100: #e4eaf3;
+  --ion-color-step-150: #dae2ee;
+  --ion-color-step-200: #d0dae9;
+  --ion-color-step-500: #667085;
+  --ion-color-step-850: #26303f;
+
+  /* System font stack — SF Pro on Apple platforms. */
+  --ion-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter,
+    ui-sans-serif, system-ui, sans-serif;
+}
+
+/* --- Component-level polish -------------------------------------------- */
+
+/* The large title is the signature iOS header; keep its weight consistent
+   with our headings rather than Ionic's lighter default. */
+ion-title.title-large {
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+
+ion-toolbar {
+  --border-color: var(--ion-border-color);
+}
+
+ion-tab-bar {
+  --border: 1px solid var(--ion-border-color);
+}
+
+ion-tab-button {
+  --color-selected: var(--ion-color-primary);
+  font-weight: 750;
+}
+
+/* Cards carry our shadow/radius language, not Ionic's flatter default. */
+ion-card {
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--ion-border-color);
+  margin: 12px;
+}
+
+ion-card-header {
+  padding-bottom: 6px;
+}
+
+ion-card-title {
+  font-size: 16px;
+  font-weight: 850;
+}
+
+ion-card-subtitle {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ion-color-step-500);
+}
+
+/* Segment = the Analyze terminal's tab strip. Scrollable so seven fit. */
+ion-segment {
+  --background: rgba(15, 23, 42, 0.05);
+}
+
+/* The split-pane sidebar is desktop-only chrome; give it our card surface. */
+ion-split-pane {
+  --side-width: 260px;
+  --side-max-width: 260px;
+  --border: 1px solid var(--ion-border-color);
+}
+
+/* Dark terminal panes keep working inside Ionic content. */
+ion-content.terminalHost {
+  --background: var(--ion-background-color);
+}

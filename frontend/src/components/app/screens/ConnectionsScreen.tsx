@@ -15,7 +15,8 @@ import {
   apiPlaidLinkToken,
   type PortfolioAnalyzeResult,
 } from '../../../lib/api/client'
-import { AppHero, Panel, PanelHead } from '../../shared/ui'
+import { Panel, PanelHead } from '../../shared/ui'
+import { AppPage } from '../../shared/AppPage'
 import { openExternal, shareText } from '../../../lib/native'
 
 declare global {
@@ -130,12 +131,11 @@ export function ConnectionsScreen() {
   }
 
   return (
-    <section className="screen active" id="connections">
-      <AppHero
-        title="Connections"
-        subtitle="Three live integrations, four planned."
-        actions={<button onClick={() => void exportJson()}>Export JSON</button>}
-      />
+    <AppPage
+      title="Connections"
+      subtitle="Three live integrations, four planned."
+      actions={<button onClick={() => void exportJson()}>Share Export</button>}
+    >
       <Panel>
         <PanelHead title="Live" subtitle="Working integrations — not toggles." />
         <div className="body">
@@ -179,6 +179,6 @@ export function ConnectionsScreen() {
           </div>
         </div>
       </Panel>
-    </section>
+    </AppPage>
   )
 }

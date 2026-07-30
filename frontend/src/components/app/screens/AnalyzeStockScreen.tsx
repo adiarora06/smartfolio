@@ -6,7 +6,9 @@ import { useStore } from '../../../store/useStore'
 import { fmt, pct, title } from '../../../lib/format'
 import { buildForecastMemo } from '../../../lib/ai/memo'
 import { describeImpact } from '../../../lib/ai/insights'
-import { AppHero, Panel, PanelHead } from '../../shared/ui'
+import { IonLabel, IonSegment, IonSegmentButton } from '@ionic/react'
+import { Panel, PanelHead } from '../../shared/ui'
+import { AppPage } from '../../shared/AppPage'
 import { ForecastChart } from '../../shared/ForecastChart'
 import type { StockTab } from '../../../types'
 
@@ -61,21 +63,22 @@ export function AnalyzeStockScreen() {
   }
 
   return (
-    <section className="screen active" id="stock">
-      <AppHero
-        title="Analyze Stock"
-        subtitle="Forecast, backtest, audit trail, and portfolio impact — for any ticker."
-        actions={
-          <>
-            <button onClick={addStockToPortfolio}>Add To Portfolio</button>
-            <button onClick={saveMemo}>Save Memo</button>
-            <button className="primary" onClick={() => setScreen('advisor')}>
-              Ask Advisor
-            </button>
-          </>
-        }
-      />
-
+    <AppPage
+      title="Analyze"
+      subtitle="Forecast, backtest, audit trail, and portfolio impact — for any ticker."
+      onRefresh={async () => {
+        await runStock(stock.symbol, stock.days)
+      }}
+      actions={
+        <>
+          <button onClick={addStockToPortfolio}>Add To Portfolio</button>
+          <button onClick={saveMemo}>Save Memo</button>
+          <button className="primary" onClick={() => setScreen('advisor')}>
+            Ask Advisor
+          </button>
+        </>
+      }
+    >
       <Panel>
         <PanelHead title="Stock Analysis Terminal" subtitle="Type a ticker, press Enter." />
         <div className="body formgrid">
@@ -142,17 +145,19 @@ export function AnalyzeStockScreen() {
           </span>
         </div>
 
-        <div className="tabs">
+        {/* iOS segmented control. `scrollable` is what makes seven options
+            workable on a phone — they slide instead of wrapping. */}
+        <IonSegment
+          scrollable
+          value={stockTab}
+          onIonChange={(e) => setStockTab(e.detail.value as StockTab)}
+        >
           {TABS.map(([id, label]) => (
-            <button
-              key={id}
-              className={stockTab === id ? 'active' : undefined}
-              onClick={() => setStockTab(id)}
-            >
-              {label}
-            </button>
+            <IonSegmentButton key={id} value={id}>
+              <IonLabel>{label}</IonLabel>
+            </IonSegmentButton>
           ))}
-        </div>
+        </IonSegment>
 
         <div className="pane active">
           {stockTab === 'forecast' && <ForecastPane />}
@@ -190,7 +195,7 @@ export function AnalyzeStockScreen() {
           {stockTab === 'history' && <HistoryPane />}
         </div>
       </section>
-    </section>
+    </AppPage>
   )
 }
 
