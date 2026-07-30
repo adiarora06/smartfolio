@@ -1,14 +1,30 @@
 # SmartFolio for iOS
 
-Native iOS app built with **Capacitor 8**, wrapping the same React build that
-ships to the web. One codebase, two targets; the web build is unaffected.
+Native iOS app built with **Ionic React 8** on **Capacitor 8**. One codebase
+serves both the app and the web build.
+
+The UI is an app, not a responsive webpage: routes push and pop with sliding
+transitions, the iOS edge-swipe goes back, titles collapse on scroll, and the
+controls are native pickers, segmented controls, and swipe-to-delete lists.
+Ionic is pinned to `ios` mode everywhere (`setupIonicReact({ mode: 'ios' })`)
+so the browser demo matches the app rather than rendering Material styling.
+
+**Layout.** One tree, two form factors: `IonSplitPane` opens a persistent
+sidebar at `lg` and the tab bar hides at the same breakpoint. Below `lg` the
+menu is *disabled*, not merely hidden, so its edge-swipe cannot compete with
+swipe-back.
+
+**Navigation.** The router is the source of truth. `lib/nav.ts` registers the
+router's push with the store, so the existing `setScreen()` call sites keep
+working, and `ScreenSync` mirrors the URL back into `screen`.
 
 ## Status
 
 | Phase | State |
 |---|---|
 | 0 — Capacitor shell, config, CORS | Done |
-| 1 — Mobile redesign (tab bar, touch charts, holdings cards, CSS) | Done |
+| 1 — Mobile redesign (tab bar, touch charts, holdings, CSS) | Done |
+| 1b — Ionic React app UI (routes, transitions, native controls) | Done |
 | 2 — Native capabilities (share, haptics, in-app browser, offline boot) | Done |
 | 3 — Icon, privacy policy, privacy manifest | Done |
 | 3b — Xcode project generation, Simulator run, screenshots | **Blocked: needs Xcode** |
