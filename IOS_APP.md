@@ -27,43 +27,12 @@ working, and `ScreenSync` mirrors the URL back into `screen`.
 | 1b — Ionic React app UI (routes, transitions, native controls) | Done |
 | 2 — Native capabilities (share, haptics, in-app browser, offline boot) | Done |
 | 3 — Icon, privacy policy, privacy manifest | Done |
-| 3b — Xcode project generation, Simulator run, screenshots | **Blocked: needs Xcode** |
+| 3b — Xcode project, Simulator run, verified on device runtime | Done |
 | 4 — Enroll ($99/yr), TestFlight, submit | Not started |
 
-## Blocked on Xcode
-
-Only Command Line Tools are installed, so there is no `xcodebuild`, no
-Simulator, and no CocoaPods. To unblock:
-
-1. Install **Xcode** from the Mac App Store (~7–15 GB).
-2. Point the toolchain at it (needs your password, so run this yourself):
-
-```bash
-sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-```
-
-3. Install CocoaPods:
-
-```bash
-brew install cocoapods
-```
-
-Then generate and open the project:
-
-```bash
-cd frontend
-npm run build
-npx cap add ios
-npm run icons          # generates the full iOS icon + splash set from public/icon.svg
-npx cap open ios
-```
-
-Finally, copy the privacy manifest into the target and add it to the App
-target in Xcode (it must be a bundled resource):
-
-```bash
-cp frontend/resources/ios/PrivacyInfo.xcprivacy frontend/ios/App/App/
-```
+Built and verified on the **iOS 26.5 Simulator (iPhone 17 Pro)**: native tab
+bar, collapsing large titles, push navigation with a Back button, working
+taps, and the offline-first launch path.
 
 ## Day-to-day
 
@@ -72,6 +41,51 @@ cd frontend
 npm run dev            # web dev server, still the fastest loop
 npm run ios:sync       # build + copy web assets into the iOS project
 npx cap open ios       # run on Simulator or device from Xcode
+```
+
+## Building from the command line
+
+**Build to a derived-data path outside this repo.** The project lives under
+an iCloud-synced `Documents` folder, and the file provider stamps directories
+with `com.apple.fileprovider.dir#N`. Codesign rejects that with:
+
+> resource fork, Finder information, or similar detritus not allowed
+
+Stripping the attributes with `xattr -cr ios` is not enough on its own —
+the provider re-applies them during the build. Building elsewhere avoids it:
+
+```bash
+cd frontend && npm run build && npx cap copy ios
+cd ios/App && xcodebuild -project App.xcodeproj -scheme App \
+  -sdk iphonesimulator -configuration Debug \
+  -derivedDataPath /tmp/smartfolio-ios \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
+```
+
+Building from inside Xcode is unaffected (it uses `~/Library/Developer`).
+
+## Regenerating the project
+
+`ios/` is committed (Capacitor's own `.gitignore` keeps build output out).
+Only needed if it is ever deleted:
+
+```bash
+cd frontend
+npm run build
+npx cap add ios
+npm run icons     # full iOS icon + splash set from public/icon.svg
+cp resources/ios/PrivacyInfo.xcprivacy ios/App/App/
+```
+
+The privacy manifest must also be added to the App target in Xcode as a
+bundled resource.
+
+## Simulator runtimes
+
+Xcode 26 ships without iOS runtimes. If `xcrun simctl list devices` is empty:
+
+```bash
+xcodebuild -downloadPlatform iOS
 ```
 
 The web layout can be checked at phone size in any browser at 393×852 — the

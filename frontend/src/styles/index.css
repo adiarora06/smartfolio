@@ -294,3 +294,13 @@ ion-content > .terminal {
   height: 100%;
   min-width: 0;
 }
+
+/* iOS WebKit renders <button> text in the system accent (blue) when `color`
+   is not set explicitly. The base rule never set one, so every plain button
+   turned blue inside the app. Desktop browsers defaulted to black, which is
+   why this only showed up on device. */
+button { color: var(--ink); }
+button.primary,
+button.dark { color: #fff; }
+.terminal button { color: #dbeafe; }
+.terminal button.primary { color: #fff; }
