@@ -74,6 +74,10 @@ cd frontend
 npm run build
 npx cap add ios
 npm run icons     # full iOS icon + splash set from public/icon.svg
+                  # (fetches @capacitor/assets via npx — deliberately not a
+                  #  devDependency: it bundles an old @capacitor/cli whose
+                  #  transitive tar/glob carry CVEs, and the generated assets
+                  #  are committed, so it is only needed when the icon changes)
 cp resources/ios/PrivacyInfo.xcprivacy ios/App/App/
 ```
 
