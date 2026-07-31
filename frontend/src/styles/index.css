@@ -304,3 +304,177 @@ button.primary,
 button.dark { color: #fff; }
 .terminal button { color: #dbeafe; }
 .terminal button.primary { color: #fff; }
+
+/* Native Overview: focused on the phone; the analytical desktop view remains. */
+.nativeOverview { display: none; }
+.desktopOverview { display: block; }
+
+@media (max-width: 720px) {
+  .nativeOverview {
+    display: grid;
+    gap: 14px;
+    padding: 16px 16px 24px;
+    background: #fff;
+  }
+  .desktopOverview { display: none; }
+  .nativeOverview h2, .nativeOverview p { margin: 0; }
+
+  .folioSummary > span { display: block; color: #667085; font-size: 14px; font-weight: 650; }
+  .folioSummary > strong {
+    display: block;
+    margin-top: 2px;
+    color: #101828;
+    font-size: 44px;
+    line-height: 1.08;
+    font-variant-numeric: tabular-nums;
+  }
+  .folioReturn { display: flex; align-items: center; gap: 5px; margin-top: 8px; color: #15803d; }
+  .folioReturn ion-icon { font-size: 19px; }
+  .folioReturn b { font-size: 20px; font-variant-numeric: tabular-nums; }
+  .folioReturn span { color: #667085; font-size: 14px; }
+
+  .folioPathCard { border: 1px solid #d9e3ee; border-radius: 8px; background: #fff; overflow: hidden; }
+  .folioChartWrap { padding: 14px 12px 10px; }
+  .folioChartHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .folioEyebrow { color: #101828; font-size: 17px; font-weight: 850; }
+  .folioRangeStatus {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    color: #0f766e;
+    font-size: 12.5px;
+    font-weight: 700;
+  }
+  .folioRangeStatus > span { width: 7px; height: 7px; border-radius: 50%; background: #0f766e; }
+  .folioGrowthTag {
+    border: 1px solid rgba(15, 118, 110, 0.24);
+    border-radius: 6px;
+    background: rgba(15, 118, 110, 0.06);
+    color: #0f766e;
+    padding: 6px 9px;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .folioPathChart { display: block; width: 100%; height: auto; margin-top: 4px; }
+  .folioCorridor { fill: rgba(15, 118, 110, 0.09); }
+  .folioBoundary { fill: none; stroke: rgba(15, 118, 110, 0.55); stroke-width: 1; stroke-dasharray: 4 4; }
+  .folioTargetLine { fill: none; stroke: rgba(15, 118, 110, 0.34); stroke-width: 1.25; }
+  .folioPortfolioLine { fill: none; stroke: #0f766e; stroke-width: 2.75; stroke-linecap: round; stroke-linejoin: round; }
+  .folioEndpoint { fill: #0f766e; }
+  .folioAxisText { fill: #667085; font-size: 10px; }
+  .folioHorizon { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding-top: 2px; }
+  .folioHorizon button {
+    min-height: 40px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #667085;
+    padding: 5px;
+    font-size: 13px;
+    font-weight: 800;
+  }
+  .folioHorizon button.active { background: #0f766e; color: #fff; }
+  .folioModelNote { padding-top: 7px; color: #667085; font-size: 11px; text-align: center; }
+
+  .folioHealth { display: grid; grid-template-columns: 98px minmax(0, 1fr); gap: 12px; align-items: center; }
+  .folioFitVisual h2 { font-size: 16px; text-align: center; }
+  .folioFitVisual svg { display: block; width: 92px; height: 92px; margin-top: 1px; }
+  .folioFitTrack, .folioFitProgress { fill: none; stroke-width: 8; }
+  .folioFitTrack { stroke: #e8eef5; }
+  .folioFitProgress {
+    stroke: #0f766e;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+  }
+  .folioFitNumber { fill: #101828; font-size: 29px; font-weight: 850; }
+  .folioFitLabel { fill: #0f766e; font-size: 10px; font-weight: 750; }
+  .folioHealthRows { display: grid; }
+  .folioHealthRows button {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) 18px;
+    gap: 8px;
+    align-items: center;
+    min-height: 54px;
+    border: 0;
+    border-bottom: 1px solid #e4eaf3;
+    border-radius: 0;
+    background: transparent;
+    padding: 7px 0;
+    text-align: left;
+  }
+  .folioHealthRows button:last-child { border-bottom: 0; }
+  .folioHealthRows button > ion-icon:first-child { color: #0f766e; font-size: 25px; }
+  .folioHealthRows button > ion-icon.warn { color: #b45309; }
+  .folioHealthRows button > ion-icon:last-child { color: #98a2b3; font-size: 17px; }
+  .folioHealthRows span { min-width: 0; }
+  .folioHealthRows b, .folioHealthRows small { display: block; }
+  .folioHealthRows b { color: #101828; font-size: 14px; }
+  .folioHealthRows small { margin-top: 2px; color: #667085; font-size: 12px; }
+
+  .smartMove, .folioAlertRow {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 20px;
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+    min-height: 44px;
+    text-align: left;
+  }
+  .smartMove {
+    border: 1px solid rgba(15, 118, 110, 0.26);
+    border-radius: 8px;
+    background: rgba(15, 118, 110, 0.04);
+    padding: 10px 11px;
+  }
+  .smartMoveIcon {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #0f766e;
+    color: #fff;
+  }
+  .smartMoveIcon ion-icon { font-size: 20px; }
+  .smartMoveCopy { min-width: 0; }
+  .smartMoveCopy > span, .smartMoveCopy > strong, .smartMoveCopy > small { display: block; }
+  .smartMoveLabel { color: #0f766e; font-size: 12px; font-weight: 850; }
+  .smartMoveLabel em { margin-left: 5px; color: #667085; font-size: 10px; font-style: normal; font-weight: 700; }
+  .smartMoveCopy strong { margin-top: 2px; color: #101828; font-size: 15px; }
+  .smartMoveCopy small { margin-top: 1px; color: #667085; font-size: 11px; font-weight: 500; }
+  .smartMove > ion-icon { color: #0f766e; font-size: 20px; }
+
+  .reviewPlan {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 50px;
+    border: 1px solid #0f766e;
+    border-radius: 8px;
+    background: #0f766e;
+    color: #fff;
+    padding: 11px 15px;
+    font-size: 16px;
+    font-weight: 850;
+  }
+  .reviewPlan ion-icon { font-size: 20px; }
+
+  .folioAlertRow { border: 0; border-radius: 0; background: transparent; padding: 2px 0; }
+  .folioAlertRow > span:first-child {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(29, 78, 216, 0.08);
+    color: #1d4ed8;
+  }
+  .folioAlertRow > span:first-child ion-icon { font-size: 20px; }
+  .folioAlertRow strong, .folioAlertRow small { display: block; }
+  .folioAlertRow strong { color: #101828; font-size: 13.5px; }
+  .folioAlertRow small { margin-top: 2px; color: #667085; font-size: 11.5px; font-weight: 500; }
+  .folioAlertRow > ion-icon { color: #98a2b3; font-size: 18px; }
+}

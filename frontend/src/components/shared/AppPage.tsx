@@ -29,6 +29,8 @@ export function AppPage({
   subtitle,
   actions,
   onRefresh,
+  largeTitle = true,
+  headerAction,
   children,
 }: {
   title: string
@@ -37,6 +39,10 @@ export function AppPage({
   actions?: ReactNode
   /** Enables pull-to-refresh when provided. */
   onRefresh?: () => Promise<void>
+  /** Disable the collapsing title for compact top-level app screens. */
+  largeTitle?: boolean
+  /** Optional trailing toolbar control, such as a profile button. */
+  headerAction?: ReactNode
   children: ReactNode
 }) {
   const handleRefresh = async (e: CustomEvent<RefresherEventDetail>) => {
@@ -60,15 +66,18 @@ export function AppPage({
             <IonMenuButton autoHide />
           </IonButtons>
           <IonTitle>{title}</IonTitle>
+          {headerAction && <IonButtons slot="end">{headerAction}</IonButtons>}
         </IonToolbar>
       </IonHeader>
 
       <IonContent fullscreen>
-        <IonHeader collapse="condense">
-          <IonToolbar>
-            <IonTitle size="large">{title}</IonTitle>
-          </IonToolbar>
-        </IonHeader>
+        {largeTitle && (
+          <IonHeader collapse="condense">
+            <IonToolbar>
+              <IonTitle size="large">{title}</IonTitle>
+            </IonToolbar>
+          </IonHeader>
+        )}
 
         {onRefresh && (
           <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>

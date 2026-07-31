@@ -9,9 +9,9 @@ const config: CapacitorConfig = {
   appName: 'SmartFolio',
   webDir: 'dist',
   ios: {
-    // Let the webview account for the status bar / home indicator itself; the
-    // CSS also uses env(safe-area-inset-*) for per-element control.
-    contentInset: 'always',
+    // Ionic already applies the status-bar safe area to its toolbars. Asking
+    // WKWebView to inset as well doubles the top gap on current iOS runtimes.
+    contentInset: 'never',
     // Avoid the rubber-band overscroll that makes a webview feel like a page.
     scrollEnabled: true,
   },

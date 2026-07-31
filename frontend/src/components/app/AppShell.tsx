@@ -158,7 +158,7 @@ export function AppShell() {
           <IonTabBar slot="bottom">
             <IonTabButton tab="overview" href={pathFor('overview')}>
               <IonIcon icon={gridOutline} />
-              <IonLabel>Overview</IonLabel>
+              <IonLabel>Home</IonLabel>
             </IonTabButton>
             <IonTabButton tab="portfolio" href={pathFor('portfolio')}>
               <IonIcon icon={pieChartOutline} />
