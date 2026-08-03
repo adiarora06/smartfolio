@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SmartFolio — Privacy Policy</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        margin: 0 auto; padding: 32px 20px 72px; max-width: 720px;
+        font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+        color: #101828; background: #f4f7fb;
+      }
+      h1 { font-size: 28px; letter-spacing: -0.02em; margin: 0 0 4px; }
+      h2 { font-size: 17px; margin: 30px 0 8px; }
+      .sub { color: #667085; margin: 0 0 28px; }
+      table { border-collapse: collapse; width: 100%; font-size: 15px; }
+      th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid #d9e3ee; vertical-align: top; }
+      th { color: #667085; font-size: 13px; text-transform: uppercase; }
+      code { background: #e8eef5; padding: 1px 5px; border-radius: 4px; font-size: 14px; }
+      .note { background: #fffdf7; border: 1px solid #f3dda2; color: #76510b;
+              border-radius: 10px; padding: 12px 14px; }
+      a { color: #0f766e; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #0f172a; color: #e8eef5; }
+        th, td { border-bottom-color: #24314d; }
+        code { background: #1b2740; }
+        .sub { color: #93a4bd; }
+        .note { background: #1e1b0f; border-color: #4d3f14; color: #e8d9a8; }
+        a { color: #5eead4; }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>SmartFolio Privacy Policy</h1>
+    <p class="sub">Last updated 29 July 2026</p>
+
+    <div class="note">
+      SmartFolio provides educational analysis only. It is not financial advice,
+      it does not execute trades, and it is not a broker or adviser.
+    </div>
+
+    <h2>The short version</h2>
+    <p>
+      SmartFolio has no accounts and asks for no personal identity. There is no
+      name, email, phone number, address, or password anywhere in the app. No
+      advertising, no analytics SDKs, and no tracking across apps or websites.
+      The app works fully offline.
+    </p>
+
+    <h2>What is stored, and where</h2>
+    <table>
+      <tr><th>Data</th><th>Where it lives</th><th>Why</th></tr>
+      <tr>
+        <td>Portfolio holdings, investor preferences (age band, horizon, risk tolerance), saved research memos</td>
+        <td>On your device, and — if the app reaches our analysis service — in our database, keyed only to a random workspace identifier</td>
+        <td>To calculate your allocation, risk profile, and analysis, and to keep them across launches</td>
+      </tr>
+      <tr>
+        <td>A random workspace identifier (e.g. <code>6f10475f…</code>)</td>
+        <td>Your device's local storage</td>
+        <td>The only thing linking your saved data to your app. It is generated on device, contains nothing about you, and is never linked to an identity</td>
+      </tr>
+      <tr>
+        <td>Tickers you analyze</td>
+        <td>Sent to our analysis service; cached briefly</td>
+        <td>To fetch prices and produce a forecast</td>
+      </tr>
+    </table>
+
+    <h2>What is sent to third parties</h2>
+    <table>
+      <tr><th>Service</th><th>What it receives</th></tr>
+      <tr>
+        <td>Market data providers (Finnhub, Alpha Vantage, Yahoo)</td>
+        <td>Only the ticker symbol being analyzed. No portfolio data, no identifier.</td>
+      </tr>
+      <tr>
+        <td>AI provider (OpenAI, or Anthropic as a fallback)</td>
+        <td>
+          The numbers a memo or advisor answer describes — which can include your
+          holdings, weights, and analysis figures — so the text can explain them.
+          Sent without any identifier. Used only to generate that response. If no
+          AI provider is configured, the app writes the text itself and nothing
+          leaves our service.
+        </td>
+      </tr>
+      <tr>
+        <td>Plaid (only if you choose to connect a brokerage)</td>
+        <td>
+          Read-only access to holdings, used once to import them. We never store
+          the access token, and SmartFolio cannot move money or place trades.
+        </td>
+      </tr>
+      <tr>
+        <td>Hosting and error reporting (Render, Neon, Sentry)</td>
+        <td>
+          Standard request logs and, if a crash occurs, diagnostic details. Not
+          used to profile you.
+        </td>
+      </tr>
+    </table>
+
+    <h2>Financial information</h2>
+    <p>
+      Holdings and values are financial information, and we disclose them as such
+      on the App Store. They are used solely to compute and explain your analysis.
+      They are never sold, never shared for advertising, and never used to build a
+      profile of you.
+    </p>
+
+    <h2>Deleting your data</h2>
+    <p>
+      Because there is no account, your data is reachable only through the random
+      workspace identifier on your device. Deleting the app removes that
+      identifier, which permanently disconnects the stored data. To have the
+      server-side record erased outright, send the identifier (shown in the app
+      under More → status) to the contact address below.
+    </p>
+
+    <h2>Children</h2>
+    <p>SmartFolio is not directed to children under 13.</p>
+
+    <h2>Changes</h2>
+    <p>
+      Material changes will be posted here with an updated date. The app's
+      version history is public at
+      <a href="https://github.com/adiarora06/smartfolio">github.com/adiarora06/smartfolio</a>.
+    </p>
+
+    <h2>Contact</h2>
+    <p>
+      <a href="mailto:adia112206@gmail.com">adia112206@gmail.com</a> ·
+      <a href="https://github.com/adiarora06/smartfolio/issues">Support &amp; issues</a>
+    </p>
+  </body>
+</html>

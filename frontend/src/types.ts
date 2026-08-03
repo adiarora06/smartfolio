@@ -183,6 +183,20 @@ export interface Fundamentals {
   industry?: string | null
 }
 
+/** A recent headline about the symbol, from the news-sentiment feed. */
+export interface NewsItem {
+  title: string
+  source?: string | null
+  url?: string | null
+  /** ISO date the story was published, e.g. "2026-07-23". */
+  published?: string | null
+  summary?: string | null
+  /** Tone label for this ticker, e.g. "Bullish" | "Neutral" | "Bearish". */
+  sentimentLabel?: string | null
+  /** This ticker's sentiment score for the article, -1..1. */
+  sentimentScore?: number | null
+}
+
 /**
  * Deterministic output of the stock forecast engine — numbers only.
  * The natural-language memo lives in the AI layer (lib/ai/memo.ts).
@@ -221,6 +235,8 @@ export interface StockForecast {
   /** Relevance-weighted news tone, -1..1. */
   sentiment?: number | null
   sentimentArticles: number
+  /** Up to 3 recent headlines the sentiment tone is measured from. */
+  news: NewsItem[]
   inputs?: ForecastInputs | null
   stats?: SeriesStats | null
   fundamentals?: Fundamentals | null

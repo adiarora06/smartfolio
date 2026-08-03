@@ -2,12 +2,26 @@
 // headline metrics, an allocation donut, and per-holding weight bars that all
 // recalculate live as you type.
 
+import { useState } from 'react'
 import { useStore } from '../../../store/useStore'
 import { usePortfolioAnalysis } from '../../../hooks/usePortfolioAnalysis'
 import { fmt, pct, title } from '../../../lib/format'
-import { AppHero, MetricCard, MetricGrid, Panel, PanelHead } from '../../shared/ui'
+import {
+  IonInput,
+  IonItem,
+  IonItemOption,
+  IonItemOptions,
+  IonItemSliding,
+  IonLabel,
+  IonList,
+  IonNote,
+  IonSelect,
+  IonSelectOption,
+} from '@ionic/react'
+import { MetricCard, MetricGrid, Panel, PanelHead } from '../../shared/ui'
+import { AppPage } from '../../shared/AppPage'
 import { DonutChart, type DonutSegment } from '../../shared/DonutChart'
-import type { AssetClass, HoldingType } from '../../../types'
+import type { AssetClass, Holding, HoldingType } from '../../../types'
 
 const ASSET_OPTIONS: Array<[AssetClass, string]> = [
   ['us_equity', 'US Equity'],
@@ -33,6 +47,121 @@ const ASSET_COLORS: Record<string, string> = {
 /** Asset-class display name ("US Equity", not the title-cased "Us Equity"). */
 const assetLabel = (k: string) =>
   k === 'us_equity' ? 'US Equity' : k === 'intl_equity' ? 'Intl Equity' : title(k)
+
+/** Phone layout for one holding: identity + value always visible, the rest
+ *  behind a disclosure. Replaces the 7-column table, which reflowed into
+ *  unlabeled inputs on a narrow screen. */
+function HoldingCard({
+  holding,
+  index,
+  total,
+}: {
+  holding: Holding
+  index: number
+  total: number
+}) {
+  const updateHolding = useStore((s) => s.updateHolding)
+  const removeHolding = useStore((s) => s.removeHolding)
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      {/* Swipe left to delete — the iOS list gesture, so no persistent
+          Remove button competing with the data for width. */}
+      <IonItemSliding>
+        <IonItem button detail={false} onClick={() => setOpen((v) => !v)}>
+          <IonLabel>
+            <h2 className="hcardSym">{holding.symbol || '—'}</h2>
+            <p>
+              {holding.name || 'Unnamed'} · {pct(holding.value / (total || 1))}
+            </p>
+          </IonLabel>
+          <IonNote slot="end" className="hcardVal">
+            {fmt.format(holding.value)}
+          </IonNote>
+        </IonItem>
+
+        <IonItemOptions side="end">
+          <IonItemOption color="danger" onClick={() => removeHolding(index)}>
+            Delete
+          </IonItemOption>
+        </IonItemOptions>
+      </IonItemSliding>
+
+      {open && (
+        <div className="hcardBody">
+          <IonItem>
+            <IonInput
+              label="Symbol"
+              labelPlacement="stacked"
+              value={holding.symbol}
+              onIonInput={(e) =>
+                updateHolding(index, 'symbol', (e.detail.value ?? '').toUpperCase())
+              }
+            />
+          </IonItem>
+          <IonItem>
+            <IonInput
+              label="Name"
+              labelPlacement="stacked"
+              value={holding.name}
+              onIonInput={(e) => updateHolding(index, 'name', e.detail.value ?? '')}
+            />
+          </IonItem>
+          <IonItem>
+            <IonInput
+              label="Value"
+              labelPlacement="stacked"
+              type="number"
+              inputmode="decimal"
+              value={holding.value}
+              onIonInput={(e) => updateHolding(index, 'value', Number(e.detail.value ?? 0))}
+            />
+          </IonItem>
+          {/* IonSelect opens the native-style picker instead of a <select>. */}
+          <IonItem>
+            <IonSelect
+              label="Type"
+              labelPlacement="stacked"
+              interface="action-sheet"
+              value={holding.type}
+              onIonChange={(e) => updateHolding(index, 'type', e.detail.value as HoldingType)}
+            >
+              {TYPE_OPTIONS.map((t) => (
+                <IonSelectOption value={t} key={t}>
+                  {t}
+                </IonSelectOption>
+              ))}
+            </IonSelect>
+          </IonItem>
+          <IonItem>
+            <IonSelect
+              label="Asset class"
+              labelPlacement="stacked"
+              interface="action-sheet"
+              value={holding.asset}
+              onIonChange={(e) => updateHolding(index, 'asset', e.detail.value as AssetClass)}
+            >
+              {ASSET_OPTIONS.map(([value, label]) => (
+                <IonSelectOption value={value} key={value}>
+                  {label}
+                </IonSelectOption>
+              ))}
+            </IonSelect>
+          </IonItem>
+          <IonItem lines="none">
+            <IonInput
+              label="Sector"
+              labelPlacement="stacked"
+              value={holding.sector}
+              onIonInput={(e) => updateHolding(index, 'sector', e.detail.value ?? '')}
+            />
+          </IonItem>
+        </div>
+      )}
+    </>
+  )
+}
 
 export function PortfolioScreen() {
   const holdings = useStore((s) => s.holdings)
@@ -76,18 +205,16 @@ export function PortfolioScreen() {
     .slice(0, 6)
 
   return (
-    <section className="screen active" id="portfolio">
-      <AppHero
-        title="Portfolio"
-        subtitle="Edit holdings — everything recalculates instantly."
-        actions={
-          <>
-            <button onClick={addHolding}>Add Holding</button>
-            <button onClick={resetHoldings}>Reset Demo</button>
-          </>
-        }
-      />
-
+    <AppPage
+      title="Portfolio"
+      subtitle="Edit holdings — everything recalculates instantly."
+      actions={
+        <>
+          <button onClick={addHolding}>Add Holding</button>
+          <button onClick={resetHoldings}>Reset Demo</button>
+        </>
+      }
+    >
       <MetricGrid>
         <MetricCard
           label="Total Value"
@@ -215,8 +342,16 @@ export function PortfolioScreen() {
                 </div>
               ))}
             </div>
+
+            {/* Phone layout. Both trees render; the mobile CSS layer shows one
+                (.table above 720px, .hcards below). */}
+            <IonList className="hcards" lines="full">
+              {holdings.map((h, i) => (
+                <HoldingCard key={i} holding={h} index={i} total={total} />
+              ))}
+            </IonList>
           </div>
       </Panel>
-    </section>
+    </AppPage>
   )
 }

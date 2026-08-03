@@ -32,6 +32,7 @@ from ..schemas import (
     ForecastInputs,
     ForecastPoint,
     FundamentalsOut,
+    NewsItemOut,
     SeriesStatsOut,
     StockForecast,
     StockTrace,
@@ -242,6 +243,18 @@ def analyze_stock(
         annualized_vol=sigma,
         sentiment=ctx.sentiment,
         sentiment_articles=ctx.sentiment_articles,
+        news=[
+            NewsItemOut(
+                title=n.title,
+                source=n.source,
+                url=n.url,
+                published=n.published,
+                summary=n.summary,
+                sentiment_label=n.sentiment_label,
+                sentiment_score=n.sentiment_score,
+            )
+            for n in ctx.news
+        ],
         paths=paths,
         backtest=_backtest(ctx, horizon, sigma),
         inputs=ForecastInputs(

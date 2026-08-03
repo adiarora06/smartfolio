@@ -208,6 +208,18 @@ class FundamentalsOut(ApiModel):
     industry: Optional[str] = None
 
 
+class NewsItemOut(ApiModel):
+    """A recent headline about the symbol, from the news-sentiment feed."""
+
+    title: str
+    source: Optional[str] = None
+    url: Optional[str] = None
+    published: Optional[str] = None
+    summary: Optional[str] = None
+    sentiment_label: Optional[str] = None
+    sentiment_score: Optional[float] = None
+
+
 class StockTrace(ApiModel):
     audit: List[str]
     topology: List[str]
@@ -248,6 +260,7 @@ class StockForecast(ApiModel):
     annualized_vol: float = 0.0
     sentiment: Optional[float] = None
     sentiment_articles: int = 0
+    news: List[NewsItemOut] = Field(default_factory=list)
     inputs: Optional[ForecastInputs] = None
     stats: Optional[SeriesStatsOut] = None
     fundamentals: Optional[FundamentalsOut] = None

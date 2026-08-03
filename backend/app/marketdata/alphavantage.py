@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import httpx
 
 from ..config import settings
-from .base import MarketSnapshot
+from .base import MarketSnapshot, NewsArticle
 from .fundamentals import Fundamentals
 from .series import PriceSeries
 
@@ -260,3 +260,80 @@ def parse_sentiment(symbol: str, payload: Dict[str, Any]) -> Optional[Tuple[floa
     if weight_total <= 0 or counted == 0:
         return None
     return max(-1.0, min(1.0, weighted / weight_total)), counted
+
+
+def _published_date(raw: Any) -> Optional[str]:
+    """AV stamps articles as "20260723T134500" -> "2026-07-23"."""
+    if not isinstance(raw, str) or len(raw) < 8 or not raw[:8].isdigit():
+        return None
+    return f"{raw[0:4]}-{raw[4:6]}-{raw[6:8]}"
+
+
+def _clip(text: Any, limit: int = 220) -> Optional[str]:
+    if not isinstance(text, str):
+        return None
+    cleaned = " ".join(text.split())
+    if not cleaned:
+        return None
+    if len(cleaned) <= limit:
+        return cleaned
+    return cleaned[: limit - 1].rstrip() + "…"
+
+
+def parse_articles(
+    symbol: str, payload: Dict[str, Any], limit: int = 3
+) -> List[NewsArticle]:
+    """NEWS_SENTIMENT payload -> the `limit` most relevant recent headlines.
+
+    Ranked by this ticker's own relevance score (the same weight the aggregate
+    sentiment uses), so a passing mention loses to a story actually about the
+    company. Sentiment label/score are taken from the ticker-specific entry
+    when present, falling back to the article's overall tone.
+    """
+    feed = payload.get("feed")
+    if not isinstance(feed, list) or not feed:
+        return []
+    target = symbol.upper()
+    ranked: List[Tuple[float, NewsArticle]] = []
+    for article in feed:
+        if not isinstance(article, dict):
+            continue
+        title = article.get("title")
+        if not isinstance(title, str) or not title.strip():
+            continue
+        relevance = 0.0
+        label = article.get("overall_sentiment_label")
+        score = _num(article.get("overall_sentiment_score"))
+        tagged = False
+        for entry in article.get("ticker_sentiment") or []:
+            if not isinstance(entry, dict):
+                continue
+            if (entry.get("ticker") or "").upper() != target:
+                continue
+            tagged = True
+            relevance = _num(entry.get("relevance_score")) or 0.0
+            label = entry.get("ticker_sentiment_label") or label
+            score = _num(entry.get("ticker_sentiment_score"))
+            break
+        # Only stories actually tagged with this ticker — a feed item that never
+        # mentions the company is not news "about" it.
+        if not tagged:
+            continue
+        ranked.append(
+            (
+                relevance,
+                NewsArticle(
+                    title=title.strip(),
+                    source=article.get("source") or None,
+                    url=article.get("url") or None,
+                    published=_published_date(article.get("time_published")),
+                    summary=_clip(article.get("summary")),
+                    sentiment_label=label if isinstance(label, str) else None,
+                    sentiment_score=score,
+                ),
+            )
+        )
+    # Highest relevance first; the feed already arrives newest-first, and Python
+    # sort is stable, so equal-relevance items keep that recency order.
+    ranked.sort(key=lambda pair: pair[0], reverse=True)
+    return [article for _, article in ranked[: max(0, limit)]]

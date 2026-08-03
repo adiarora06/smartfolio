@@ -6,7 +6,9 @@ import { useStore } from '../../../store/useStore'
 import { fmt, pct, title } from '../../../lib/format'
 import { buildForecastMemo } from '../../../lib/ai/memo'
 import { describeImpact } from '../../../lib/ai/insights'
-import { AppHero, Panel, PanelHead } from '../../shared/ui'
+import { IonLabel, IonSegment, IonSegmentButton } from '@ionic/react'
+import { Panel, PanelHead } from '../../shared/ui'
+import { AppPage } from '../../shared/AppPage'
 import { ForecastChart } from '../../shared/ForecastChart'
 import type { StockTab } from '../../../types'
 
@@ -61,21 +63,22 @@ export function AnalyzeStockScreen() {
   }
 
   return (
-    <section className="screen active" id="stock">
-      <AppHero
-        title="Analyze Stock"
-        subtitle="Forecast, backtest, audit trail, and portfolio impact — for any ticker."
-        actions={
-          <>
-            <button onClick={addStockToPortfolio}>Add To Portfolio</button>
-            <button onClick={saveMemo}>Save Memo</button>
-            <button className="primary" onClick={() => setScreen('advisor')}>
-              Ask Advisor
-            </button>
-          </>
-        }
-      />
-
+    <AppPage
+      title="Analyze"
+      subtitle="Forecast, backtest, audit trail, and portfolio impact — for any ticker."
+      onRefresh={async () => {
+        await runStock(stock.symbol, stock.days)
+      }}
+      actions={
+        <>
+          <button onClick={addStockToPortfolio}>Add To Portfolio</button>
+          <button onClick={saveMemo}>Save Memo</button>
+          <button className="primary" onClick={() => setScreen('advisor')}>
+            Ask Advisor
+          </button>
+        </>
+      }
+    >
       <Panel>
         <PanelHead title="Stock Analysis Terminal" subtitle="Type a ticker, press Enter." />
         <div className="body formgrid">
@@ -115,7 +118,9 @@ export function AnalyzeStockScreen() {
       </Panel>
 
       <section className="terminal">
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+        {/* Class, not an inline style, so the mobile layer can stack this —
+            the rating/source badge collided with the title at phone width. */}
+        <div className="termHead">
           <div>
             <h2>{stock.symbol} Forecast</h2>
             <span style={{ color: '#93c5fd' }}>
@@ -134,23 +139,25 @@ export function AnalyzeStockScreen() {
               )}
             </div>
           </div>
-          <span>
+          <span className="termBadge">
             {stock.rating} · {stockSource === 'api' ? 'API' : 'Local'}
             {narrator === 'llm' ? ' · LLM memo' : ''}
           </span>
         </div>
 
-        <div className="tabs">
+        {/* iOS segmented control. `scrollable` is what makes seven options
+            workable on a phone — they slide instead of wrapping. */}
+        <IonSegment
+          scrollable
+          value={stockTab}
+          onIonChange={(e) => setStockTab(e.detail.value as StockTab)}
+        >
           {TABS.map(([id, label]) => (
-            <button
-              key={id}
-              className={stockTab === id ? 'active' : undefined}
-              onClick={() => setStockTab(id)}
-            >
-              {label}
-            </button>
+            <IonSegmentButton key={id} value={id}>
+              <IonLabel>{label}</IonLabel>
+            </IonSegmentButton>
           ))}
-        </div>
+        </IonSegment>
 
         <div className="pane active">
           {stockTab === 'forecast' && <ForecastPane />}
@@ -188,7 +195,7 @@ export function AnalyzeStockScreen() {
           {stockTab === 'history' && <HistoryPane />}
         </div>
       </section>
-    </section>
+    </AppPage>
   )
 }
 
@@ -274,7 +281,74 @@ function ForecastPane() {
           <li key={i}>{line}</li>
         ))}
       </ul>
+      <NewsSection />
     </>
+  )
+}
+
+const SENTIMENT_TONE: Record<string, string> = {
+  bullish: '#5eead4',
+  'somewhat-bullish': '#5eead4',
+  bearish: '#f87171',
+  'somewhat-bearish': '#f87171',
+}
+
+/** Relevant News — the 3 most relevant recent headlines about the ticker.
+ *  Live-only (needs the news provider); shows an explicit note otherwise. */
+function NewsSection() {
+  const stock = useStore((s) => s.stock)
+  const news = stock.news ?? []
+
+  return (
+    <div>
+      <SectionLabel>Relevant News</SectionLabel>
+      {news.length ? (
+        <ul className="list termList">
+          {news.map((n, i) => {
+            const tone = n.sentimentLabel
+              ? SENTIMENT_TONE[n.sentimentLabel.toLowerCase()] ?? '#93c5fd'
+              : '#93c5fd'
+            return (
+              <li key={n.url ?? i}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                  {n.url ? (
+                    <a
+                      href={n.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontWeight: 600, color: '#e2e8f0' }}
+                    >
+                      {n.title}
+                    </a>
+                  ) : (
+                    <strong>{n.title}</strong>
+                  )}
+                  {n.sentimentLabel && (
+                    <span style={{ color: tone, fontSize: 12, whiteSpace: 'nowrap' }}>
+                      {title(n.sentimentLabel.replace(/-/g, ' '))}
+                    </span>
+                  )}
+                </div>
+                <span style={{ color: '#93c5fd', fontSize: 12 }}>
+                  {[n.source, n.published].filter(Boolean).join(' · ')}
+                </span>
+                {n.summary && (
+                  <span style={{ display: 'block', fontSize: 12.5, marginTop: 2 }}>
+                    {n.summary}
+                  </span>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      ) : (
+        <p style={{ color: 'var(--muted)', fontSize: 12.5 }}>
+          {stock.source && stock.source !== 'offline'
+            ? 'No recent tagged headlines for this ticker right now.'
+            : 'Live headlines appear here when the analysis runs against the connected news provider.'}
+        </p>
+      )}
+    </div>
   )
 }
 

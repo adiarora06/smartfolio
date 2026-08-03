@@ -11,6 +11,23 @@ from .series import PriceSeries, SeriesStats
 
 
 @dataclass
+class NewsArticle:
+    """One recent headline about a symbol, from the news-sentiment feed.
+
+    Kept alongside the aggregate sentiment score so the UI can show the actual
+    stories the tone is measured from, not just the number.
+    """
+
+    title: str
+    source: Optional[str] = None  # publisher, e.g. "Reuters"
+    url: Optional[str] = None
+    published: Optional[str] = None  # ISO date, e.g. "2026-07-23"
+    summary: Optional[str] = None
+    sentiment_label: Optional[str] = None  # "Bullish" | "Neutral" | ...
+    sentiment_score: Optional[float] = None  # this ticker's score, -1..1
+
+
+@dataclass
 class MarketSnapshot:
     """Resolved scalar inputs for the forecast engine.
 
@@ -45,6 +62,8 @@ class MarketContext:
     fundamentals: Optional[Fundamentals] = None
     sentiment: Optional[float] = None  # -1..1, relevance-weighted
     sentiment_articles: int = 0
+    # The most relevant recent headlines the sentiment score was measured from.
+    news: List[NewsArticle] = field(default_factory=list)
     # Which inputs are measured rather than assumed — drives both the drift
     # shrinkage and what the UI is allowed to claim.
     sources: List[str] = field(default_factory=list)

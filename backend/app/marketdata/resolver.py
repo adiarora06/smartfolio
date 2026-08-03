@@ -29,6 +29,7 @@ from ..config import settings
 from . import cache
 from .alphavantage import (
     AlphaVantageProvider,
+    parse_articles,
     parse_fundamentals,
     parse_sentiment,
     parse_series,
@@ -297,6 +298,7 @@ class MarketDataResolver:
             parsed = parse_sentiment(symbol, sentiment_payload)
             if parsed is not None:
                 ctx.sentiment, ctx.sentiment_articles = parsed
+            ctx.news = parse_articles(symbol, sentiment_payload, limit=3)
 
         if not ctx.sources:
             ctx.sources.append("offline:reference")

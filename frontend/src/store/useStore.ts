@@ -39,6 +39,8 @@ import { analyzeStock } from '../lib/calculations/stock'
 import { computeImpact } from '../lib/calculations/impact'
 import { buildSavedMemo } from '../lib/ai/memo'
 import { answerAdvisor } from '../lib/ai/advisor'
+import { isNative, successFeedback } from '../lib/native'
+import { navigateTo, screenFromPath } from '../lib/nav'
 import {
   apiAnalyzeStock,
   apiAskAdvisor,
@@ -122,6 +124,8 @@ interface AppState {
   goToPage: (page: Page) => void
   openDemo: () => void
   setScreen: (screen: Screen) => void
+  /** Set `screen` without navigating (router -> store sync only). */
+  syncScreen: (screen: Screen) => void
   setStockTab: (tab: StockTab) => void
   nextSetupStep: () => void
   prevSetupStep: () => void
@@ -155,8 +159,23 @@ const initialProfile = local.profile ?? { ...DEFAULT_PROFILE }
 const initialHoldings = local.holdings?.length ? local.holdings : demoHoldings()
 const initialStock = analyzeStock('AAPL', 30)
 
+/** Current path, or '' where there is no DOM (Node tests, SSR). */
+const initialPathname = (): string =>
+  typeof window === 'undefined' ? '' : window.location.pathname
+
 export const useStore = create<AppState>((set, get) => ({
-  page: 'landing',
+  // The web build opens on the marketing landing page. Two exceptions:
+  //   - native: an installed app has no one left to pitch, and launching into
+  //     marketing copy is exactly what Guideline 4.2 reads as a repackaged
+  //     website, so it opens straight into the dashboard;
+  //   - a deep link to an app route (/portfolio, /stock, …) must land on that
+  //     screen rather than the landing page — otherwise the URLs the router
+  //     hands out are not actually openable.
+  // Set as initial state (not in an effect) so neither case flashes the
+  // landing page first.
+  // The store is created at module scope, so this runs on import — guard the
+  // window access or importing the store throws under Node (tests, SSR).
+  page: isNative || screenFromPath(initialPathname()) ? 'app' : 'landing',
   screen: 'overview',
   setupStep: 0,
   stockTab: 'forecast',
@@ -230,7 +249,15 @@ export const useStore = create<AppState>((set, get) => ({
 
   goToPage: (page) => set({ page }),
   openDemo: () => set({ page: 'app', screen: 'overview' }),
-  setScreen: (screen) => set({ screen }),
+  // Navigate *and* set state. The route change is what produces the native
+  // push transition; ScreenSync then confirms `screen` from the URL, so
+  // swipe-back and browser-back stay consistent with this value.
+  setScreen: (screen) => {
+    set({ screen })
+    navigateTo(screen)
+  },
+  /** State-only setter used by ScreenSync — must not navigate (would loop). */
+  syncScreen: (screen) => set({ screen }),
   setStockTab: (stockTab) => set({ stockTab }),
   nextSetupStep: () =>
     set((s) =>
@@ -294,6 +321,9 @@ export const useStore = create<AppState>((set, get) => ({
       })
     } finally {
       set({ running: false })
+      // A pipeline run is the app's one long action; on device a success tap
+      // is the difference between "did that work?" and obvious completion.
+      void successFeedback()
     }
   },
   resetStock: () => {

@@ -1,8 +1,15 @@
-// Top-level shell. Routes between the three top-level pages based on store state.
-// (A single-source-of-truth `page` value replaces the prototype's show/hide DOM.)
+// Top-level shell.
+//
+// `page` still switches between the three top-level surfaces, because landing
+// and setup are marketing/onboarding flows rather than app screens — they want
+// page scroll, not an IonPage with a nav bar. Everything under `app` is Ionic
+// and route-driven (see AppShell).
 
 import { useEffect } from 'react'
+import { IonApp } from '@ionic/react'
+import { IonReactRouter } from '@ionic/react-router'
 import { useStore } from './store/useStore'
+import { hideSplash } from './lib/native'
 import { TopBar } from './components/layout/TopBar'
 import { LandingPage } from './components/landing/LandingPage'
 import { SetupFlow } from './components/setup/SetupFlow'
@@ -11,6 +18,13 @@ import { AppShell } from './components/app/AppShell'
 export default function App() {
   const page = useStore((s) => s.page)
   const checkBackend = useStore((s) => s.checkBackend)
+
+  // Dismiss the native launch splash as soon as React has painted. The UI is
+  // already interactive at this point because the deterministic engine runs
+  // locally — the backend warm-up below only upgrades it.
+  useEffect(() => {
+    void hideSplash()
+  }, [])
 
   // Detect the FastAPI backend on load; the app runs on the local
   // deterministic mirror when it is unreachable. Free-tier hosts sleep when
@@ -32,13 +46,21 @@ export default function App() {
   }, [checkBackend])
 
   return (
-    <>
-      <TopBar />
-      <div className="shell">
-        {page === 'landing' && <LandingPage />}
-        {page === 'setup' && <SetupFlow />}
-        {page === 'app' && <AppShell />}
-      </div>
-    </>
+    <IonApp>
+      <IonReactRouter>
+        {page === 'app' ? (
+          <AppShell />
+        ) : (
+          // Marketing surfaces keep the plain document flow and the web top bar.
+          <div className="webSurface">
+            <TopBar />
+            <div className="shell">
+              {page === 'landing' && <LandingPage />}
+              {page === 'setup' && <SetupFlow />}
+            </div>
+          </div>
+        )}
+      </IonReactRouter>
+    </IonApp>
   )
 }

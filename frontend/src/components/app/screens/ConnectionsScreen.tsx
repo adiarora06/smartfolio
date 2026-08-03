@@ -15,7 +15,9 @@ import {
   apiPlaidLinkToken,
   type PortfolioAnalyzeResult,
 } from '../../../lib/api/client'
-import { AppHero, Panel, PanelHead } from '../../shared/ui'
+import { Panel, PanelHead } from '../../shared/ui'
+import { AppPage } from '../../shared/AppPage'
+import { openExternal, shareText } from '../../../lib/native'
 
 declare global {
   interface Window {
@@ -119,22 +121,21 @@ export function ConnectionsScreen() {
       source = 'local'
     }
     const payload = { source, profile, holdings, connections, stock, ...result }
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'smartfolio-export.json'
-    a.click()
-    URL.revokeObjectURL(url)
+    // Native gets the system share sheet; the browser keeps Web Share, then a
+    // download. The old download-only path silently did nothing on iOS.
+    await shareText({
+      title: 'SmartFolio export',
+      text: JSON.stringify(payload, null, 2),
+      filename: 'smartfolio-export.json',
+    })
   }
 
   return (
-    <section className="screen active" id="connections">
-      <AppHero
-        title="Connections"
-        subtitle="Three live integrations, four planned."
-        actions={<button onClick={() => void exportJson()}>Export JSON</button>}
-      />
+    <AppPage
+      title="Connections"
+      subtitle="Three live integrations, four planned."
+      actions={<button onClick={() => void exportJson()}>Share Export</button>}
+    >
       <Panel>
         <PanelHead title="Live" subtitle="Working integrations — not toggles." />
         <div className="body">
@@ -155,7 +156,7 @@ export function ConnectionsScreen() {
               </span>
               <button
                 onClick={() =>
-                  window.open(`${API_URL}/.well-known/agent.json`, '_blank', 'noopener')
+                  void openExternal(`${API_URL}/.well-known/agent.json`)
                 }
               >
                 View Agent Card
@@ -178,6 +179,6 @@ export function ConnectionsScreen() {
           </div>
         </div>
       </Panel>
-    </section>
+    </AppPage>
   )
 }
