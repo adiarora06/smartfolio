@@ -1,16 +1,26 @@
 // Analyze Stock — the OpenVC-style terminal.
 // Forecast / Backtest / Topology / Audit / Memory tabs over a deterministic run.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../../../store/useStore'
 import { fmt, pct, title } from '../../../lib/format'
 import { buildForecastMemo } from '../../../lib/ai/memo'
 import { describeImpact } from '../../../lib/ai/insights'
-import { IonLabel, IonSegment, IonSegmentButton } from '@ionic/react'
+import { IonIcon, IonLabel, IonSegment, IonSegmentButton } from '@ionic/react'
+import {
+  addOutline,
+  arrowDownOutline,
+  arrowForwardOutline,
+  arrowUpOutline,
+  bookmarkOutline,
+  chatbubbleEllipsesOutline,
+  refreshOutline,
+  removeOutline,
+} from 'ionicons/icons'
 import { Panel, PanelHead } from '../../shared/ui'
 import { AppPage } from '../../shared/AppPage'
 import { ForecastChart } from '../../shared/ForecastChart'
-import type { StockTab } from '../../../types'
+import type { NewsItem, StockTab } from '../../../types'
 
 // Topology (the agent-flow view) lives in the Open Source screen now — the
 // terminal keeps only the tabs a customer acts on.
@@ -66,6 +76,7 @@ export function AnalyzeStockScreen() {
     <AppPage
       title="Analyze"
       subtitle="Forecast, backtest, audit trail, and portfolio impact — for any ticker."
+      desktopHeader={false}
       onRefresh={async () => {
         await runStock(stock.symbol, stock.days)
       }}
@@ -79,6 +90,19 @@ export function AnalyzeStockScreen() {
         </>
       }
     >
+      <div className="analyzeDesktop">
+        <DesktopAnalysis
+          ticker={ticker}
+          horizon={horizon}
+          running={running}
+          slowHint={slowHint}
+          setTicker={setTicker}
+          setHorizon={setHorizon}
+          run={run}
+        />
+      </div>
+
+      <div className="analyzeLegacy">
       <Panel>
         <PanelHead title="Stock Analysis Terminal" subtitle="Type a ticker, press Enter." />
         <div className="body formgrid">
@@ -195,7 +219,417 @@ export function AnalyzeStockScreen() {
           {stockTab === 'history' && <HistoryPane />}
         </div>
       </section>
+      </div>
     </AppPage>
+  )
+}
+
+type SignalTone = 'positive' | 'negative' | 'mixed'
+type NewsFilter = 'all' | SignalTone
+
+const QUICK_TICKERS = ['AAPL', 'NVDA', 'TSLA', 'VOO']
+
+const SAMPLE_NEWS: NewsItem[] = [
+  {
+    title: 'Product roadmap expands services opportunity',
+    source: 'Sample signal',
+    published: 'Run live analysis for current coverage',
+    sentimentLabel: 'Bullish',
+  },
+  {
+    title: 'Analysts debate valuation after the latest rally',
+    source: 'Sample signal',
+    published: 'Run live analysis for current coverage',
+    sentimentLabel: 'Somewhat-Bearish',
+  },
+  {
+    title: 'Supply outlook remains balanced into next quarter',
+    source: 'Sample signal',
+    published: 'Run live analysis for current coverage',
+    sentimentLabel: 'Neutral',
+  },
+  {
+    title: 'Institutional demand supports long-term outlook',
+    source: 'Sample signal',
+    published: 'Run live analysis for current coverage',
+    sentimentLabel: 'Somewhat-Bullish',
+  },
+]
+
+function signalTone(item: NewsItem): SignalTone {
+  const label = item.sentimentLabel?.toLowerCase() ?? ''
+  if (label.includes('bearish')) return 'negative'
+  if (label.includes('bullish')) return 'positive'
+  if ((item.sentimentScore ?? 0) > 0.12) return 'positive'
+  if ((item.sentimentScore ?? 0) < -0.12) return 'negative'
+  return 'mixed'
+}
+
+function signalLabel(tone: SignalTone): string {
+  return tone === 'positive' ? 'Positive' : tone === 'negative' ? 'Negative' : 'Mixed'
+}
+
+function DesktopAnalysis({
+  ticker,
+  horizon,
+  running,
+  slowHint,
+  setTicker,
+  setHorizon,
+  run,
+}: {
+  ticker: string
+  horizon: string
+  running: boolean
+  slowHint: boolean
+  setTicker: (value: string) => void
+  setHorizon: (value: string) => void
+  run: () => void
+}) {
+  const stock = useStore((s) => s.stock)
+  const impact = useStore((s) => s.impact)
+  const holdings = useStore((s) => s.holdings)
+  const addStockToPortfolio = useStore((s) => s.addStockToPortfolio)
+  const saveMemo = useStore((s) => s.saveMemo)
+  const setScreen = useStore((s) => s.setScreen)
+  const runStock = useStore((s) => s.runStock)
+  const [mode, setMode] = useState<'price' | 'impact'>('impact')
+  const [newsFilter, setNewsFilter] = useState<NewsFilter>('all')
+  const [selectedNews, setSelectedNews] = useState<string | null>(null)
+
+  const isDemoNews = !(stock.news?.length)
+  const news = useMemo(() => stock.news?.length ? stock.news : SAMPLE_NEWS, [stock.news])
+  const filteredNews = useMemo(
+    () => news.filter((item) => newsFilter === 'all' || signalTone(item) === newsFilter),
+    [news, newsFilter],
+  )
+  const total = holdings.reduce((sum, holding) => sum + holding.value, 0) || 1
+  const currentWeight = holdings
+    .filter((holding) => holding.symbol.toUpperCase() === stock.symbol.toUpperCase())
+    .reduce((sum, holding) => sum + holding.value, 0) / total
+  const displayedWeight = impact?.newWeight ?? currentWeight
+
+  const analyzeTicker = (symbol: string) => {
+    setTicker(symbol)
+    if (!running) void runStock(symbol, Number(horizon))
+  }
+
+  return (
+    <main className="analysisWorkspace">
+      <header className="analysisCommandBar">
+        <div className="analysisIdentity">
+          <span className="analysisEyebrow">Analyze</span>
+          <label className="tickerField">
+            <span className="srOnly">Ticker</span>
+            <input
+              value={ticker}
+              onChange={(event) => setTicker(event.target.value.toUpperCase())}
+              onKeyDown={(event) => event.key === 'Enter' && run()}
+              aria-label="Ticker symbol"
+            />
+          </label>
+          <div>
+            <strong>{stock.name}</strong>
+            <span>
+              {fmt.format(stock.price)} · {title(stock.sector)}
+            </span>
+          </div>
+        </div>
+
+        <div className="quickTickerGroup" aria-label="Quick ticker selection">
+          {QUICK_TICKERS.map((symbol) => (
+            <button
+              className={stock.symbol === symbol ? 'active' : ''}
+              key={symbol}
+              onClick={() => analyzeTicker(symbol)}
+            >
+              {symbol}
+            </button>
+          ))}
+          <button className="iconButton" onClick={addStockToPortfolio} aria-label="Add stock to portfolio">
+            <IonIcon icon={addOutline} />
+          </button>
+        </div>
+
+        <div className="horizonGroup" aria-label="Forecast horizon">
+          {[
+            ['30', '30D'],
+            ['90', '90D'],
+            ['365', '1Y'],
+          ].map(([days, label]) => (
+            <button
+              className={Number(horizon) === Number(days) ? 'active' : ''}
+              key={days}
+              onClick={() => setHorizon(days)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="analysisFreshness">
+          <span className={stock.source && stock.source !== 'offline' ? 'live' : 'demo'}>
+            {stock.source && stock.source !== 'offline' ? 'Live data' : 'Demo data'}
+          </span>
+          <small>{stock.asOf ? `As of ${stock.asOf}` : 'Refresh for latest'}</small>
+        </div>
+
+        <button className="analysisIconAction" onClick={saveMemo} aria-label="Save analysis memo">
+          <IonIcon icon={bookmarkOutline} />
+        </button>
+        <button className="primary refreshAnalysis" disabled={running || !ticker.trim()} onClick={run}>
+          <IonIcon icon={refreshOutline} />
+          {running ? 'Refreshing…' : 'Refresh analysis'}
+        </button>
+      </header>
+
+      {slowHint && running && (
+        <div className="analysisStatus" role="status">
+          The live engine is waking up. This first refresh can take about 30 seconds.
+        </div>
+      )}
+
+      <div className="analysisWorkbench">
+        <section className="analysisCanvas" aria-label={`${stock.symbol} forecast`}>
+          <div className="analysisMetricStrip">
+            <DecisionMetric label="Median" value={fmt.format(stock.medianTarget)} sub={pct(stock.expected)} />
+            <DecisionMetric
+              label="Likely range"
+              value={`${fmt.format(stock.q25Target)} – ${fmt.format(stock.q75Target)}`}
+              sub="50% model band"
+            />
+            <DecisionMetric label="P(Gain)" value={pct(stock.probGain)} sub={`${stock.days}-day horizon`} />
+            <DecisionMetric label="Portfolio weight" value={pct(displayedWeight)} sub={impact ? 'after proposed add' : 'current'} />
+          </div>
+
+          <div className="forecastStage">
+            <div className="forecastStageHead">
+              <div>
+                <span>Price outlook</span>
+                <strong>{stock.symbol} probability range</strong>
+              </div>
+              <div className="forecastLegend" aria-label="Chart legend">
+                <span><i className="legendMedian" />Median</span>
+                <span><i className="legendBand" />50% range</span>
+              </div>
+            </div>
+            <ForecastChart forecast={stock} />
+            <div className="eventPins" aria-label="News events on forecast">
+              {news.slice(0, 3).map((item, index) => {
+                const tone = signalTone(item)
+                return (
+                  <button
+                    className={`eventPin ${tone} ${(selectedNews ?? news[0]?.title) === item.title ? 'active' : ''}`}
+                    style={{ left: `${27 + index * 24}%`, top: `${33 + (index % 2) * 17}%` }}
+                    key={`${item.title}-${index}`}
+                    onClick={() => setSelectedNews(item.title)}
+                    aria-label={`${signalLabel(tone)} news event: ${item.title}`}
+                  >
+                    <IonIcon icon={tone === 'positive' ? arrowUpOutline : tone === 'negative' ? arrowDownOutline : removeOutline} />
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="analysisModeTabs" role="tablist" aria-label="Analysis view">
+            <button className={mode === 'price' ? 'active' : ''} onClick={() => setMode('price')} role="tab" aria-selected={mode === 'price'}>
+              Price outlook
+            </button>
+            <button className={mode === 'impact' ? 'active' : ''} onClick={() => setMode('impact')} role="tab" aria-selected={mode === 'impact'}>
+              Portfolio effect
+            </button>
+          </div>
+
+          {mode === 'impact' ? (
+            <PortfolioEffect />
+          ) : (
+            <div className="priceSummary">
+              <div><span>Bear case</span><strong>{fmt.format(stock.bearTarget)}</strong></div>
+              <div><span>Median case</span><strong>{fmt.format(stock.medianTarget)}</strong></div>
+              <div><span>Bull case</span><strong>{fmt.format(stock.bullTarget)}</strong></div>
+            </div>
+          )}
+
+          <DesktopResearchTools />
+        </section>
+
+        <aside className="newsRail" aria-label="Relevant news signals">
+          <div className="newsRailHead">
+            <div>
+              <span>Relevant evidence</span>
+              <h2>News signals</h2>
+            </div>
+            <span className="newsCount">{news.length}</span>
+          </div>
+          <div className="newsFilters" role="group" aria-label="Filter news by sentiment">
+            {(['all', 'positive', 'negative', 'mixed'] as const).map((filter) => (
+              <button
+                className={newsFilter === filter ? 'active' : ''}
+                key={filter}
+                onClick={() => {
+                  setNewsFilter(filter)
+                  setSelectedNews(news.find((item) => filter === 'all' || signalTone(item) === filter)?.title ?? null)
+                }}
+              >
+                {title(filter)}
+              </button>
+            ))}
+          </div>
+
+          <div className="newsSignalList">
+            {filteredNews.length ? filteredNews.map((item, index) => {
+              const tone = signalTone(item)
+              const body = (
+                <>
+                  <span className={`sentimentMarker ${tone}`}>
+                    <IonIcon icon={tone === 'positive' ? arrowUpOutline : tone === 'negative' ? arrowDownOutline : removeOutline} />
+                  </span>
+                  <span className="newsSignalCopy">
+                    <strong>{item.title}</strong>
+                    <small>{[item.source, item.published].filter(Boolean).join(' · ')}</small>
+                    <span className={`sentimentLabel ${tone}`}>{signalLabel(tone)}</span>
+                  </span>
+                  <IonIcon className="newsOpenIcon" icon={arrowForwardOutline} />
+                </>
+              )
+              return item.url ? (
+                <a
+                  className={(selectedNews ?? news[0]?.title) === item.title ? 'newsSignal active' : 'newsSignal'}
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  key={item.url}
+                  onClick={() => setSelectedNews(item.title)}
+                >
+                  {body}
+                </a>
+              ) : (
+                <button
+                  className={(selectedNews ?? news[0]?.title) === item.title ? 'newsSignal active' : 'newsSignal'}
+                  key={`${item.title}-${index}`}
+                  onClick={() => setSelectedNews(item.title)}
+                >
+                  {body}
+                </button>
+              )
+            }) : (
+              <div className="newsEmpty">No signals match this filter.</div>
+            )}
+          </div>
+
+          <div className="newsRailFooter">
+            <p>
+              {isDemoNews
+                ? 'Sample signals are shown until a live analysis returns current coverage.'
+                : 'Sentiment is an estimate, not a forecast.'}
+            </p>
+            <button className="advisorShortcut" onClick={() => setScreen('advisor')}>
+              <IonIcon icon={chatbubbleEllipsesOutline} />
+              Ask Advisor
+              <IonIcon icon={arrowForwardOutline} />
+            </button>
+          </div>
+        </aside>
+      </div>
+    </main>
+  )
+}
+
+function DecisionMetric({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div className="decisionMetric">
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{sub}</small>
+    </div>
+  )
+}
+
+function PortfolioEffect() {
+  const stock = useStore((s) => s.stock)
+  const impact = useStore((s) => s.impact)
+  const holdings = useStore((s) => s.holdings)
+  const total = holdings.reduce((sum, holding) => sum + holding.value, 0) || 1
+  const symbol = stock.symbol.toUpperCase()
+  const currentPosition = holdings
+    .filter((holding) => holding.symbol.toUpperCase() === symbol)
+    .reduce((sum, holding) => sum + holding.value, 0) / total
+  const sectorBefore = holdings
+    .filter((holding) => holding.sector.toLowerCase() === stock.sector.toLowerCase())
+    .reduce((sum, holding) => sum + holding.value, 0) / total
+  const nextPosition = impact?.newWeight ?? currentPosition
+  const sectorAfter = impact?.sectorWeightAfter ?? sectorBefore
+
+  return (
+    <section className="portfolioEffect" aria-label="Portfolio effect">
+      <div className="effectHeader">
+        <div>
+          <span>Position impact</span>
+          <strong>{impact ? `${fmt.format(impact.addedValue)} proposed add` : 'Run with holdings to model a trade'}</strong>
+        </div>
+        <span className={impact?.improvesRiskAdjustedReturn ? 'effectVerdict good' : 'effectVerdict'}>
+          {impact ? (impact.improvesRiskAdjustedReturn ? 'Improves risk / return' : 'Adds concentration') : 'Current portfolio'}
+        </span>
+      </div>
+      <EffectBar label={`${symbol} weight`} before={currentPosition} after={nextPosition} />
+      <EffectBar label={`${title(stock.sector)} sector`} before={sectorBefore} after={sectorAfter} />
+    </section>
+  )
+}
+
+function EffectBar({ label, before, after }: { label: string; before: number; after: number }) {
+  const max = Math.max(before, after, 0.01)
+  return (
+    <div className="effectRow">
+      <span>{label}</span>
+      <div className="effectBars">
+        <div><i style={{ width: `${Math.max((before / max) * 100, before ? 4 : 0)}%` }} /></div>
+        <div><i style={{ width: `${Math.max((after / max) * 100, after ? 4 : 0)}%` }} /></div>
+      </div>
+      <span className="effectNumbers">{pct(before)} <IonIcon icon={arrowForwardOutline} /> {pct(after)}</span>
+    </div>
+  )
+}
+
+function DesktopResearchTools() {
+  const [tab, setTab] = useState<Exclude<StockTab, 'forecast' | 'impact'>>('backtest')
+  const agentEvents = useStore((s) => s.agentEvents)
+  const stock = useStore((s) => s.stock)
+  const stockMemory = useStore((s) => s.stockMemory)
+
+  return (
+    <details className="researchTools">
+      <summary>Method, audit & history</summary>
+      <div className="researchToolTabs" role="tablist" aria-label="Research detail">
+        {(['backtest', 'inputs', 'audit', 'memory', 'history'] as const).map((item) => (
+          <button className={tab === item ? 'active' : ''} key={item} onClick={() => setTab(item)} role="tab" aria-selected={tab === item}>
+            {title(item)}
+          </button>
+        ))}
+      </div>
+      <div className="researchToolBody">
+        {tab === 'backtest' && <BacktestPane />}
+        {tab === 'inputs' && <InputsPane />}
+        {tab === 'audit' && (
+          <ul className="list termList">
+            {agentEvents
+              ? agentEvents.map((event, index) => (
+                  <li key={index}><strong>{event.agent}</strong> · {event.status} · {event.durationMs.toFixed(1)}ms<br />{event.detail}</li>
+                ))
+              : stock.trace.audit.map((line, index) => <li key={index}>{line} · succeeded</li>)}
+          </ul>
+        )}
+        {tab === 'memory' && (
+          <ul className="list termList">
+            {stockMemory.length
+              ? stockMemory.map((memo, index) => <li key={index}><strong>{memo.symbol}</strong> · {memo.rating}<br />{memo.memo}</li>)
+              : <li>No saved stock memos yet.</li>}
+          </ul>
+        )}
+        {tab === 'history' && <HistoryPane />}
+      </div>
+    </details>
   )
 }
 

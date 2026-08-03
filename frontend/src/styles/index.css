@@ -478,3 +478,2355 @@ button.dark { color: #fff; }
   .folioAlertRow small { margin-top: 2px; color: #667085; font-size: 11.5px; font-weight: 500; }
   .folioAlertRow > ion-icon { color: #98a2b3; font-size: 18px; }
 }
+
+/* ==========================================================================
+   WEB DESKTOP REDESIGN
+   Option 3: analysis-first workspace with compact evidence and controls.
+   The existing Ionic/mobile trees remain intact below the lg breakpoint.
+   ========================================================================== */
+
+.desktopPageHeader,
+.analyzeDesktop {
+  display: none;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (min-width: 992px) {
+  :root {
+    --web-navy: #0b1428;
+    --web-navy-2: #111d35;
+    --web-navy-3: #17243d;
+    --web-border-dark: rgba(148, 163, 184, 0.18);
+    --web-teal: #20b8a5;
+  }
+
+  ion-split-pane {
+    --side-width: 184px;
+    --side-min-width: 184px;
+    --side-max-width: 184px;
+  }
+
+  .mobileAppHeader,
+  .mobileLargeHeader,
+  .pageIntro,
+  .analyzeLegacy {
+    display: none;
+  }
+
+  .desktopPageHeader {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 28px 28px 18px;
+  }
+
+  .desktopPageHeader h1 {
+    margin: 0;
+    color: #101828;
+    font-size: clamp(30px, 2.5vw, 40px);
+    line-height: 1;
+    letter-spacing: -0.035em;
+  }
+
+  .desktopPageHeader p {
+    margin: 8px 0 0;
+    color: #667085;
+    font-size: 14px;
+  }
+
+  .desktopPageActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .desktopPageActions button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 40px;
+    border-radius: 8px;
+    padding: 8px 13px;
+    font-size: 13px;
+  }
+
+  .desktopPageActions ion-icon {
+    font-size: 16px;
+  }
+
+  /* Slim, stable web navigation. */
+  .desktopSidebar {
+    --width: 184px;
+    width: 184px;
+    max-width: 184px;
+  }
+
+  .desktopSidebar::part(container) {
+    border-right: 1px solid #dfe6ef;
+    box-shadow: none;
+  }
+
+  .desktopSidebar ion-header,
+  .desktopSidebar ion-toolbar {
+    box-shadow: none;
+  }
+
+  .desktopSidebar ion-toolbar {
+    --background: #fbfcfe;
+    --border-color: #e4eaf2;
+    --min-height: 68px;
+  }
+
+  .desktopSidebar ion-title {
+    padding-inline: 16px;
+    color: #172033;
+    font-size: 15px;
+    font-weight: 850;
+  }
+
+  .desktopSidebar ion-title > span:last-child {
+    vertical-align: middle;
+  }
+
+  .sidebarBrandMark {
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    margin-right: 9px;
+    border-radius: 8px;
+    background: #0f766e;
+    color: #fff;
+    font-size: 14px;
+    vertical-align: middle;
+  }
+
+  .desktopSidebar ion-content {
+    --background: #fbfcfe;
+  }
+
+  .sidebarNav {
+    padding: 12px 8px;
+    background: transparent;
+  }
+
+  .sidebarNavItem {
+    --min-height: 42px;
+    --padding-start: 10px;
+    --inner-padding-end: 10px;
+    --border-radius: 8px;
+    --background: transparent;
+    margin-bottom: 3px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .sidebarNavItem.active {
+    --background: rgba(15, 118, 110, 0.09);
+    color: #0b5f59;
+  }
+
+  .sidebarNavItem ion-icon {
+    margin-right: 11px;
+    font-size: 18px;
+  }
+
+  .sidebarNavItem ion-label {
+    margin: 0;
+  }
+
+  .sidebarStatus {
+    position: absolute;
+    right: 14px;
+    bottom: 22px;
+    left: 14px;
+    display: grid;
+    grid-template-columns: 8px minmax(0, 1fr);
+    gap: 9px;
+    align-items: start;
+    padding-top: 14px;
+    border-top: 1px solid #e4eaf2;
+    color: #475467;
+  }
+
+  .sidebarStatusDot {
+    width: 8px;
+    height: 8px;
+    margin-top: 4px;
+    border-radius: 50%;
+    background: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+  }
+
+  .sidebarStatus strong,
+  .sidebarStatus small {
+    display: block;
+  }
+
+  .sidebarStatus strong {
+    font-size: 11px;
+  }
+
+  .sidebarStatus small {
+    margin-top: 2px;
+    color: #98a2b3;
+    font-size: 10px;
+  }
+
+  /* Analyze: command bar + two-column decision surface. */
+  .analyzeDesktop {
+    display: block;
+    min-height: 100%;
+  }
+
+  .analysisWorkspace {
+    min-height: 100%;
+    padding: 16px;
+    background: #eef2f7;
+  }
+
+  .analysisCommandBar {
+    display: grid;
+    grid-template-columns: minmax(240px, 1.15fr) auto auto minmax(112px, auto) 40px auto;
+    gap: 10px;
+    align-items: center;
+    min-height: 66px;
+    padding: 10px 12px;
+    border: 1px solid #dbe3ed;
+    border-radius: 11px 11px 0 0;
+    background: rgba(255, 255, 255, 0.98);
+  }
+
+  .analysisIdentity {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: 10px;
+  }
+
+  .analysisEyebrow {
+    color: #0f766e;
+    font-size: 11px;
+    font-weight: 850;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .tickerField {
+    display: block;
+    width: 74px;
+  }
+
+  .tickerField input {
+    min-height: 38px;
+    border-radius: 7px;
+    padding: 7px 9px;
+    color: #101828;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+  }
+
+  .analysisIdentity > div:last-child {
+    min-width: 0;
+  }
+
+  .analysisIdentity strong,
+  .analysisIdentity > div:last-child span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .analysisIdentity strong {
+    color: #172033;
+    font-size: 13px;
+  }
+
+  .analysisIdentity > div:last-child span {
+    margin-top: 1px;
+    color: #667085;
+    font-size: 11px;
+  }
+
+  .quickTickerGroup,
+  .horizonGroup {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px;
+    border: 1px solid #e1e7ef;
+    border-radius: 8px;
+    background: #f7f9fc;
+  }
+
+  .quickTickerGroup button,
+  .horizonGroup button {
+    min-height: 30px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    padding: 4px 8px;
+    color: #667085;
+    font-size: 11px;
+  }
+
+  .quickTickerGroup button.active,
+  .horizonGroup button.active {
+    background: #fff;
+    color: #0f766e;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+  }
+
+  .quickTickerGroup .iconButton {
+    width: 30px;
+    padding: 0;
+  }
+
+  .analysisFreshness span,
+  .analysisFreshness small {
+    display: block;
+  }
+
+  .analysisFreshness span {
+    color: #475467;
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .analysisFreshness span::before {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-right: 6px;
+    border-radius: 50%;
+    background: #98a2b3;
+  }
+
+  .analysisFreshness span.live::before {
+    background: #16a34a;
+  }
+
+  .analysisFreshness small {
+    margin-top: 2px;
+    color: #98a2b3;
+    font-size: 10px;
+  }
+
+  .analysisIconAction {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    min-height: 38px;
+    padding: 0;
+    border-radius: 8px;
+  }
+
+  .refreshAnalysis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 38px;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 12px;
+  }
+
+  .analysisStatus {
+    padding: 9px 14px;
+    background: #fff7ed;
+    color: #9a3412;
+    font-size: 12px;
+  }
+
+  .analysisWorkbench {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 350px;
+    min-height: calc(100dvh - 115px);
+    overflow: hidden;
+    border: 1px solid #1e2d49;
+    border-top: 0;
+    border-radius: 0 0 12px 12px;
+    background: var(--web-navy);
+    box-shadow: 0 22px 48px rgba(15, 23, 42, 0.14);
+  }
+
+  .analysisCanvas {
+    min-width: 0;
+    padding: 18px;
+    color: #dce7f7;
+    background: var(--web-navy);
+  }
+
+  .analysisMetricStrip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 14px;
+    overflow: hidden;
+    border: 1px solid var(--web-border-dark);
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .decisionMetric {
+    min-width: 0;
+    padding: 12px 14px;
+    border-right: 1px solid var(--web-border-dark);
+  }
+
+  .decisionMetric:last-child {
+    border-right: 0;
+  }
+
+  .decisionMetric span,
+  .decisionMetric strong,
+  .decisionMetric small {
+    display: block;
+  }
+
+  .decisionMetric span {
+    color: #8fa3c2;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+
+  .decisionMetric strong {
+    margin-top: 3px;
+    overflow: hidden;
+    color: #fff;
+    font-size: 19px;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .decisionMetric small {
+    margin-top: 2px;
+    color: #8092ad;
+    font-size: 10px;
+  }
+
+  .forecastStage {
+    position: relative;
+    padding: 13px 14px 8px;
+    overflow: hidden;
+    border: 1px solid var(--web-border-dark);
+    border-radius: 10px;
+    background: #0f1b32;
+  }
+
+  .forecastStageHead {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 1px 2px 4px;
+  }
+
+  .forecastStageHead span,
+  .forecastStageHead strong {
+    display: block;
+  }
+
+  .forecastStageHead > div:first-child > span {
+    color: #20b8a5;
+    font-size: 10px;
+    font-weight: 850;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+
+  .forecastStageHead strong {
+    margin-top: 2px;
+    color: #fff;
+    font-size: 14px;
+  }
+
+  .forecastLegend {
+    display: flex;
+    gap: 12px;
+    color: #8fa3c2;
+    font-size: 10px;
+  }
+
+  .forecastLegend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .forecastLegend i {
+    display: inline-block;
+    width: 15px;
+    height: 3px;
+    border-radius: 999px;
+  }
+
+  .forecastLegend .legendMedian {
+    background: #5eead4;
+  }
+
+  .forecastLegend .legendBand {
+    height: 8px;
+    background: rgba(94, 234, 212, 0.28);
+  }
+
+  .forecastStage .svgbox {
+    height: clamp(280px, 36vh, 372px);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .forecastStage figcaption {
+    padding: 3px 4px 2px !important;
+    color: #8295b2 !important;
+    font-size: 10px !important;
+  }
+
+  .eventPins {
+    position: absolute;
+    inset: 50px 30px 44px 40px;
+    pointer-events: none;
+  }
+
+  .eventPin {
+    position: absolute;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    min-height: 34px;
+    padding: 0;
+    border: 2px solid #0f1b32;
+    border-radius: 50%;
+    color: #fff;
+    pointer-events: auto;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+    transform: translate(-50%, -50%);
+  }
+
+  .eventPin ion-icon {
+    font-size: 17px;
+  }
+
+  .eventPin.positive { background: #109b70; }
+  .eventPin.negative { background: #dc4c57; }
+  .eventPin.mixed { background: #718096; }
+  .eventPin.active { box-shadow: 0 0 0 4px rgba(94, 234, 212, 0.18), 0 6px 16px rgba(0, 0, 0, 0.25); }
+
+  .analysisModeTabs {
+    display: inline-flex;
+    gap: 3px;
+    margin-top: 12px;
+    padding: 3px;
+    border: 1px solid var(--web-border-dark);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .analysisModeTabs button,
+  .researchToolTabs button {
+    min-height: 32px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #91a4c1;
+    padding: 5px 12px;
+    font-size: 11px;
+  }
+
+  .analysisModeTabs button.active,
+  .researchToolTabs button.active {
+    background: rgba(32, 184, 165, 0.15);
+    color: #7ce8d9;
+  }
+
+  .portfolioEffect,
+  .priceSummary {
+    margin-top: 10px;
+    border: 1px solid var(--web-border-dark);
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .portfolioEffect {
+    padding: 12px 14px;
+  }
+
+  .effectHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 10px;
+  }
+
+  .effectHeader span,
+  .effectHeader strong {
+    display: block;
+  }
+
+  .effectHeader > div > span {
+    color: #8fa3c2;
+    font-size: 10px;
+    text-transform: uppercase;
+  }
+
+  .effectHeader strong {
+    margin-top: 2px;
+    color: #fff;
+    font-size: 12px;
+  }
+
+  .effectVerdict {
+    padding: 4px 7px;
+    border-radius: 5px;
+    background: rgba(245, 158, 11, 0.12);
+    color: #fbbf24;
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  .effectVerdict.good {
+    background: rgba(16, 185, 129, 0.12);
+    color: #6ee7b7;
+  }
+
+  .effectRow {
+    display: grid;
+    grid-template-columns: 110px minmax(100px, 1fr) 120px;
+    gap: 12px;
+    align-items: center;
+    margin-top: 7px;
+    color: #a7b7cf;
+    font-size: 11px;
+  }
+
+  .effectBars {
+    display: grid;
+    gap: 4px;
+  }
+
+  .effectBars > div {
+    height: 4px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .effectBars i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: #7085a4;
+  }
+
+  .effectBars > div:last-child i {
+    background: #20b8a5;
+  }
+
+  .effectNumbers {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    color: #d8e3f3;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .effectNumbers ion-icon {
+    color: #71829e;
+    font-size: 12px;
+  }
+
+  .priceSummary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    overflow: hidden;
+  }
+
+  .priceSummary > div {
+    padding: 12px 14px;
+    border-right: 1px solid var(--web-border-dark);
+  }
+
+  .priceSummary > div:last-child { border-right: 0; }
+  .priceSummary span,
+  .priceSummary strong { display: block; }
+  .priceSummary span { color: #8fa3c2; font-size: 10px; }
+  .priceSummary strong { margin-top: 2px; color: #fff; font-size: 14px; }
+
+  .researchTools {
+    margin-top: 10px;
+    border-top: 1px solid var(--web-border-dark);
+    color: #a8b8cf;
+  }
+
+  .researchTools summary {
+    padding: 10px 2px 0;
+    color: #91a4c1;
+    font-size: 11px;
+    font-weight: 750;
+    cursor: pointer;
+  }
+
+  .researchToolTabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: 10px;
+  }
+
+  .researchToolBody {
+    margin-top: 10px;
+    max-height: 380px;
+    overflow: auto;
+    padding-right: 4px;
+  }
+
+  /* Evidence rail. Explicit text labels accompany color for accessibility. */
+  .newsRail {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border-left: 1px solid var(--web-border-dark);
+    background: #101a2e;
+    color: #dbe7f7;
+  }
+
+  .newsRailHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 17px 10px;
+  }
+
+  .newsRailHead span,
+  .newsRailHead h2 {
+    display: block;
+    margin: 0;
+  }
+
+  .newsRailHead > div > span {
+    color: #20b8a5;
+    font-size: 10px;
+    font-weight: 850;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .newsRailHead h2 {
+    margin-top: 2px;
+    color: #fff;
+    font-size: 19px;
+    letter-spacing: -0.02em;
+  }
+
+  .newsCount {
+    display: grid !important;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--web-border-dark);
+    border-radius: 7px;
+    color: #91a4c1;
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .newsFilters {
+    display: flex;
+    gap: 4px;
+    padding: 0 17px 12px;
+  }
+
+  .newsFilters button {
+    min-height: 29px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: #8fa3c2;
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  .newsFilters button.active {
+    border-color: rgba(32, 184, 165, 0.24);
+    background: rgba(32, 184, 165, 0.11);
+    color: #72e4d4;
+  }
+
+  .newsSignalList {
+    flex: 1;
+    overflow: auto;
+    border-top: 1px solid var(--web-border-dark);
+  }
+
+  .newsSignal {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) 16px;
+    gap: 10px;
+    align-items: start;
+    width: 100%;
+    min-height: 0;
+    border: 0;
+    border-bottom: 1px solid var(--web-border-dark);
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    padding: 13px 16px;
+    text-align: left;
+    text-decoration: none;
+  }
+
+  .newsSignal:hover,
+  .newsSignal.active {
+    border-color: var(--web-border-dark);
+    background: rgba(255, 255, 255, 0.045);
+  }
+
+  .sentimentMarker {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+  }
+
+  .sentimentMarker ion-icon {
+    font-size: 16px;
+  }
+
+  .sentimentMarker.positive { background: rgba(16, 185, 129, 0.13); color: #6ee7b7; }
+  .sentimentMarker.negative { background: rgba(244, 63, 94, 0.13); color: #fda4af; }
+  .sentimentMarker.mixed { background: rgba(148, 163, 184, 0.12); color: #cbd5e1; }
+
+  .newsSignalCopy,
+  .newsSignalCopy strong,
+  .newsSignalCopy small {
+    display: block;
+  }
+
+  .newsSignalCopy strong {
+    color: #e8eef8;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .newsSignalCopy small {
+    margin-top: 4px;
+    color: #8193ad;
+    font-size: 9.5px;
+    line-height: 1.35;
+  }
+
+  .sentimentLabel {
+    display: inline-flex;
+    width: fit-content;
+    margin-top: 6px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 800;
+  }
+
+  .sentimentLabel.positive { background: rgba(16, 185, 129, 0.11); color: #6ee7b7; }
+  .sentimentLabel.negative { background: rgba(244, 63, 94, 0.11); color: #fda4af; }
+  .sentimentLabel.mixed { background: rgba(148, 163, 184, 0.11); color: #cbd5e1; }
+
+  .newsOpenIcon {
+    margin-top: 6px;
+    color: #62738e;
+    font-size: 14px;
+  }
+
+  .newsEmpty {
+    padding: 24px 17px;
+    color: #8fa3c2;
+    font-size: 12px;
+  }
+
+  .newsRailFooter {
+    padding: 12px 16px 16px;
+    border-top: 1px solid var(--web-border-dark);
+  }
+
+  .newsRailFooter p {
+    margin: 0 0 10px;
+    color: #788ba7;
+    font-size: 10px;
+    line-height: 1.45;
+  }
+
+  .advisorShortcut {
+    display: grid;
+    grid-template-columns: 18px 1fr 18px;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+    min-height: 38px;
+    border: 1px solid rgba(32, 184, 165, 0.28);
+    border-radius: 7px;
+    background: rgba(32, 184, 165, 0.09);
+    color: #8bf0e2;
+    padding: 7px 10px;
+    font-size: 11px;
+    text-align: left;
+  }
+
+  /* Portfolio: cleaner summary, denser allocation, fixed desktop table. */
+  .portfolioScreen {
+    display: grid;
+    gap: 14px;
+    padding: 0 28px 32px;
+  }
+
+  .portfolioScreen .panel,
+  .portfolioScreen .metrics {
+    margin: 0;
+  }
+
+  .portfolioSummaryBand .metrics {
+    grid-template-columns: 1.25fr 1fr 1fr 1fr;
+    gap: 10px;
+  }
+
+  .portfolioSummaryBand .metric {
+    min-height: 112px;
+    padding: 17px;
+    border-radius: 11px;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.055);
+  }
+
+  .portfolioSummaryBand .metric:first-child {
+    border-color: rgba(15, 118, 110, 0.24);
+    background: linear-gradient(135deg, rgba(15, 118, 110, 0.08), #fff 62%);
+  }
+
+  .portfolioSummaryBand .metric span {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+  }
+
+  .portfolioSummaryBand .metric strong {
+    margin-top: 7px;
+    font-size: 25px;
+    letter-spacing: -0.025em;
+  }
+
+  .portfolioSummaryBand .metric small {
+    font-size: 11px;
+  }
+
+  .portfolioAllocationPanel,
+  .portfolioHoldingsPanel {
+    border-radius: 12px;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+  }
+
+  .portfolioScreen .head {
+    padding: 13px 16px;
+  }
+
+  .portfolioScreen .head h2 {
+    color: #172033;
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  .portfolioScreen .head h2 small {
+    margin-left: 8px;
+    color: #98a2b3;
+    font-size: 10px;
+    font-weight: 650;
+  }
+
+  .portfolioAllocationPanel .body {
+    padding: 20px 24px;
+  }
+
+  .portfolioAllocationPanel .allocSplit {
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 50px;
+  }
+
+  .portfolioAllocationPanel .wrow {
+    margin-bottom: 10px;
+  }
+
+  .portfolioAllocationPanel .track {
+    height: 7px;
+  }
+
+  .portfolioHoldingsPanel .body {
+    padding: 0;
+  }
+
+  .portfolioHoldingsPanel .table {
+    min-width: 900px;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .portfolioHoldingsPanel .thead,
+  .portfolioHoldingsPanel .row {
+    grid-template-columns: 0.65fr 1.3fr 0.8fr 1fr 0.9fr 0.75fr 42px;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+
+  .portfolioHoldingsPanel .thead {
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #77839a;
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+  }
+
+  .portfolioHoldingsPanel .row {
+    min-height: 58px;
+    border-top: 0;
+    border-bottom: 1px solid #e8edf4;
+  }
+
+  .portfolioHoldingsPanel .row:last-child {
+    border-bottom: 0;
+  }
+
+  .portfolioHoldingsPanel .row:hover {
+    background: #fbfcfe;
+  }
+
+  .portfolioHoldingsPanel input,
+  .portfolioHoldingsPanel select {
+    min-width: 0;
+    min-height: 36px;
+    border-color: transparent;
+    border-radius: 6px;
+    background: transparent;
+    padding: 6px 7px;
+    color: #344054;
+    font-size: 12px;
+  }
+
+  .portfolioHoldingsPanel input:hover,
+  .portfolioHoldingsPanel select:hover,
+  .portfolioHoldingsPanel input:focus,
+  .portfolioHoldingsPanel select:focus {
+    border-color: #cbd5e1;
+    background: #fff;
+  }
+
+  .portfolioHoldingsPanel .holdingSymbolInput {
+    color: #101828;
+    font-weight: 850;
+  }
+
+  .portfolioHoldingsPanel .holdingNameInput {
+    grid-column: auto;
+  }
+
+  .removeHoldingButton {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    min-height: 36px;
+    border-color: transparent;
+    background: transparent;
+    color: #98a2b3;
+    padding: 0;
+  }
+
+  .removeHoldingButton:hover {
+    border-color: rgba(185, 28, 28, 0.15);
+    background: rgba(185, 28, 28, 0.06);
+    color: #b91c1c;
+  }
+
+  .removeHoldingButton span {
+    display: none;
+  }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+  .analysisCommandBar {
+    grid-template-columns: minmax(215px, 1fr) auto auto 40px auto;
+  }
+
+  .analysisFreshness {
+    display: none;
+  }
+
+  .quickTickerGroup button:nth-child(4) {
+    display: none;
+  }
+
+  .analysisWorkbench {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+
+  .analysisMetricStrip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .decisionMetric:nth-child(2) { border-right: 0; }
+  .decisionMetric:nth-child(-n + 2) { border-bottom: 1px solid var(--web-border-dark); }
+
+  .portfolioScreen {
+    padding-inline: 20px;
+  }
+
+  .portfolioHoldingsPanel .body {
+    overflow-x: auto;
+  }
+}
+
+/* ==========================================================================
+   WEB WORKSPACE EXTENSION
+   Overview command center, portfolio strategy rail, and unified AI Assistant.
+   ========================================================================== */
+
+@media (min-width: 992px) {
+  /* Overview -------------------------------------------------------------- */
+  .overviewDesktopV2 {
+    display: grid;
+    gap: 12px;
+    padding: 0 28px 28px;
+  }
+
+  .overviewPulseGrid {
+    display: grid;
+    grid-template-columns: 1.35fr 0.82fr 0.82fr;
+    gap: 10px;
+  }
+
+  .overviewValueCard,
+  .overviewFitCard,
+  .overviewTargetCard,
+  .overviewDecisionPanel,
+  .overviewAllocationPanel {
+    border: 1px solid #dbe3ed;
+    border-radius: 11px;
+    background: #fff;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.055);
+  }
+
+  .overviewValueCard,
+  .overviewFitCard,
+  .overviewTargetCard {
+    min-height: 132px;
+    padding: 15px 16px;
+  }
+
+  .overviewValueCard {
+    position: relative;
+    overflow: hidden;
+    border-color: #1f2b43;
+    background: linear-gradient(135deg, #0b1428, #15233f);
+    color: #fff;
+  }
+
+  .overviewValueCard::after {
+    content: '';
+    position: absolute;
+    top: -48px;
+    right: -36px;
+    width: 170px;
+    height: 170px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(32, 184, 165, 0.2), transparent 68%);
+    pointer-events: none;
+  }
+
+  .overviewValueCard > span,
+  .overviewCardHead > span {
+    color: #8ea2c0;
+    font-size: 10px;
+    font-weight: 850;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+
+  .overviewValueCard > strong {
+    display: block;
+    margin-top: 4px;
+    font-size: 30px;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+  }
+
+  .overviewValueMeta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 5px;
+    color: #8fa3c2;
+    font-size: 10px;
+  }
+
+  .overviewValueMeta .positive {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #6ee7b7;
+    font-weight: 800;
+  }
+
+  .overviewValueCard button {
+    position: absolute;
+    right: 14px;
+    bottom: 13px;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 31px;
+    border-color: rgba(94, 234, 212, 0.25);
+    border-radius: 7px;
+    background: rgba(32, 184, 165, 0.09);
+    color: #8bf0e2;
+    padding: 5px 9px;
+    font-size: 10px;
+  }
+
+  .overviewFitCard,
+  .overviewTargetCard {
+    background: linear-gradient(145deg, #fff, #f9fbfd);
+  }
+
+  .overviewCardHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .overviewCardHead > span {
+    color: #7a879b;
+  }
+
+  .overviewCardHead b {
+    color: #0f766e;
+    font-size: 10px;
+  }
+
+  .overviewFitCard > strong,
+  .overviewTargetCard > strong {
+    display: block;
+    margin-top: 9px;
+    color: #101828;
+    font-size: 25px;
+    line-height: 1;
+  }
+
+  .overviewFitCard > strong small {
+    color: #98a2b3;
+    font-size: 11px;
+  }
+
+  .overviewFitCard p,
+  .overviewTargetCard p {
+    margin: 6px 0 0;
+    color: #667085;
+    font-size: 10px;
+  }
+
+  .overviewFitTrack {
+    height: 6px;
+    margin-top: 10px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e8eef5;
+  }
+
+  .overviewFitTrack span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #0f766e, #20b8a5);
+  }
+
+  .overviewTargetDelta {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-top: 7px;
+  }
+
+  .overviewTargetDelta span {
+    color: #0f766e;
+    font-size: 11px;
+    font-weight: 850;
+  }
+
+  .overviewTargetDelta small {
+    color: #98a2b3;
+    font-size: 9px;
+  }
+
+  .overviewCoreGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.42fr) minmax(310px, 0.78fr);
+    gap: 12px;
+  }
+
+  .overviewPathPanel {
+    overflow: hidden;
+    border: 1px solid #1f2d48;
+    border-radius: 11px;
+    background: #0b1428;
+    color: #dbe7f7;
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+  }
+
+  .overviewSectionHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 13px 15px;
+    border-bottom: 1px solid #e5eaf1;
+  }
+
+  .overviewSectionHead.dark {
+    border-bottom-color: rgba(148, 163, 184, 0.16);
+  }
+
+  .overviewSectionHead span,
+  .overviewSectionHead h2 {
+    display: block;
+  }
+
+  .overviewSectionHead > div > span {
+    color: #0f766e;
+    font-size: 9px;
+    font-weight: 850;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .overviewSectionHead.dark > div > span { color: #20b8a5; }
+
+  .overviewSectionHead h2 {
+    margin: 2px 0 0;
+    color: #101828;
+    font-size: 15px;
+    letter-spacing: -0.015em;
+  }
+
+  .overviewSectionHead.dark h2 { color: #fff; }
+
+  .overviewSectionHead > button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 31px;
+    border: 0;
+    background: transparent;
+    color: #0f766e;
+    padding: 4px 7px;
+    font-size: 10px;
+  }
+
+  .overviewLiveBadge {
+    padding: 4px 7px;
+    border-radius: 5px;
+    background: rgba(32, 184, 165, 0.1);
+    color: #71e1d2;
+    font-size: 9px;
+    font-weight: 750;
+  }
+
+  .overviewPathPanel .folioChartWrap {
+    padding: 10px 14px 9px;
+  }
+
+  .overviewPathPanel .folioChartHead {
+    display: none;
+  }
+
+  .overviewPathPanel .folioPathChart {
+    display: block;
+    width: 100%;
+    height: 178px;
+  }
+
+  .overviewPathPanel .folioCorridor { fill: rgba(32, 184, 165, 0.11); }
+  .overviewPathPanel .folioBoundary { fill: none; stroke: rgba(94, 234, 212, 0.4); stroke-width: 0.8; stroke-dasharray: 4 4; }
+  .overviewPathPanel .folioTargetLine { fill: none; stroke: rgba(96, 165, 250, 0.55); stroke-width: 1; }
+  .overviewPathPanel .folioPortfolioLine { fill: none; stroke: #5eead4; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
+  .overviewPathPanel .folioEndpoint { fill: #5eead4; }
+  .overviewPathPanel .folioAxisText { fill: #7990b0; font-size: 9px; }
+
+  .overviewPathPanel .folioHorizon {
+    display: inline-flex;
+    gap: 3px;
+    padding: 3px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .overviewPathPanel .folioHorizon button {
+    min-height: 27px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: #8fa3c2;
+    padding: 3px 14px;
+    font-size: 9px;
+  }
+
+  .overviewPathPanel .folioHorizon button.active {
+    background: rgba(32, 184, 165, 0.14);
+    color: #7ce8d9;
+  }
+
+  .overviewPathPanel .folioModelNote {
+    display: inline-block;
+    margin: 0 0 0 10px;
+    color: #71829e;
+    font-size: 9px;
+  }
+
+  .overviewDecisionPanel {
+    overflow: hidden;
+  }
+
+  .overviewSmartMove {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) 16px;
+    gap: 9px;
+    align-items: center;
+    width: calc(100% - 24px);
+    min-height: 0;
+    margin: 12px;
+    border: 1px solid rgba(15, 118, 110, 0.22);
+    border-radius: 9px;
+    background: rgba(15, 118, 110, 0.06);
+    padding: 10px;
+    text-align: left;
+  }
+
+  .overviewSmartMove > span:first-child {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: #0f766e;
+    color: #fff;
+  }
+
+  .overviewSmartMove small,
+  .overviewSmartMove strong,
+  .overviewSmartMove em {
+    display: block;
+  }
+
+  .overviewSmartMove small {
+    color: #0f766e;
+    font-size: 9px;
+    font-weight: 850;
+    text-transform: uppercase;
+  }
+
+  .overviewSmartMove strong {
+    margin-top: 1px;
+    color: #172033;
+    font-size: 12px;
+  }
+
+  .overviewSmartMove em {
+    margin-top: 2px;
+    overflow: hidden;
+    color: #667085;
+    font-size: 9px;
+    font-style: normal;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .overviewSignalList {
+    display: grid;
+    border-top: 1px solid #e8edf3;
+  }
+
+  .overviewSignalList button {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) 16px;
+    gap: 9px;
+    align-items: center;
+    min-height: 0;
+    border: 0;
+    border-bottom: 1px solid #edf1f5;
+    border-radius: 0;
+    background: transparent;
+    padding: 10px 13px;
+    text-align: left;
+  }
+
+  .overviewSignalList button:last-child { border-bottom: 0; }
+
+  .overviewSignalList button > span:first-child {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: rgba(29, 78, 216, 0.07);
+    color: #1d4ed8;
+  }
+
+  .overviewSignalList button > span:first-child.warn { background: rgba(180, 83, 9, 0.08); color: #b45309; }
+  .overviewSignalList button > span:first-child.good { background: rgba(21, 128, 61, 0.08); color: #15803d; }
+  .overviewSignalList strong,
+  .overviewSignalList small { display: block; }
+  .overviewSignalList strong { color: #172033; font-size: 11px; }
+  .overviewSignalList small { margin-top: 2px; color: #7a879b; font-size: 9px; }
+  .overviewSignalList button > ion-icon { color: #98a2b3; font-size: 14px; }
+
+  .overviewAllocationPanel {
+    overflow: hidden;
+  }
+
+  .overviewGapGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .overviewGapGrid button {
+    display: grid;
+    gap: 5px;
+    min-height: 82px;
+    border: 0;
+    border-right: 1px solid #e8edf3;
+    border-radius: 0;
+    background: transparent;
+    padding: 11px 14px;
+    text-align: left;
+  }
+
+  .overviewGapGrid button:last-child { border-right: 0; }
+  .overviewGapName { color: #344054; font-size: 10px; font-weight: 800; }
+  .overviewGapValues { display: flex; align-items: center; gap: 5px; color: #98a2b3; font-size: 11px; }
+  .overviewGapValues b { color: #172033; }
+  .overviewGapValues ion-icon { font-size: 11px; }
+  .overviewGapGrid .need,
+  .overviewGapGrid .trim { width: fit-content; padding: 2px 5px; border-radius: 4px; font-size: 9px; font-weight: 800; }
+  .overviewGapGrid .need { background: rgba(15, 118, 110, 0.08); color: #0f766e; }
+  .overviewGapGrid .trim { background: rgba(180, 83, 9, 0.08); color: #b45309; }
+
+  /* Portfolio ------------------------------------------------------------- */
+  .portfolioSummaryBand .metric {
+    min-height: 92px;
+    padding: 14px 15px;
+  }
+
+  .portfolioSummaryBand .metric strong {
+    margin-top: 4px;
+    font-size: 22px;
+  }
+
+  .portfolioCoreGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(290px, 0.65fr);
+    gap: 12px;
+  }
+
+  .portfolioCoreGrid .portfolioAllocationPanel {
+    min-width: 0;
+  }
+
+  .portfolioAllocationPanel .body {
+    padding: 17px 20px;
+  }
+
+  .portfolioAllocationPanel .allocSplit {
+    gap: 28px;
+  }
+
+  .portfolioRebalancePanel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #1f2c46;
+    border-radius: 12px;
+    background: #0d172b;
+    color: #dce7f7;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.11);
+  }
+
+  .portfolioRebalanceHead {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 9px;
+    align-items: center;
+    padding: 13px 14px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  }
+
+  .portfolioRebalanceHead > span {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: rgba(32, 184, 165, 0.14);
+    color: #74e6d7;
+  }
+
+  .portfolioRebalanceHead small,
+  .portfolioRebalanceHead h2 {
+    display: block;
+    margin: 0;
+  }
+
+  .portfolioRebalanceHead small {
+    color: #20b8a5;
+    font-size: 9px;
+    font-weight: 850;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+
+  .portfolioRebalanceHead h2 {
+    margin-top: 1px;
+    color: #fff;
+    font-size: 14px;
+  }
+
+  .portfolioGapList {
+    display: grid;
+  }
+
+  .portfolioGapList > div {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    padding: 9px 13px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.13);
+  }
+
+  .portfolioGapList > div > span:first-child {
+    display: grid;
+    place-items: center;
+    width: 25px;
+    height: 25px;
+    border-radius: 7px;
+    font-size: 14px;
+  }
+
+  .portfolioGapList .need { background: rgba(16, 185, 129, 0.11); color: #6ee7b7; }
+  .portfolioGapList .trim { background: rgba(245, 158, 11, 0.11); color: #fbbf24; }
+  .portfolioGapList strong,
+  .portfolioGapList small { display: block; }
+  .portfolioGapList strong { color: #e8eef8; font-size: 10px; }
+  .portfolioGapList small { margin-top: 1px; color: #8598b5; font-size: 8.5px; }
+  .portfolioGapList b { color: #aab9cf; font-size: 8.5px; font-weight: 700; white-space: nowrap; }
+
+  .portfolioRebalanceSummary {
+    display: grid;
+    gap: 2px;
+    margin: 10px 13px;
+    padding: 9px 10px;
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .portfolioRebalanceSummary span { color: #8295b2; font-size: 8.5px; text-transform: uppercase; }
+  .portfolioRebalanceSummary strong { color: #fff; font-size: 12px; }
+  .portfolioRebalanceSummary small { color: #8295b2; font-size: 8.5px; }
+
+  .portfolioStrategyButton {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: calc(100% - 26px);
+    min-height: 36px;
+    margin: auto 13px 13px;
+    border-color: rgba(32, 184, 165, 0.3);
+    border-radius: 7px;
+    background: rgba(32, 184, 165, 0.11);
+    color: #86eee0;
+    padding: 7px 10px;
+    font-size: 10px;
+  }
+
+  /* Unified AI Assistant ------------------------------------------------- */
+  .strategyLabScreen {
+    display: grid;
+    gap: 10px;
+    padding: 0 20px 28px;
+  }
+
+  .strategyPresetStrip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .strategyPresetStrip button {
+    display: grid;
+    align-content: start;
+    gap: 2px;
+    min-height: 92px;
+    border-radius: 9px;
+    background: #fff;
+    padding: 11px 12px;
+    text-align: left;
+  }
+
+  .strategyPresetStrip button span,
+  .strategyPresetStrip button strong,
+  .strategyPresetStrip button small {
+    display: block;
+  }
+
+  .strategyPresetStrip button span {
+    color: #7a879b;
+    font-size: 8.5px;
+    font-weight: 850;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .strategyPresetStrip button strong {
+    color: #172033;
+    font-size: 12px;
+  }
+
+  .strategyPresetStrip button small {
+    color: #7a879b;
+    font-size: 8.5px;
+    line-height: 1.35;
+  }
+
+  .strategyPresetStrip button.active {
+    border-color: rgba(15, 118, 110, 0.45);
+    background: linear-gradient(145deg, rgba(15, 118, 110, 0.08), #fff 72%);
+    box-shadow: 0 8px 20px rgba(15, 118, 110, 0.08);
+  }
+
+  .strategyPresetStrip button.active span,
+  .strategyPresetStrip button.active strong { color: #0f766e; }
+
+  .strategyLabGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 10px;
+    align-items: start;
+  }
+
+  .strategyModelColumn {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .strategyProjectionPanel,
+  .strategyControlsPanel,
+  .strategyAdvisorPanel {
+    overflow: hidden;
+    border-radius: 11px;
+  }
+
+  .strategyProjectionPanel {
+    border: 1px solid #1f2d48;
+    background: #0b1428;
+    color: #dce7f7;
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+  }
+
+  .strategyPanelHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #e5eaf1;
+  }
+
+  .strategyPanelHead.dark { border-bottom-color: rgba(148, 163, 184, 0.16); }
+  .strategyPanelHead span,
+  .strategyPanelHead h2 { display: block; }
+  .strategyPanelHead > div > span { color: #0f766e; font-size: 8.5px; font-weight: 850; text-transform: uppercase; letter-spacing: 0.08em; }
+  .strategyPanelHead.dark > div > span { color: #20b8a5; }
+  .strategyPanelHead h2 { margin: 2px 0 0; color: #172033; font-size: 14px; }
+  .strategyPanelHead.dark h2 { color: #fff; }
+
+  .strategyAssumptionBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 7px;
+    border-radius: 5px;
+    background: rgba(32, 184, 165, 0.1);
+    color: #75e6d7;
+    font-size: 9px;
+    font-weight: 800;
+  }
+
+  .strategyMetricStrip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  }
+
+  .strategyMetricStrip > div {
+    min-width: 0;
+    padding: 10px 12px;
+    border-right: 1px solid rgba(148, 163, 184, 0.16);
+  }
+
+  .strategyMetricStrip > div:last-child { border-right: 0; }
+  .strategyMetricStrip span,
+  .strategyMetricStrip strong,
+  .strategyMetricStrip small { display: block; }
+  .strategyMetricStrip span { color: #8295b2; font-size: 8px; text-transform: uppercase; font-weight: 800; }
+  .strategyMetricStrip strong { margin-top: 2px; overflow: hidden; color: #fff; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+  .strategyMetricStrip small { margin-top: 1px; overflow: hidden; color: #71829e; font-size: 7.5px; text-overflow: ellipsis; white-space: nowrap; }
+
+  .strategyChartWrap {
+    position: relative;
+    padding: 8px 12px 10px;
+  }
+
+  .strategyProjectionChart {
+    display: block;
+    width: 100%;
+    height: 190px;
+    border: 0;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.025);
+  }
+
+  .strategyProjectionChart text { fill: #7890b1; }
+
+  .strategyLegend {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    color: #8295b2;
+    font-size: 8px;
+  }
+
+  .strategyLegend span { display: inline-flex; align-items: center; gap: 4px; }
+  .strategyLegend i { display: inline-block; width: 14px; height: 3px; border-radius: 999px; }
+  .strategyLegend .withContributions { background: #20b8a5; }
+  .strategyLegend .growthOnly { background: #71829e; }
+
+  .strategyControlsPanel {
+    border: 1px solid #dbe3ed;
+    background: #fff;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
+  }
+
+  .strategyCustomState {
+    padding: 3px 6px;
+    border-radius: 5px;
+    background: #f1f5f9;
+    color: #667085;
+    font-size: 8.5px;
+    font-weight: 800;
+  }
+
+  .strategyControlGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+  }
+
+  .strategyControlGrid label {
+    display: block;
+    min-width: 0;
+    padding: 10px 13px 8px;
+    border-right: 1px solid #e8edf3;
+    color: #475467;
+  }
+
+  .strategyControlGrid label:last-child { border-right: 0; }
+  .strategyControlGrid label > span { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 9.5px; }
+  .strategyControlGrid label b { color: #172033; font-size: 10px; }
+  .strategyControlGrid ion-range { --bar-height: 4px; --knob-size: 18px; padding: 7px 0 2px; }
+  .strategyControlGrid label small { display: block; color: #98a2b3; font-size: 8px; font-weight: 550; }
+
+  .strategyGuardrail {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 8px;
+    align-items: center;
+    margin: 0 12px 10px;
+    padding: 8px 10px;
+    border: 1px solid rgba(15, 118, 110, 0.16);
+    border-radius: 7px;
+    background: rgba(15, 118, 110, 0.045);
+    color: #0f766e;
+  }
+
+  .strategyGuardrail strong,
+  .strategyGuardrail small { display: block; }
+  .strategyGuardrail strong { font-size: 9px; }
+  .strategyGuardrail small { margin-top: 1px; color: #667085; font-size: 8px; }
+
+  .strategyAdvisorPanel {
+    position: sticky;
+    top: 10px;
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 214px);
+    min-height: 510px;
+    border: 1px solid #1f2d48;
+    background: #101a2e;
+    color: #dce7f7;
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+  }
+
+  .strategyAdvisorHead {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    gap: 9px;
+    align-items: center;
+    padding: 13px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  }
+
+  .strategyAdvisorHead > span:first-child {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: rgba(32, 184, 165, 0.14);
+    color: #75e6d7;
+  }
+
+  .strategyAdvisorHead small,
+  .strategyAdvisorHead h2 { display: block; margin: 0; }
+  .strategyAdvisorHead small { color: #20b8a5; font-size: 8.5px; font-weight: 850; text-transform: uppercase; }
+  .strategyAdvisorHead h2 { margin-top: 1px; color: #fff; font-size: 13px; }
+  .advisorStatus { padding: 3px 6px; border-radius: 4px; background: rgba(16, 185, 129, 0.11); color: #6ee7b7; font-size: 8px; font-weight: 850; }
+
+  .strategyContextChips {
+    display: flex;
+    gap: 5px;
+    overflow-x: auto;
+    padding: 9px 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.13);
+  }
+
+  .strategyContextChips span {
+    flex: 0 0 auto;
+    padding: 3px 6px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.035);
+    color: #95a7c1;
+    font-size: 8px;
+  }
+
+  .strategyChat {
+    flex: 1;
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    overflow: auto;
+    padding: 11px 12px;
+  }
+
+  .strategyMessage {
+    display: flex;
+    gap: 7px;
+    max-width: 92%;
+  }
+
+  .strategyMessage.user {
+    justify-self: end;
+    padding: 8px 9px;
+    border-radius: 9px 9px 2px 9px;
+    background: rgba(32, 184, 165, 0.14);
+  }
+
+  .strategyMessage.ai {
+    justify-self: start;
+  }
+
+  .strategyMessage p {
+    margin: 0;
+    color: #cbd8ea;
+    font-size: 9.5px;
+    line-height: 1.45;
+  }
+
+  .strategyAiIcon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 25px;
+    width: 25px;
+    height: 25px;
+    border-radius: 7px;
+    background: rgba(32, 184, 165, 0.11);
+    color: #72e4d4;
+  }
+
+  .strategyMessage.pending p { color: #8295b2; font-style: italic; }
+
+  .strategyPromptList {
+    display: grid;
+    border-top: 1px solid rgba(148, 163, 184, 0.13);
+  }
+
+  .strategyPromptList button {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) 14px;
+    gap: 7px;
+    align-items: center;
+    min-height: 0;
+    border: 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    border-radius: 0;
+    background: transparent;
+    color: #a9b9cf;
+    padding: 7px 12px;
+    font-size: 8.5px;
+    text-align: left;
+  }
+
+  .strategyPromptList button > span {
+    display: grid;
+    place-items: center;
+    width: 19px;
+    height: 19px;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.055);
+    color: #8295b2;
+    font-size: 8px;
+  }
+
+  .strategyComposer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 38px;
+    gap: 7px;
+    padding: 10px 11px;
+    border-top: 1px solid rgba(148, 163, 184, 0.15);
+  }
+
+  .strategyComposer textarea {
+    min-height: 38px;
+    max-height: 76px;
+    border-color: rgba(148, 163, 184, 0.19);
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.055);
+    color: #e4edf8;
+    padding: 8px 9px;
+    font-size: 10px;
+  }
+
+  .strategyComposer textarea::placeholder { color: #71829e; }
+  .strategyComposer button { display: grid; place-items: center; width: 38px; min-height: 38px; border-radius: 7px; padding: 0; }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+  .overviewDesktopV2 { padding-inline: 20px; }
+  .overviewCoreGrid { grid-template-columns: minmax(0, 1.25fr) minmax(285px, 0.75fr); }
+  .overviewGapGrid { grid-template-columns: repeat(2, 1fr); }
+  .overviewGapGrid button:nth-child(2) { border-right: 0; }
+  .overviewGapGrid button:nth-child(-n + 2) { border-bottom: 1px solid #e8edf3; }
+  .portfolioCoreGrid { grid-template-columns: minmax(0, 1.35fr) minmax(270px, 0.65fr); }
+  .strategyLabScreen { padding-inline: 14px; }
+  .strategyLabGrid { grid-template-columns: minmax(0, 1fr) 310px; }
+  .strategyPresetStrip button small { display: none; }
+  .strategyPresetStrip button { min-height: 66px; }
+  .strategyMetricStrip { grid-template-columns: repeat(2, 1fr); }
+  .strategyMetricStrip > div:nth-child(2) { border-right: 0; }
+  .strategyMetricStrip > div:nth-child(-n + 2) { border-bottom: 1px solid rgba(148, 163, 184, 0.16); }
+}
+
+@media (max-width: 991px) {
+  .strategyLabScreen {
+    display: grid;
+    gap: 12px;
+    padding: 12px 12px 28px;
+  }
+
+  .strategyPresetStrip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .strategyPresetStrip button {
+    flex: 0 0 210px;
+    display: grid;
+    gap: 2px;
+    min-height: 88px;
+    padding: 10px;
+    text-align: left;
+  }
+
+  .strategyPresetStrip button span,
+  .strategyPresetStrip button strong,
+  .strategyPresetStrip button small { display: block; }
+  .strategyPresetStrip button span { color: var(--muted); font-size: 10px; text-transform: uppercase; }
+  .strategyPresetStrip button small { color: var(--muted); font-size: 10px; }
+  .strategyLabGrid,
+  .strategyModelColumn { display: grid; gap: 12px; }
+  .strategyProjectionPanel { overflow: hidden; border-radius: 12px; background: #0b1428; color: #dce7f7; }
+  .strategyPanelHead,
+  .strategyAdvisorHead { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; }
+  .strategyPanelHead h2,
+  .strategyAdvisorHead h2 { margin: 2px 0 0; font-size: 15px; }
+  .strategyMetricStrip { display: grid; grid-template-columns: 1fr 1fr; }
+  .strategyMetricStrip > div { padding: 10px; border: 1px solid rgba(255,255,255,.1); }
+  .strategyMetricStrip span,
+  .strategyMetricStrip strong,
+  .strategyMetricStrip small { display: block; }
+  .strategyMetricStrip span,
+  .strategyMetricStrip small { color: #93a7c4; font-size: 10px; }
+  .strategyMetricStrip strong { color: #fff; font-size: 16px; }
+  .strategyChartWrap { padding: 10px; }
+  .strategyProjectionChart { width: 100%; height: auto; }
+  .strategyLegend { display: flex; gap: 10px; color: #93a7c4; font-size: 10px; }
+  .strategyControlGrid { display: grid; gap: 2px; padding: 8px 12px; }
+  .strategyControlGrid label { padding: 7px 0; }
+  .strategyControlGrid label > span { display: flex; justify-content: space-between; }
+  .strategyGuardrail { display: flex; gap: 8px; margin: 0 12px 12px; padding: 9px; background: rgba(15,118,110,.06); border-radius: 8px; }
+  .strategyGuardrail strong,
+  .strategyGuardrail small { display: block; }
+  .strategyAdvisorPanel { overflow: hidden; border-radius: 12px; background: #101a2e; color: #dce7f7; }
+  .strategyAdvisorHead { justify-content: flex-start; }
+  .advisorStatus { margin-left: auto; }
+  .strategyContextChips { display: flex; gap: 6px; overflow-x: auto; padding: 8px 12px; }
+  .strategyContextChips span { white-space: nowrap; font-size: 10px; }
+  .strategyChat { display: grid; gap: 8px; max-height: 300px; overflow: auto; padding: 12px; }
+  .strategyMessage { display: flex; gap: 7px; }
+  .strategyMessage.user { justify-self: end; padding: 8px; border-radius: 8px; background: rgba(32,184,165,.14); }
+  .strategyMessage p { margin: 0; font-size: 12px; }
+  .strategyPromptList { display: grid; }
+  .strategyPromptList button { display: grid; grid-template-columns: 24px 1fr 18px; gap: 8px; align-items: center; text-align: left; }
+  .strategyComposer { display: grid; grid-template-columns: 1fr 44px; gap: 8px; padding: 12px; }
+  .strategyComposer textarea { min-height: 44px; }
+}
+
+/* ==========================================================================
+   DESKTOP READABILITY SCALE
+   The web app should remain comfortably legible without browser zoom. This
+   final layer keeps supporting copy at 12px or larger and primary interface
+   text at 14–18px while preserving the existing information hierarchy.
+   ========================================================================== */
+
+@media (min-width: 992px) {
+  body {
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  button { font-size: 14px; }
+  label { font-size: 14px; }
+
+  .brand span,
+  .proof span,
+  .feature span,
+  .choice span,
+  .head p,
+  .foot,
+  .line,
+  .pill,
+  .allocLegend li,
+  .donutLegend li,
+  .weightHead,
+  .wrow {
+    font-size: 14px;
+  }
+
+  .metric span,
+  .metric small,
+  ion-content .metric span,
+  ion-content .metric small {
+    font-size: 13px;
+  }
+
+  .head h2,
+  .portfolioScreen .head h2 {
+    font-size: 18px;
+  }
+
+  ion-split-pane {
+    --side-width: 208px;
+    --side-min-width: 208px;
+    --side-max-width: 208px;
+  }
+
+  .desktopSidebar {
+    --width: 208px;
+    width: 208px;
+    max-width: 208px;
+  }
+
+  .desktopSidebar ion-title { font-size: 18px; }
+  .sidebarBrandMark { width: 32px; height: 32px; font-size: 16px; }
+  .sidebarNavItem { --min-height: 48px; font-size: 15px; }
+  .sidebarNavItem ion-icon { font-size: 20px; }
+  .sidebarStatus strong { font-size: 13px; }
+  .sidebarStatus small { font-size: 12px; }
+
+  .desktopPageHeader { padding-bottom: 20px; }
+  .desktopPageHeader h1 { font-size: clamp(36px, 3vw, 44px); }
+  .desktopPageHeader p { font-size: 17px; }
+  .desktopPageActions button { min-height: 44px; font-size: 15px; }
+
+  /* Overview */
+  .overviewValueCard,
+  .overviewFitCard,
+  .overviewTargetCard { min-height: 148px; }
+  .overviewValueCard > span,
+  .overviewCardHead > span { font-size: 12px; }
+  .overviewValueCard > strong { font-size: 34px; }
+  .overviewValueMeta { font-size: 14px; }
+  .overviewValueCard button { min-height: 38px; font-size: 13px; }
+  .overviewCardHead b { font-size: 13px; }
+  .overviewFitCard > strong,
+  .overviewTargetCard > strong { font-size: 28px; }
+  .overviewFitCard > strong small,
+  .overviewFitCard p,
+  .overviewTargetCard p,
+  .overviewTargetDelta span,
+  .overviewTargetDelta small { font-size: 13px; }
+  .overviewSectionHead > div > span { font-size: 12px; }
+  .overviewSectionHead h2 { font-size: 18px; }
+  .overviewSectionHead > button,
+  .overviewLiveBadge { font-size: 12px; }
+  .overviewPathPanel .folioAxisText { font-size: 12px; }
+  .overviewPathPanel .folioHorizon button { min-height: 34px; font-size: 13px; }
+  .overviewPathPanel .folioModelNote { font-size: 12px; }
+  .overviewSmartMove small { font-size: 11px; }
+  .overviewSmartMove strong { font-size: 15px; }
+  .overviewSmartMove em { font-size: 12px; white-space: normal; }
+  .overviewSignalList strong { font-size: 14px; }
+  .overviewSignalList small { font-size: 12px; }
+  .overviewGapGrid button { min-height: 96px; }
+  .overviewGapName { font-size: 14px; }
+  .overviewGapValues { font-size: 13px; }
+  .overviewGapGrid .need,
+  .overviewGapGrid .trim { font-size: 12px; }
+
+  /* Analyze */
+  .analysisCommandBar { min-height: 76px; }
+  .analysisEyebrow { font-size: 13px; }
+  .analysisIdentity strong { font-size: 15px; }
+  .analysisIdentity > div:last-child span,
+  .analysisFreshness span { font-size: 13px; }
+  .analysisFreshness small { font-size: 12px; }
+  .quickTickerGroup button,
+  .horizonGroup button { min-height: 36px; font-size: 13px; }
+  .refreshAnalysis,
+  .analysisStatus { font-size: 14px; }
+  .decisionMetric span,
+  .decisionMetric small { font-size: 12px; }
+  .decisionMetric strong { font-size: 22px; }
+  .forecastStageHead > div:first-child > span { font-size: 12px; }
+  .forecastStageHead strong { font-size: 17px; }
+  .forecastLegend { font-size: 12px; }
+  .forecastStage .svgbox text { font-size: 13px; }
+  .forecastStage figcaption { font-size: 12px !important; }
+  .analysisModeTabs button,
+  .researchToolTabs button { min-height: 38px; font-size: 13px; }
+  .effectHeader > div > span,
+  .priceSummary span { font-size: 12px; }
+  .effectHeader strong,
+  .priceSummary strong { font-size: 16px; }
+  .effectVerdict { font-size: 12px; }
+  .effectRow,
+  .researchTools summary { font-size: 13px; }
+  .newsRailHead > div > span { font-size: 12px; }
+  .newsRailHead h2 { font-size: 22px; }
+  .newsCount { font-size: 13px; }
+  .newsFilters button { min-height: 36px; font-size: 12px; }
+  .newsSignalCopy strong { font-size: 15px; }
+  .newsSignalCopy small { font-size: 12px; }
+  .sentimentLabel { font-size: 11px; }
+  .newsEmpty,
+  .newsRailFooter p { font-size: 12px; }
+  .advisorShortcut { min-height: 44px; font-size: 13px; }
+
+  /* Portfolio */
+  .portfolioSummaryBand .metric { min-height: 112px; }
+  .portfolioSummaryBand .metric span { font-size: 12px; }
+  .portfolioSummaryBand .metric strong { font-size: 26px; }
+  .portfolioSummaryBand .metric small { font-size: 13px; }
+  .portfolioScreen .head h2 small { font-size: 12px; }
+  .portfolioHoldingsPanel .thead { font-size: 12px; }
+  .portfolioHoldingsPanel .row { min-height: 66px; }
+  .portfolioHoldingsPanel input,
+  .portfolioHoldingsPanel select { min-height: 42px; font-size: 14px; }
+  .portfolioRebalanceHead small { font-size: 12px; }
+  .portfolioRebalanceHead h2 { font-size: 17px; }
+  .portfolioGapList strong { font-size: 14px; }
+  .portfolioGapList small,
+  .portfolioGapList b { font-size: 12px; }
+  .portfolioRebalanceSummary span,
+  .portfolioRebalanceSummary small { font-size: 12px; }
+  .portfolioRebalanceSummary strong { font-size: 15px; }
+  .portfolioStrategyButton { min-height: 44px; font-size: 14px; }
+
+  /* AI Assistant */
+  .strategyPresetStrip button { min-height: 118px; padding: 14px; }
+  .strategyPresetStrip button span { font-size: 12px; }
+  .strategyPresetStrip button strong { font-size: 16px; }
+  .strategyPresetStrip button small { font-size: 13px; }
+  .strategyPanelHead > div > span { font-size: 12px; }
+  .strategyPanelHead h2 { font-size: 18px; }
+  .strategyAssumptionBadge,
+  .strategyCustomState { font-size: 12px; }
+  .strategyMetricStrip > div { padding: 13px 14px; }
+  .strategyMetricStrip span,
+  .strategyMetricStrip small { font-size: 12px; }
+  .strategyMetricStrip strong { font-size: 19px; }
+  .strategyProjectionChart text { font-size: 13px; }
+  .strategyLegend { font-size: 12px; }
+  .strategyControlGrid label { padding: 13px 15px 11px; }
+  .strategyControlGrid label > span { font-size: 13px; }
+  .strategyControlGrid label b { font-size: 14px; }
+  .strategyControlGrid label small { font-size: 12px; }
+  .strategyGuardrail { padding: 10px 12px; }
+  .strategyGuardrail strong { font-size: 13px; }
+  .strategyGuardrail small { font-size: 12px; }
+  .strategyAdvisorHead small { font-size: 11px; }
+  .strategyAdvisorHead h2 { font-size: 16px; }
+  .advisorStatus { font-size: 11px; }
+  .strategyContextChips span { font-size: 11px; }
+  .strategyMessage p { font-size: 13px; }
+  .strategyPromptList button { min-height: 42px; font-size: 13px; }
+  .strategyPromptList button > span { font-size: 11px; }
+  .strategyComposer textarea { min-height: 44px; font-size: 14px; }
+  .strategyComposer button { min-height: 44px; }
+}
+
+@media (min-width: 1200px) {
+  .analysisWorkbench { grid-template-columns: minmax(0, 1fr) 390px; }
+  .strategyLabGrid { grid-template-columns: minmax(0, 1fr) 370px; }
+}

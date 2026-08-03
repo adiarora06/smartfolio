@@ -31,6 +31,7 @@ export function AppPage({
   onRefresh,
   largeTitle = true,
   headerAction,
+  desktopHeader = true,
   children,
 }: {
   title: string
@@ -43,6 +44,8 @@ export function AppPage({
   largeTitle?: boolean
   /** Optional trailing toolbar control, such as a profile button. */
   headerAction?: ReactNode
+  /** Screens with a purpose-built desktop command bar can opt out. */
+  desktopHeader?: boolean
   children: ReactNode
 }) {
   const handleRefresh = async (e: CustomEvent<RefresherEventDetail>) => {
@@ -55,7 +58,7 @@ export function AppPage({
 
   return (
     <IonPage>
-      <IonHeader translucent>
+      <IonHeader className="mobileAppHeader" translucent>
         <IonToolbar>
           <IonButtons slot="start">
             {/* No defaultHref on purpose: the back button then renders only
@@ -72,7 +75,7 @@ export function AppPage({
 
       <IonContent fullscreen>
         {largeTitle && (
-          <IonHeader collapse="condense">
+          <IonHeader className="mobileLargeHeader" collapse="condense">
             <IonToolbar>
               <IonTitle size="large">{title}</IonTitle>
             </IonToolbar>
@@ -83,6 +86,16 @@ export function AppPage({
           <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
             <IonRefresherContent />
           </IonRefresher>
+        )}
+
+        {desktopHeader && (
+          <header className="desktopPageHeader">
+            <div>
+              <h1>{title}</h1>
+              {subtitle && <p>{subtitle}</p>}
+            </div>
+            {actions && <div className="desktopPageActions">{actions}</div>}
+          </header>
         )}
 
         {(subtitle || actions) && (

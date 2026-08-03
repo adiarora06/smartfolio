@@ -8,6 +8,7 @@ import { usePortfolioAnalysis } from '../../../hooks/usePortfolioAnalysis'
 import { fmt, pct, title } from '../../../lib/format'
 import {
   IonInput,
+  IonIcon,
   IonItem,
   IonItemOption,
   IonItemOptions,
@@ -18,6 +19,15 @@ import {
   IonSelect,
   IonSelectOption,
 } from '@ionic/react'
+import {
+  addOutline,
+  alertCircleOutline,
+  arrowForwardOutline,
+  checkmarkCircleOutline,
+  refreshOutline,
+  sparklesOutline,
+  trashOutline,
+} from 'ionicons/icons'
 import { MetricCard, MetricGrid, Panel, PanelHead } from '../../shared/ui'
 import { AppPage } from '../../shared/AppPage'
 import { DonutChart, type DonutSegment } from '../../shared/DonutChart'
@@ -170,6 +180,7 @@ export function PortfolioScreen() {
   const resetHoldings = useStore((s) => s.resetHoldings)
   const removeHolding = useStore((s) => s.removeHolding)
   const updateHolding = useStore((s) => s.updateHolding)
+  const setScreen = useStore((s) => s.setScreen)
 
   // Donut segments from the live asset-class allocation.
   const segments: DonutSegment[] = Object.entries(analysis.current)
@@ -197,6 +208,10 @@ export function PortfolioScreen() {
   const biggestGap = Object.entries(analysis.gap).sort(
     (a, b) => Math.abs(b[1]) - Math.abs(a[1]),
   )[0]
+  const priorityGaps = Object.entries(analysis.gap)
+    .filter(([, delta]) => Math.abs(delta) >= 0.02)
+    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+    .slice(0, 3)
 
   // Per-holding weights, heaviest first.
   const weights = [...holdings]
@@ -210,11 +225,19 @@ export function PortfolioScreen() {
       subtitle="Edit holdings — everything recalculates instantly."
       actions={
         <>
-          <button onClick={addHolding}>Add Holding</button>
-          <button onClick={resetHoldings}>Reset Demo</button>
+          <button className="primary" onClick={addHolding}>
+            <IonIcon icon={addOutline} />
+            Add holding
+          </button>
+          <button onClick={resetHoldings}>
+            <IonIcon icon={refreshOutline} />
+            Reset demo
+          </button>
         </>
       }
     >
+      <div className="portfolioScreen">
+      <div className="portfolioSummaryBand">
       <MetricGrid>
         <MetricCard
           label="Total Value"
@@ -241,9 +264,11 @@ export function PortfolioScreen() {
           }
         />
       </MetricGrid>
+      </div>
 
-      <Panel>
-        <PanelHead title="Allocation" />
+      <div className="portfolioCoreGrid">
+      <Panel className="portfolioAllocationPanel">
+        <PanelHead title="Allocation at a glance" />
         <div className="body allocSplit">
           <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
             <DonutChart
@@ -263,8 +288,8 @@ export function PortfolioScreen() {
           </div>
           <div>
             <div className="weightHead">Position weight</div>
-            {weights.map((h) => (
-              <div className="wrow" key={h.symbol}>
+            {weights.map((h, index) => (
+              <div className="wrow" key={`${h.symbol}-${index}`}>
                 <span className="sym">{h.symbol}</span>
                 <div className="track">
                   <div
@@ -279,8 +304,42 @@ export function PortfolioScreen() {
         </div>
       </Panel>
 
-      <Panel>
-        <PanelHead title="Holdings" />
+      <aside className="portfolioRebalancePanel">
+        <div className="portfolioRebalanceHead">
+          <span><IonIcon icon={sparklesOutline} /></span>
+          <div>
+            <small>AI planning preview</small>
+            <h2>Rebalance priorities</h2>
+          </div>
+        </div>
+        <div className="portfolioGapList">
+          {priorityGaps.map(([asset, delta]) => (
+            <div key={asset}>
+              <span className={delta >= 0 ? 'need' : 'trim'}>
+                <IonIcon icon={delta >= 0 ? checkmarkCircleOutline : alertCircleOutline} />
+              </span>
+              <span>
+                <strong>{assetLabel(asset)}</strong>
+                <small>{delta >= 0 ? 'Increase' : 'Reduce'} by {pct(Math.abs(delta))}</small>
+              </span>
+              <b>{pct(analysis.current[asset] ?? 0)} → {pct(analysis.target[asset] ?? 0)}</b>
+            </div>
+          ))}
+        </div>
+        <div className="portfolioRebalanceSummary">
+          <span>Risk profile</span>
+          <strong>{title(analysis.riskProfileName)}</strong>
+          <small>{analysis.concentrations.length ? `${analysis.concentrations.length} concentration flags to model` : 'No concentration flags'}</small>
+        </div>
+        <button className="portfolioStrategyButton" onClick={() => setScreen('scenarios')}>
+          Simulate this plan
+          <IonIcon icon={arrowForwardOutline} />
+        </button>
+      </aside>
+      </div>
+
+      <Panel className="portfolioHoldingsPanel">
+        <PanelHead title={<span>Holdings <small>{holdings.length} positions</small></span>} />
         <div className="body">
             <div className="table">
               <div className="thead">
@@ -295,17 +354,21 @@ export function PortfolioScreen() {
               {holdings.map((h, i) => (
                 <div className="row" key={i}>
                   <input
+                    aria-label={`Symbol for holding ${i + 1}`}
+                    className="holdingSymbolInput"
                     name="symbol"
                     value={h.symbol}
                     onChange={(e) => updateHolding(i, 'symbol', e.target.value)}
                   />
                   <input
-                    className="wide"
+                    aria-label={`Name for ${h.symbol || `holding ${i + 1}`}`}
+                    className="holdingNameInput"
                     name="name"
                     value={h.name}
                     onChange={(e) => updateHolding(i, 'name', e.target.value)}
                   />
                   <select
+                    aria-label={`Type for ${h.symbol || `holding ${i + 1}`}`}
                     name="type"
                     value={h.type}
                     onChange={(e) => updateHolding(i, 'type', e.target.value as HoldingType)}
@@ -317,6 +380,7 @@ export function PortfolioScreen() {
                     ))}
                   </select>
                   <select
+                    aria-label={`Asset class for ${h.symbol || `holding ${i + 1}`}`}
                     name="asset"
                     value={h.asset}
                     onChange={(e) => updateHolding(i, 'asset', e.target.value as AssetClass)}
@@ -328,17 +392,26 @@ export function PortfolioScreen() {
                     ))}
                   </select>
                   <input
+                    aria-label={`Sector for ${h.symbol || `holding ${i + 1}`}`}
                     name="sector"
                     value={h.sector}
                     onChange={(e) => updateHolding(i, 'sector', e.target.value)}
                   />
                   <input
+                    aria-label={`Value for ${h.symbol || `holding ${i + 1}`}`}
                     name="value"
                     type="number"
                     value={h.value}
                     onChange={(e) => updateHolding(i, 'value', Number(e.target.value))}
                   />
-                  <button onClick={() => removeHolding(i)}>Remove</button>
+                  <button
+                    className="removeHoldingButton"
+                    onClick={() => removeHolding(i)}
+                    aria-label={`Remove ${h.symbol || `holding ${i + 1}`}`}
+                  >
+                    <IonIcon icon={trashOutline} />
+                    <span>Remove</span>
+                  </button>
                 </div>
               ))}
             </div>
@@ -352,6 +425,7 @@ export function PortfolioScreen() {
             </IonList>
           </div>
       </Panel>
+      </div>
     </AppPage>
   )
 }

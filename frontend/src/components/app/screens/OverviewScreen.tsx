@@ -2,7 +2,10 @@
 
 import { IonButton, IonIcon } from '@ionic/react'
 import {
+  alertCircleOutline,
+  arrowForwardOutline,
   chevronForwardOutline,
+  compassOutline,
   personCircleOutline,
   pieChartOutline,
   shieldCheckmarkOutline,
@@ -13,10 +16,7 @@ import { useStore } from '../../../store/useStore'
 import { usePortfolioAnalysis } from '../../../hooks/usePortfolioAnalysis'
 import { calculateFolioFit, selectSmartMove } from '../../../lib/calculations/overview'
 import { fmt, pct, title } from '../../../lib/format'
-import { MetricCard, MetricGrid, Panel, PanelHead } from '../../shared/ui'
 import { AppPage } from '../../shared/AppPage'
-import { AllocationBars } from '../../shared/AllocationBars'
-import { InsightList, type InsightItem } from '../../shared/InsightList'
 import { FolioPathChart } from '../../shared/FolioPathChart'
 
 function assetName(asset: string): string {
@@ -32,7 +32,6 @@ function moveDetail(asset: string): string {
 
 export function OverviewScreen() {
   const analysis = usePortfolioAnalysis()
-  const holdings = useStore((s) => s.holdings)
   const stock = useStore((s) => s.stock)
   const setScreen = useStore((s) => s.setScreen)
   const checkBackend = useStore((s) => s.checkBackend)
@@ -41,40 +40,31 @@ export function OverviewScreen() {
     await checkBackend()
   }
 
-  const insightItems: InsightItem[] = [
-    ...analysis.concentrations.map((finding) => ({
-      stat: pct(finding.weight),
-      text:
-        finding.kind === 'single_stock'
-          ? `${finding.label} — single stock`
-          : finding.kind === 'stock_aggregate'
-            ? 'in individual stocks'
-            : `${title(finding.label)} sector`,
-      warn: true,
-    })),
-    ...analysis.recommendations.slice(0, 3).map((signal) => ({
-      text:
-        signal.kind === 'increase'
-          ? `Add ${title(signal.asset ?? '')}`
-          : signal.kind === 'reduce'
-            ? `Trim ${title(signal.asset ?? '')}`
-            : 'Shift into broad funds over time',
-    })),
-  ]
-  if (!analysis.concentrations.length) {
-    insightItems.unshift({ stat: '0', text: 'concentration flags — well diversified' })
-  }
-
   const fit = calculateFolioFit(analysis.gap, analysis.concentrations.length)
   const smartMove = selectSmartMove(analysis.gap)
   const largestOverweight = Object.entries(analysis.gap)
     .filter(([, delta]) => delta < -0.02)
     .sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]))[0]
   const fitLabel = fit >= 85 ? 'Strong fit' : fit >= 70 ? 'Good fit' : 'Needs review'
+  const gapMoves = Object.entries(analysis.gap)
+    .filter(([, delta]) => Math.abs(delta) >= 0.02)
+    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+    .slice(0, 4)
+  const topConcern = analysis.concentrations[0]
 
   return (
     <AppPage
-      title="SmartFolio"
+      title="Overview"
+      subtitle="Portfolio health, trajectory, and the next decisions worth making."
+      actions={
+        <>
+          <button onClick={() => setScreen('stock')}>Analyze stock</button>
+          <button className="primary" onClick={() => setScreen('scenarios')}>
+            Open AI Assistant
+            <IonIcon icon={arrowForwardOutline} />
+          </button>
+        </>
+      }
       largeTitle={false}
       onRefresh={refresh}
       headerAction={
@@ -163,30 +153,124 @@ export function OverviewScreen() {
       </div>
 
       <div className="desktopOverview">
-        <div className="pageIntro">
-          <p className="pageSubtitle">Your portfolio at a glance — value, risk, allocation, next actions.</p>
-          <div className="pageActions">
-            <button onClick={() => setScreen('stock')}>Analyze Stock</button>
-            <button className="primary" onClick={() => setScreen('connections')}>Connect Apps</button>
+        <div className="overviewDesktopV2">
+          <section className="overviewPulseGrid" aria-label="Portfolio summary">
+            <div className="overviewValueCard">
+              <span>Portfolio value</span>
+              <strong>{fmt.format(analysis.value)}</strong>
+              <div className="overviewValueMeta">
+                <span className="positive"><IonIcon icon={trendingUpOutline} /> {pct(analysis.currentReturn)}</span>
+                <span>modeled 1-year return</span>
+              </div>
+              <button onClick={() => setScreen('portfolio')}>
+                Review holdings <IonIcon icon={arrowForwardOutline} />
+              </button>
+            </div>
+
+            <div className="overviewFitCard">
+              <div className="overviewCardHead">
+                <span>Portfolio fit</span>
+                <b>{fitLabel}</b>
+              </div>
+              <strong>{fit}<small>/100</small></strong>
+              <div className="overviewFitTrack" aria-label={`Portfolio fit ${fit} out of 100`}>
+                <span style={{ width: `${fit}%` }} />
+              </div>
+              <p>{analysis.concentrations.length ? `${analysis.concentrations.length} concentration flags` : 'Allocation is well diversified'}</p>
+            </div>
+
+            <div className="overviewTargetCard">
+              <div className="overviewCardHead">
+                <span>Target posture</span>
+                <b>{title(analysis.riskProfileName)}</b>
+              </div>
+              <strong>{pct(analysis.targetReturn)}</strong>
+              <p>Modeled 1-year target</p>
+              <div className="overviewTargetDelta">
+                <span>{analysis.targetReturn >= analysis.currentReturn ? '+' : ''}{pct(analysis.targetReturn - analysis.currentReturn)}</span>
+                <small>vs current mix</small>
+              </div>
+            </div>
+          </section>
+
+          <div className="overviewCoreGrid">
+            <section className="overviewPathPanel">
+              <div className="overviewSectionHead dark">
+                <div>
+                  <span>Trajectory</span>
+                  <h2>Your modeled path</h2>
+                </div>
+                <span className="overviewLiveBadge">Updates with allocation</span>
+              </div>
+              <FolioPathChart currentReturn={analysis.currentReturn} targetReturn={analysis.targetReturn} />
+            </section>
+
+            <section className="overviewDecisionPanel">
+              <div className="overviewSectionHead">
+                <div>
+                  <span>Decision queue</span>
+                  <h2>What to act on</h2>
+                </div>
+                <button aria-label="Open AI Assistant" onClick={() => setScreen('scenarios')}>
+                  <IonIcon icon={compassOutline} />
+                </button>
+              </div>
+
+              {smartMove && (
+                <button className="overviewSmartMove" onClick={() => setScreen('scenarios')}>
+                  <span><IonIcon icon={sparklesOutline} /></span>
+                  <span>
+                    <small>Best next simulation</small>
+                    <strong>Increase {assetName(smartMove.asset)} {pct(smartMove.delta, 0)}</strong>
+                    <em>{moveDetail(smartMove.asset)}</em>
+                  </span>
+                  <IonIcon icon={arrowForwardOutline} />
+                </button>
+              )}
+
+              <div className="overviewSignalList">
+                <button onClick={() => setScreen('portfolio')}>
+                  <span className={topConcern ? 'warn' : 'good'}><IonIcon icon={topConcern ? alertCircleOutline : shieldCheckmarkOutline} /></span>
+                  <span>
+                    <strong>{topConcern ? `${topConcern.label} concentration` : 'Diversification looks healthy'}</strong>
+                    <small>{topConcern ? `${pct(topConcern.weight)} of portfolio needs review` : 'No material concentration flags'}</small>
+                  </span>
+                  <IonIcon icon={chevronForwardOutline} />
+                </button>
+                <button onClick={() => setScreen('stock')}>
+                  <span><IonIcon icon={trendingUpOutline} /></span>
+                  <span>
+                    <strong>Latest analysis: {stock.symbol}</strong>
+                    <small>{stock.rating} · {pct(stock.probGain)} probability of gain</small>
+                  </span>
+                  <IonIcon icon={chevronForwardOutline} />
+                </button>
+              </div>
+            </section>
           </div>
-        </div>
 
-        <MetricGrid>
-          <MetricCard label="Portfolio Value" value={fmt.format(analysis.value)} sub={`${holdings.length} holdings`} />
-          <MetricCard label="Risk Profile" value={title(analysis.riskProfileName)} sub={`Score ${analysis.riskScore.toFixed(4)}`} />
-          <MetricCard label="Current 1Y" value={pct(analysis.currentReturn)} sub={`Target ${pct(analysis.targetReturn)}`} />
-          <MetricCard label="Analyze Stock" value={stock.symbol} sub={stock.rating} />
-        </MetricGrid>
-
-        <div className="grid2">
-          <Panel>
-            <PanelHead title="Target Allocation" subtitle="Now vs your risk target." />
-            <div className="body"><AllocationBars analysis={analysis} /></div>
-          </Panel>
-          <Panel>
-            <PanelHead title="AI Insight Queue" subtitle="What needs attention first." />
-            <div className="body"><InsightList items={insightItems} /></div>
-          </Panel>
+          <section className="overviewAllocationPanel">
+            <div className="overviewSectionHead">
+              <div>
+                <span>Allocation drift</span>
+                <h2>Current mix vs target</h2>
+              </div>
+              <button onClick={() => setScreen('portfolio')}>Open portfolio <IonIcon icon={arrowForwardOutline} /></button>
+            </div>
+            <div className="overviewGapGrid">
+              {gapMoves.map(([asset, delta]) => {
+                const current = analysis.current[asset] ?? 0
+                const target = analysis.target[asset] ?? 0
+                return (
+                  <button key={asset} onClick={() => setScreen('portfolio')}>
+                    <span className="overviewGapName">{assetName(asset)}</span>
+                    <span className="overviewGapValues"><b>{pct(current)}</b><IonIcon icon={arrowForwardOutline} /><b>{pct(target)}</b></span>
+                    <span className={delta >= 0 ? 'need' : 'trim'}>{delta >= 0 ? 'Add' : 'Trim'} {pct(Math.abs(delta))}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
         </div>
       </div>
     </AppPage>

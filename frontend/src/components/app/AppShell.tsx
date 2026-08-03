@@ -30,7 +30,6 @@ import {
 } from '@ionic/react'
 import {
   analyticsOutline,
-  chatbubbleEllipsesOutline,
   ellipsisHorizontal,
   gitNetworkOutline,
   gridOutline,
@@ -44,7 +43,6 @@ import { OverviewScreen } from './screens/OverviewScreen'
 import { PortfolioScreen } from './screens/PortfolioScreen'
 import { AnalyzeStockScreen } from './screens/AnalyzeStockScreen'
 import { ScenariosScreen } from './screens/ScenariosScreen'
-import { AdvisorScreen } from './screens/AdvisorScreen'
 import { ConnectionsScreen } from './screens/ConnectionsScreen'
 import { OpenSourceScreen } from './screens/OpenSourceScreen'
 import { MoreScreen } from './MoreScreen'
@@ -70,9 +68,8 @@ function ScreenSync() {
 const SIDEBAR_ITEMS = [
   { path: pathFor('overview'), icon: gridOutline, label: 'Overview' },
   { path: pathFor('portfolio'), icon: pieChartOutline, label: 'Portfolio' },
-  { path: pathFor('stock'), icon: analyticsOutline, label: 'Analyze Stock' },
-  { path: pathFor('scenarios'), icon: optionsOutline, label: 'Scenarios' },
-  { path: pathFor('advisor'), icon: chatbubbleEllipsesOutline, label: 'AI Advisor' },
+  { path: pathFor('stock'), icon: analyticsOutline, label: 'Analyze' },
+  { path: pathFor('scenarios'), icon: optionsOutline, label: 'AI Assistant' },
   { path: pathFor('connections'), icon: linkOutline, label: 'Connections' },
   { path: pathFor('opensource'), icon: gitNetworkOutline, label: 'Open Source' },
 ]
@@ -101,16 +98,20 @@ function Sidebar() {
   const location = useLocation()
   const wide = useIsWide()
   return (
-    <IonMenu contentId="main" type="overlay" disabled={!wide}>
+    <IonMenu className="desktopSidebar" contentId="main" type="overlay" disabled={!wide}>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>SmartFolio</IonTitle>
+          <IonTitle>
+            <span className="sidebarBrandMark" aria-hidden="true">S</span>
+            <span>SmartFolio</span>
+          </IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent>
-        <IonList>
+        <IonList className="sidebarNav">
           {SIDEBAR_ITEMS.map((it) => (
             <IonItem
+              className={location.pathname === it.path ? 'sidebarNavItem active' : 'sidebarNavItem'}
               key={it.path}
               routerLink={it.path}
               routerDirection="root"
@@ -126,6 +127,13 @@ function Sidebar() {
             </IonItem>
           ))}
         </IonList>
+        <div className="sidebarStatus">
+          <span className="sidebarStatusDot" aria-hidden="true" />
+          <span>
+            <strong>Workspace ready</strong>
+            <small>Local-first analysis</small>
+          </span>
+        </div>
       </IonContent>
     </IonMenu>
   )
@@ -148,7 +156,9 @@ export function AppShell() {
             <Route exact path="/portfolio" component={PortfolioScreen} />
             <Route exact path="/stock" component={AnalyzeStockScreen} />
             <Route exact path="/scenarios" component={ScenariosScreen} />
-            <Route exact path="/advisor" component={AdvisorScreen} />
+            <Route exact path="/advisor">
+              <Redirect to="/scenarios?focus=advisor" />
+            </Route>
             <Route exact path="/connections" component={ConnectionsScreen} />
             <Route exact path="/opensource" component={OpenSourceScreen} />
             <Route exact path="/more" component={MoreScreen} />
@@ -168,9 +178,9 @@ export function AppShell() {
               <IonIcon icon={analyticsOutline} />
               <IonLabel>Analyze</IonLabel>
             </IonTabButton>
-            <IonTabButton tab="advisor" href={pathFor('advisor')}>
-              <IonIcon icon={chatbubbleEllipsesOutline} />
-              <IonLabel>Advisor</IonLabel>
+            <IonTabButton tab="advisor" href={pathFor('scenarios')}>
+              <IonIcon icon={optionsOutline} />
+              <IonLabel>AI Assistant</IonLabel>
             </IonTabButton>
             <IonTabButton tab="more" href="/more">
               <IonIcon icon={ellipsisHorizontal} />

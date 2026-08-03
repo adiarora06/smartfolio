@@ -17,6 +17,16 @@
     <meta name="theme-color" content="#0b1220" />
     <meta name="format-detection" content="telephone=no" />
     <title>SmartFolio</title>
+    <script>
+      // Keep the Figma bridge available for explicit capture URLs without
+      // loading a third-party design script during normal app sessions.
+      if (window.location.hash.includes('figmacapture=')) {
+        const figmaCapture = document.createElement('script')
+        figmaCapture.src = 'https://mcp.figma.com/mcp/html-to-design/capture.js'
+        figmaCapture.async = true
+        document.head.appendChild(figmaCapture)
+      }
+    </script>
     <meta
       name="description"
       content="SmartFolio — AI investment intelligence platform: guided onboarding, portfolio diagnostics, and an OpenVC-style stock analysis terminal."
