@@ -45,6 +45,71 @@ class Holding(ApiModel):
     value: float = Field(ge=0, le=1e12)
 
 
+TransactionType = Literal[
+    "deposit", "withdrawal", "buy", "sell", "dividend", "fee"
+]
+PortfolioDataSource = Literal["demo", "imported", "manual"]
+
+
+class PortfolioTransaction(ApiModel):
+    """One dated portfolio activity stored in the workspace ledger."""
+
+    id: str = Field(max_length=64)
+    date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    type: TransactionType
+    symbol: Optional[str] = Field(default=None, max_length=16)
+    quantity: Optional[float] = Field(default=None, ge=0, le=1e12)
+    price: Optional[float] = Field(default=None, ge=0, le=1e12)
+    amount: float = Field(ge=0, le=1e12)
+    description: str = Field(default="", max_length=160)
+    source: PortfolioDataSource = "manual"
+
+
+class ValuationSnapshot(ApiModel):
+    """An explicit dated portfolio value and optional benchmark observation."""
+
+    id: str = Field(max_length=64)
+    date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    value: float = Field(ge=0, le=1e13)
+    benchmark_symbol: str = Field(default="VOO", max_length=16)
+    benchmark_value: Optional[float] = Field(default=None, gt=0, le=1e12)
+    source: PortfolioDataSource = "manual"
+
+
+class PerformancePoint(ApiModel):
+    date: str
+    value: float
+    cumulative_contributions: float
+    portfolio_index: float
+    benchmark_index: Optional[float] = None
+
+
+class PerformanceSummary(ApiModel):
+    measured: bool
+    benchmark_symbol: str
+    start_date: Optional[str]
+    end_date: Optional[str]
+    current_value: float
+    net_contributions: float
+    gain: float
+    total_return: float
+    benchmark_return: Optional[float]
+    excess_return: Optional[float]
+    max_drawdown: float
+    observations: int
+    source: Literal["demo", "imported", "manual", "mixed"]
+    points: List[PerformancePoint]
+
+
+class PortfolioPerformanceRequest(ApiModel):
+    transactions: List[PortfolioTransaction] = Field(max_length=5000)
+    valuations: List[ValuationSnapshot] = Field(max_length=2000)
+
+
+class PortfolioPerformanceResponse(ApiModel):
+    performance: PerformanceSummary
+
+
 class ConcentrationFinding(ApiModel):
     """A structured concentration finding — no prose."""
 
@@ -60,6 +125,44 @@ class RecommendationSignal(ApiModel):
     asset: Optional[str] = None
 
 
+class RiskContribution(ApiModel):
+    """A holding's share of total portfolio risk, not merely capital."""
+
+    label: str
+    weight: float
+    volatility: float
+    beta: float
+    risk_contribution: float
+
+
+class PortfolioStressTest(ApiModel):
+    """One deterministic shock applied to the current portfolio."""
+
+    scenario: Literal["market_selloff", "technology_shock", "rate_shock"]
+    estimated_return: float
+    dollar_impact: float
+
+
+class PortfolioRiskSnapshot(ApiModel):
+    """Whole-portfolio risk decomposition used across the product."""
+
+    annualized_volatility: float
+    target_volatility: float
+    beta: float
+    systematic_share: float
+    idiosyncratic_share: float
+    diversification_ratio: float
+    effective_positions: float
+    vol_ceiling: float
+    risk_budget_used: float
+    var95_one_month: float
+    cvar95_one_month: float
+    return_to_risk: float
+    top_contributors: List[RiskContribution]
+    stress_tests: List[PortfolioStressTest]
+    assumption_driven: bool = True
+
+
 class PortfolioAnalysis(ApiModel):
     risk_profile_name: RiskProfileName
     risk_score: float
@@ -71,6 +174,7 @@ class PortfolioAnalysis(ApiModel):
     value: float
     current_return: float
     target_return: float
+    risk: PortfolioRiskSnapshot
 
 
 class PortfolioInsights(ApiModel):
@@ -88,6 +192,108 @@ class PortfolioAnalyzeRequest(ApiModel):
 class PortfolioAnalyzeResponse(ApiModel):
     analysis: PortfolioAnalysis
     insights: PortfolioInsights
+
+
+class ScenarioSimulationInputs(ApiModel):
+    """User-controlled assumptions for a reproducible strategy simulation."""
+
+    contribution: float = Field(ge=0, le=1e7)
+    return_adj: float = Field(default=0.0, ge=-0.50, le=0.50)
+    rebalance: float = Field(default=0.5, ge=0.0, le=1.0)
+    goal_value: float = Field(gt=0, le=1e13)
+    horizon_years: int = Field(default=10, ge=1, le=40)
+    paths: int = Field(default=2000, ge=100, le=5000)
+    seed: int = Field(default=20260806, ge=0, le=4294967295)
+
+
+class PortfolioSimulateRequest(ScenarioSimulationInputs):
+    profile: InvestorProfile
+    holdings: List[Holding] = Field(max_length=200)
+
+
+class SimulationPercentilePoint(ApiModel):
+    year: int
+    p10: float
+    p25: float
+    p50: float
+    p75: float
+    p90: float
+
+
+class SimulationTerminalRange(ApiModel):
+    p10: float
+    p25: float
+    p50: float
+    p75: float
+    p90: float
+
+
+class ScenarioSimulation(ApiModel):
+    """Distributional strategy result; every value comes from seeded paths."""
+
+    blended_return: float
+    blended_volatility: float
+    goal_value: float
+    horizon_years: int
+    paths: int
+    seed: int
+    success_probability: float
+    preserve_contributions_probability: float
+    expected_terminal: float
+    terminal: SimulationTerminalRange
+    points: List[SimulationPercentilePoint]
+    assumption_driven: bool = True
+
+
+class PortfolioSimulateResponse(ApiModel):
+    simulation: ScenarioSimulation
+
+
+class ContributionOptimizationInputs(ApiModel):
+    """Inputs for reverse-solving the monthly contribution on fixed paths."""
+
+    return_adj: float = Field(default=0.0, ge=-0.50, le=0.50)
+    rebalance: float = Field(default=0.5, ge=0.0, le=1.0)
+    goal_value: float = Field(gt=0, le=1e13)
+    target_probability: float = Field(default=0.75, gt=0.0, lt=1.0)
+    horizon_years: int = Field(default=10, ge=1, le=40)
+    paths: int = Field(default=800, ge=100, le=5000)
+    seed: int = Field(default=20260806, ge=0, le=4294967295)
+    max_contribution: float = Field(default=5000, gt=0, le=1e7)
+    contribution_step: float = Field(default=50, gt=0, le=1e6)
+
+
+class ContributionOptimizeRequest(ContributionOptimizationInputs):
+    profile: InvestorProfile
+    holdings: List[Holding] = Field(max_length=200)
+
+
+class ContributionOptimization(ApiModel):
+    target_probability: float
+    required_contribution: float
+    achieved_probability: float
+    capped: bool
+    max_contribution: float
+    contribution_step: float
+
+
+class ContributionOptimizeResponse(ApiModel):
+    optimization: ContributionOptimization
+
+
+class AdvisorScenarioContext(ApiModel):
+    """The visible Strategy Lab result supplied to the advisor verbatim."""
+
+    contribution: float
+    goal_value: float
+    horizon_years: int
+    modeled_return: float
+    modeled_volatility: float
+    success_probability: float
+    p10: float
+    p50: float
+    p90: float
+    paths: int
 
 
 class ForecastPoint(ApiModel):
@@ -287,21 +493,6 @@ class AgentEvent(ApiModel):
     detail: str
 
 
-class RiskContribution(ApiModel):
-    """A holding's share of total portfolio risk (not of portfolio value).
-
-    These two differ sharply for volatile positions — a 5% weight in a
-    high-vol name can carry 15% of the risk — and that gap is the single most
-    useful thing a concentration view can show.
-    """
-
-    label: str
-    weight: float
-    volatility: float
-    beta: float
-    risk_contribution: float  # share of portfolio volatility, 0..1
-
-
 class PortfolioImpact(ApiModel):
     """Deterministic what-if: adding this stock to the sent portfolio."""
 
@@ -356,6 +547,7 @@ class AdvisorAskRequest(ApiModel):
     profile: InvestorProfile
     holdings: List[Holding] = Field(max_length=200)
     stock: StockForecast
+    scenario: Optional[AdvisorScenarioContext] = None
 
 
 class AdvisorAskResponse(ApiModel):
@@ -387,10 +579,20 @@ class WorkspaceState(ApiModel):
     profile: Optional[InvestorProfile] = None
     holdings: List[Holding] = []
     memos: List[MemoOut] = []
+    transactions: List[PortfolioTransaction] = []
+    valuations: List[ValuationSnapshot] = []
 
 
 class HoldingsPut(ApiModel):
     holdings: List[Holding] = Field(max_length=500)
+
+
+class TransactionsPut(ApiModel):
+    transactions: List[PortfolioTransaction] = Field(max_length=5000)
+
+
+class ValuationsPut(ApiModel):
+    valuations: List[ValuationSnapshot] = Field(max_length=2000)
 
 
 class AnalysisSummary(ApiModel):

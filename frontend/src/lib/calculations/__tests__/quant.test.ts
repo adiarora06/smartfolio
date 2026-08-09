@@ -17,6 +17,7 @@ import {
   winsorize,
 } from '../quant'
 import {
+  conditionalValueAtRisk,
   decompose,
   marginalContribution,
   maxWeightUnderVol,
@@ -130,6 +131,10 @@ describe('risk model', () => {
 
   it('scales VaR with sqrt(time)', () => {
     expect(valueAtRisk(0.2, 1.0) / valueAtRisk(0.2, 0.25)).toBeCloseTo(2.0, 6)
+  })
+
+  it('puts expected tail loss beyond VaR at the same confidence', () => {
+    expect(conditionalValueAtRisk(0.2, 1 / 12)).toBeGreaterThan(valueAtRisk(0.2, 1 / 12))
   })
 
   it('keeps the max position within the volatility ceiling', () => {

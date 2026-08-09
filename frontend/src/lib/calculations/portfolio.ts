@@ -8,11 +8,23 @@
 
 import { RETURNS, TARGETS } from '../data/constants'
 import type {
-  AllocationMap,
-  Holding,
-  InvestorProfile,
-  RiskProfileName,
+    AllocationMap,
+    Holding,
+    InvestorProfile,
+    RiskContribution,
+    RiskProfileName,
 } from '../../types'
+import {
+  ASSET_RISK,
+  VOL_CEILING,
+  conditionalValueAtRisk,
+  decompose,
+  marginalContribution,
+  positionsFromHoldings,
+  riskInputs,
+  valueAtRisk,
+  type Position,
+} from './risk'
 
 const EQUITY_ASSETS = ['us_equity', 'intl_equity']
 
@@ -87,6 +99,32 @@ export interface RecommendationSignal {
   asset?: string
 }
 
+export type StressScenario = 'market_selloff' | 'technology_shock' | 'rate_shock'
+
+export interface PortfolioStressTest {
+  scenario: StressScenario
+  estimatedReturn: number
+  dollarImpact: number
+}
+
+export interface PortfolioRiskSnapshot {
+  annualizedVolatility: number
+  targetVolatility: number
+  beta: number
+  systematicShare: number
+  idiosyncraticShare: number
+  diversificationRatio: number
+  effectivePositions: number
+  volCeiling: number
+  riskBudgetUsed: number
+  var95OneMonth: number
+  cvar95OneMonth: number
+  returnToRisk: number
+  topContributors: RiskContribution[]
+  stressTests: PortfolioStressTest[]
+  assumptionDriven: boolean
+}
+
 export interface PortfolioAnalysis {
   riskProfileName: RiskProfileName
   riskScore: number
@@ -101,6 +139,90 @@ export interface PortfolioAnalysis {
   currentReturn: number
   /** Blended assumed 1Y return of the target allocation. */
   targetReturn: number
+  risk: PortfolioRiskSnapshot
+}
+
+function stressReturn(holding: Holding, scenario: StressScenario): number {
+  const [beta] = riskInputs(holding)
+  const isEquity = EQUITY_ASSETS.includes(holding.asset)
+  if (scenario === 'market_selloff') {
+    if (holding.asset === 'cash') return 0
+    return Math.max(-0.65, -0.2 * beta)
+  }
+  if (scenario === 'technology_shock') {
+    if (isEquity && holding.sector === 'technology') return -0.25
+    if (isEquity) return -0.03 * beta
+    if (holding.asset === 'alternatives') return -0.03
+    return 0
+  }
+  if (holding.asset === 'bonds') return -0.08
+  if (holding.asset === 'cash') return 0
+  if (isEquity && holding.sector === 'real_estate') return -0.12
+  if (isEquity) return -0.05 * beta
+  return holding.asset === 'alternatives' ? -0.04 : 0
+}
+
+function buildRiskSnapshot(
+  holdings: Holding[],
+  profileName: RiskProfileName,
+  currentReturn: number,
+  total: number,
+): PortfolioRiskSnapshot {
+  const positions = positionsFromHoldings(holdings, total)
+  const decomposition = decompose(positions)
+  const totalVariance = decomposition.volatility ** 2
+  const topContributors: RiskContribution[] = decomposition.volatility > 0
+    ? positions.map((position, index) => ({
+        label: position.label,
+        weight: position.weight,
+        volatility: position.vol,
+        beta: position.beta,
+        riskContribution: Math.max(
+          0,
+          (position.weight * marginalContribution(positions, index)) / decomposition.volatility,
+        ),
+      }))
+    : []
+  topContributors.sort((a, b) => b.riskContribution - a.riskContribution)
+
+  const targetPositions: Position[] = Object.entries(TARGETS[profileName])
+    .filter(([, weight]) => weight > 0)
+    .map(([asset, weight]) => {
+      const [beta, vol] = ASSET_RISK[asset] ?? ASSET_RISK.other
+      return { label: asset, weight, beta, vol }
+    })
+  const targetVolatility = decompose(targetPositions).volatility
+  const volCeiling = VOL_CEILING[profileName] ?? 0.15
+  const oneMonth = 1 / 12
+  const stressTests: PortfolioStressTest[] = (
+    ['market_selloff', 'technology_shock', 'rate_shock'] as StressScenario[]
+  ).map((scenario) => {
+    const estimatedReturn = total > 0
+      ? holdings.reduce(
+          (sum, holding) => sum + (Number(holding.value) / total) * stressReturn(holding, scenario),
+          0,
+        )
+      : 0
+    return { scenario, estimatedReturn, dollarImpact: total * estimatedReturn }
+  })
+
+  return {
+    annualizedVolatility: decomposition.volatility,
+    targetVolatility,
+    beta: decomposition.beta,
+    systematicShare: totalVariance > 0 ? decomposition.systematic ** 2 / totalVariance : 0,
+    idiosyncraticShare: totalVariance > 0 ? decomposition.idiosyncratic ** 2 / totalVariance : 0,
+    diversificationRatio: decomposition.diversificationRatio,
+    effectivePositions: decomposition.effectivePositions,
+    volCeiling,
+    riskBudgetUsed: volCeiling > 0 ? decomposition.volatility / volCeiling : 0,
+    var95OneMonth: valueAtRisk(decomposition.volatility, oneMonth),
+    cvar95OneMonth: conditionalValueAtRisk(decomposition.volatility, oneMonth),
+    returnToRisk: decomposition.volatility > 0 ? currentReturn / decomposition.volatility : 0,
+    topContributors: topContributors.slice(0, 6),
+    stressTests,
+    assumptionDriven: true,
+  }
 }
 
 /**
@@ -166,5 +288,6 @@ export function analyzePortfolio(
     value: portfolioValue(holdings),
     currentReturn,
     targetReturn,
+    risk: buildRiskSnapshot(holdings, riskProfileName, currentReturn, portfolioValue(holdings)),
   }
 }

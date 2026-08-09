@@ -20,7 +20,13 @@ from anthropic import AsyncAnthropic
 from openai import AsyncOpenAI
 
 from ...config import settings
-from ...schemas import Narrator, PortfolioAnalysis, PortfolioImpact, StockForecast
+from ...schemas import (
+    AdvisorScenarioContext,
+    Narrator,
+    PortfolioAnalysis,
+    PortfolioImpact,
+    StockForecast,
+)
 from .compliance import DISCLAIMER, violations, with_disclaimer
 from .format import pct, title_case
 from .insights import describe_concentrations, describe_recommendations
@@ -198,6 +204,7 @@ async def answer_question(
     analysis: PortfolioAnalysis,
     stock: StockForecast,
     template_answer: str,
+    scenario: AdvisorScenarioContext | None = None,
 ) -> Tuple[str, Narrator]:
     """Advisor answer + which engine produced it."""
     if not settings.llm_enabled:
@@ -208,10 +215,29 @@ async def answer_question(
         "portfolioValue": round(analysis.value, 2),
         "current1YReturn": pct(analysis.current_return),
         "target1YReturn": pct(analysis.target_return),
+        "portfolioRisk": {
+            "annualizedVolatility": pct(analysis.risk.annualized_volatility),
+            "targetVolatility": pct(analysis.risk.target_volatility),
+            "riskBudgetUsed": pct(analysis.risk.risk_budget_used),
+            "beta": round(analysis.risk.beta, 2),
+            "effectivePositions": round(analysis.risk.effective_positions, 1),
+            "var95OneMonth": pct(analysis.risk.var95_one_month),
+            "cvar95OneMonth": pct(analysis.risk.cvar95_one_month),
+            "topRiskContributors": [
+                {
+                    "symbol": item.label,
+                    "capitalWeight": pct(item.weight),
+                    "riskContribution": pct(item.risk_contribution),
+                }
+                for item in analysis.risk.top_contributors[:3]
+            ],
+        },
         "concentrationFlags": describe_concentrations(analysis.concentrations),
         "recommendations": describe_recommendations(analysis.recommendations),
         "currentStock": _forecast_context(stock),
     }
+    if scenario is not None:
+        context["strategySimulation"] = scenario.model_dump(by_alias=True)
     user = (
         f"User question: {question}\n\n"
         f"JSON context:\n{json.dumps(context, indent=2)}"

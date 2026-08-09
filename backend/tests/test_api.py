@@ -1,6 +1,7 @@
 """API surface tests — every route's happy path plus the failure contracts."""
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
@@ -123,7 +124,90 @@ def test_stock_analyze_clamps_horizon(client):
 def test_portfolio_analyze(client):
     r = client.post("/portfolio/analyze", json={"profile": PROFILE, "holdings": HOLDINGS})
     assert r.status_code == 200
-    assert "analysis" in r.json()
+    analysis = r.json()["analysis"]
+    assert analysis["risk"]["annualizedVolatility"] > 0
+    assert analysis["risk"]["cvar95OneMonth"] > analysis["risk"]["var95OneMonth"]
+    assert len(analysis["risk"]["stressTests"]) == 3
+
+
+def test_portfolio_simulate_returns_seeded_percentile_fan(client):
+    payload = {
+        "profile": PROFILE,
+        "holdings": HOLDINGS,
+        "contribution": 1000,
+        "returnAdj": 0,
+        "rebalance": 0.5,
+        "goalValue": 300000,
+        "horizonYears": 10,
+        "paths": 300,
+        "seed": 20260806,
+    }
+    first = client.post("/portfolio/simulate", json=payload)
+    second = client.post("/portfolio/simulate", json=payload)
+
+    assert first.status_code == 200
+    assert first.json() == second.json()
+    simulation = first.json()["simulation"]
+    assert len(simulation["points"]) == 11
+    assert 0 <= simulation["successProbability"] <= 1
+    assert simulation["terminal"]["p10"] <= simulation["terminal"]["p50"]
+    assert simulation["terminal"]["p50"] <= simulation["terminal"]["p90"]
+    assert simulation["assumptionDriven"] is True
+
+
+def test_contribution_optimizer_returns_an_actionable_step(client):
+    r = client.post(
+        "/portfolio/optimize-contribution",
+        json={
+            "profile": PROFILE,
+            "holdings": HOLDINGS,
+            "returnAdj": 0,
+            "rebalance": 0.5,
+            "goalValue": 300000,
+            "targetProbability": 0.75,
+            "horizonYears": 10,
+            "paths": 300,
+            "seed": 20260806,
+            "maxContribution": 5000,
+            "contributionStep": 50,
+        },
+    )
+
+    assert r.status_code == 200
+    optimization = r.json()["optimization"]
+    assert optimization["requiredContribution"] % 50 == 0
+    assert optimization["achievedProbability"] >= 0.75 or optimization["capped"]
+
+
+def test_advisor_receives_visible_scenario_context(client):
+    stock = client.post("/stocks/analyze", json={"ticker": "AAPL", "days": 30}).json()[
+        "forecast"
+    ]
+    r = client.post(
+        "/advisor/ask",
+        json={
+            "question": "What is my chance of reaching the goal?",
+            "profile": PROFILE,
+            "holdings": HOLDINGS,
+            "stock": stock,
+            "scenario": {
+                "contribution": 1000,
+                "goalValue": 300000,
+                "horizonYears": 10,
+                "modeledReturn": 0.12,
+                "modeledVolatility": 0.17,
+                "successProbability": 0.61,
+                "p10": 180000,
+                "p50": 320000,
+                "p90": 540000,
+                "paths": 2000,
+            },
+        },
+    )
+
+    assert r.status_code == 200
+    assert "61.0%" in r.json()["answer"]
+    assert "$300,000" in r.json()["answer"]
 
 
 def test_workspace_lifecycle(client):
@@ -144,6 +228,85 @@ def test_workspace_lifecycle(client):
     ).json()
     assert memo["id"]
     assert client.get(f"/workspaces/{ws}/state").json()["memos"][0]["symbol"] == "AAPL"
+
+    transactions = [
+        {
+            "id": "deposit-1",
+            "date": "2026-01-02",
+            "type": "deposit",
+            "amount": 1000,
+            "description": "Initial funding",
+            "source": "imported",
+        }
+    ]
+    valuations = [
+        {
+            "id": "value-1",
+            "date": "2026-01-02",
+            "value": 1000,
+            "benchmarkSymbol": "VOO",
+            "benchmarkValue": 100,
+            "source": "imported",
+        },
+        {
+            "id": "value-2",
+            "date": "2026-08-08",
+            "value": 1100,
+            "benchmarkSymbol": "VOO",
+            "benchmarkValue": 106,
+            "source": "imported",
+        },
+    ]
+    assert client.put(
+        f"/workspaces/{ws}/transactions", json={"transactions": transactions}
+    ).json()["count"] == 1
+    assert client.put(
+        f"/workspaces/{ws}/valuations", json={"valuations": valuations}
+    ).json()["count"] == 2
+    state = client.get(f"/workspaces/{ws}/state").json()
+    assert state["transactions"][0]["type"] == "deposit"
+    assert state["valuations"][-1]["benchmarkValue"] == 106
+
+
+def test_portfolio_performance_endpoint(client):
+    r = client.post(
+        "/portfolio/performance",
+        json={
+            "transactions": [
+                {
+                    "id": "deposit-1",
+                    "date": "2026-01-02",
+                    "type": "deposit",
+                    "amount": 1000,
+                    "description": "",
+                    "source": "manual",
+                }
+            ],
+            "valuations": [
+                {
+                    "id": "value-1",
+                    "date": "2026-01-02",
+                    "value": 1000,
+                    "benchmarkSymbol": "VOO",
+                    "benchmarkValue": 100,
+                    "source": "manual",
+                },
+                {
+                    "id": "value-2",
+                    "date": "2026-08-08",
+                    "value": 1120,
+                    "benchmarkSymbol": "VOO",
+                    "benchmarkValue": 108,
+                    "source": "manual",
+                },
+            ],
+        },
+    )
+    assert r.status_code == 200
+    performance = r.json()["performance"]
+    assert performance["measured"] is True
+    assert performance["totalReturn"] == pytest.approx(0.12)
+    assert performance["benchmarkReturn"] == pytest.approx(0.08)
 
 
 def test_workspace_404(client):

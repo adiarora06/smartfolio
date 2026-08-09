@@ -59,6 +59,41 @@ export interface Holding {
   value: number
 }
 
+export type TransactionType =
+  | 'deposit'
+  | 'withdrawal'
+  | 'buy'
+  | 'sell'
+  | 'dividend'
+  | 'fee'
+
+export type PortfolioDataSource = 'demo' | 'imported' | 'manual'
+
+/** A dated portfolio activity. Deposits and withdrawals are external cash flows;
+ * buys, sells, dividends, and fees explain what happened inside the account. */
+export interface PortfolioTransaction {
+  id: string
+  date: string
+  type: TransactionType
+  symbol?: string | null
+  quantity?: number | null
+  price?: number | null
+  amount: number
+  description: string
+  source: PortfolioDataSource
+}
+
+/** An explicit portfolio valuation. Historical performance is only calculated
+ * from these observed/imported values—not reconstructed from today's holdings. */
+export interface ValuationSnapshot {
+  id: string
+  date: string
+  value: number
+  benchmarkSymbol: string
+  benchmarkValue?: number | null
+  source: PortfolioDataSource
+}
+
 export interface Connection {
   name: string
   type: string
@@ -74,6 +109,17 @@ export interface SavedMemo {
   symbol: string
   rating: StockRating
   memo: string
+}
+
+export interface SavedStrategyPlan {
+  id: string
+  name: string
+  contribution: number
+  returnPts: number
+  rebalPts: number
+  goalValue: number
+  targetProbability: number
+  createdAt: string
 }
 
 export type StockRating = 'Constructive' | 'Neutral' | 'Cautious'

@@ -1,14 +1,26 @@
-// Scenario lab — contribution, return, and rebalancing sliders drive a
-// deterministic 1/5/10-year projection.
+// AI Assistant — deterministic planning plus reproducible Monte Carlo ranges.
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePortfolioAnalysis } from '../../../hooks/usePortfolioAnalysis'
-import { projectScenario, type ScenarioProjection } from '../../../lib/calculations/scenario'
+import {
+  DEFAULT_SIMULATION_SEED,
+  optimizeContribution,
+  projectScenario,
+  simulateScenario,
+  type AdvisorScenarioContext,
+  type ScenarioProjection,
+  type ScenarioSimulation,
+} from '../../../lib/calculations/scenario'
 import { fmt, pct } from '../../../lib/format'
 import { IonIcon, IonRange } from '@ionic/react'
 import {
   arrowForwardOutline,
+  analyticsOutline,
+  bookmarkOutline,
+  calculatorOutline,
   chatbubbleEllipsesOutline,
+  closeOutline,
+  flagOutline,
   refreshOutline,
   sendOutline,
   shieldCheckmarkOutline,
@@ -105,16 +117,75 @@ function ProjectionChart({ projection }: { projection: ScenarioProjection }) {
   )
 }
 
+/** Percentile fan for the seeded monthly path simulation. */
+function MonteCarloChart({ simulation }: { simulation: ScenarioSimulation }) {
+  const W = 560
+  const H = 176
+  const PAD = { top: 18, right: 12, bottom: 24, left: 12 }
+  const max = Math.max(simulation.goalValue, ...simulation.points.map((point) => point.p90), 1)
+  const min = Math.min(...simulation.points.map((point) => point.p10))
+  const x = (year: number) =>
+    PAD.left + (year / simulation.horizonYears) * (W - PAD.left - PAD.right)
+  const y = (value: number) =>
+    PAD.top + (1 - (value - min) / (max - min || 1)) * (H - PAD.top - PAD.bottom)
+  const line = (key: 'p50') =>
+    simulation.points.map((point) => `${x(point.year)},${y(point[key])}`).join(' ')
+  const band = (low: 'p10' | 'p25', high: 'p90' | 'p75') => [
+    ...simulation.points.map((point) => `${x(point.year)},${y(point[high])}`),
+    ...[...simulation.points]
+      .reverse()
+      .map((point) => `${x(point.year)},${y(point[low])}`),
+  ].join(' ')
+  const goalY = y(simulation.goalValue)
+  const midpoint = Math.floor(simulation.horizonYears / 2)
+
+  return (
+    <svg
+      width="100%"
+      viewBox={`0 0 ${W} ${H}`}
+      role="img"
+      aria-label={`Monte Carlo range over ${simulation.horizonYears} years`}
+      className="strategyMonteCarloChart"
+    >
+      <polygon points={band('p10', 'p90')} fill="rgba(79, 70, 229, 0.09)" />
+      <polygon points={band('p25', 'p75')} fill="rgba(20, 184, 166, 0.16)" />
+      <line
+        x1={PAD.left}
+        x2={W - PAD.right}
+        y1={goalY}
+        y2={goalY}
+        stroke="#d97706"
+        strokeDasharray="6 5"
+        strokeWidth="1.5"
+      />
+      <polyline points={line('p50')} fill="none" stroke="#0f766e" strokeWidth="3" />
+      <text x={W - PAD.right} y={Math.max(PAD.top + 10, goalY - 5)} textAnchor="end">
+        Goal {fmt.format(simulation.goalValue)}
+      </text>
+      {[0, midpoint, simulation.horizonYears].map((year) => (
+        <text key={year} x={x(year)} y={H - 6} textAnchor="middle">
+          {year}y
+        </text>
+      ))}
+    </svg>
+  )
+}
+
 export function ScenariosScreen() {
   const analysis = usePortfolioAnalysis()
   const chat = useStore((s) => s.chat)
   const advisorPending = useStore((s) => s.advisorPending)
   const ask = useStore((s) => s.ask)
+  const strategyPlans = useStore((s) => s.strategyPlans)
+  const saveStrategyPlan = useStore((s) => s.saveStrategyPlan)
+  const removeStrategyPlan = useStore((s) => s.removeStrategyPlan)
 
   // Raw slider positions (dollars, percentage points, and 0..100 intensity).
   const [contribution, setContribution] = useState(750)
   const [returnPts, setReturnPts] = useState(0)
   const [rebalPts, setRebalPts] = useState(50)
+  const [goalValue, setGoalValue] = useState(300000)
+  const [targetProbability, setTargetProbability] = useState(0.75)
   const [selectedStrategy, setSelectedStrategy] = useState('baseline')
   const [draft, setDraft] = useState('')
   const chatRef = useRef<HTMLDivElement>(null)
@@ -122,11 +193,65 @@ export function ScenariosScreen() {
   const returnAdj = returnPts / 100
   const rebalance = rebalPts / 100
   const projection = projectScenario(analysis, { contribution, returnAdj, rebalance })
+  const simulation = useMemo(
+    () =>
+      simulateScenario(
+        analysis,
+        { contribution, returnAdj, rebalance },
+        { goalValue, paths: 2000, horizonYears: 10, seed: DEFAULT_SIMULATION_SEED },
+      ),
+    [analysis, contribution, goalValue, rebalance, returnAdj],
+  )
+  const strategyComparisons = useMemo(
+    () =>
+      STRATEGIES.map((strategy) => ({
+        strategy,
+        simulation: simulateScenario(
+          analysis,
+          {
+            contribution: strategy.contribution,
+            returnAdj: strategy.returnPts / 100,
+            rebalance: strategy.rebalPts / 100,
+          },
+          { goalValue, paths: 2000, horizonYears: 10, seed: DEFAULT_SIMULATION_SEED },
+        ),
+      })),
+    [analysis, goalValue],
+  )
+  const contributionOptimization = useMemo(
+    () =>
+      optimizeContribution(
+        analysis,
+        { returnAdj, rebalance },
+        {
+          goalValue,
+          targetProbability,
+          paths: 800,
+          horizonYears: 10,
+          seed: DEFAULT_SIMULATION_SEED,
+          maxContribution: 5000,
+          contributionStep: 50,
+        },
+      ),
+    [analysis, goalValue, rebalance, returnAdj, targetProbability],
+  )
   const selected = STRATEGIES.find((strategy) => strategy.id === selectedStrategy)
   const contributionLift = projection.series[10] - projection.growthOnlySeries[10]
   const investedOverTenYears = contribution * 12 * 10
   const modeledGrowth = projection.series[10] - analysis.value - investedOverTenYears
   const canSend = draft.trim().length > 0 && !advisorPending
+  const scenarioContext: AdvisorScenarioContext = {
+    contribution,
+    goalValue,
+    horizonYears: simulation.horizonYears,
+    modeledReturn: simulation.blendedReturn,
+    modeledVolatility: simulation.blendedVolatility,
+    successProbability: simulation.successProbability,
+    p10: simulation.terminal.p10,
+    p50: simulation.terminal.p50,
+    p90: simulation.terminal.p90,
+    paths: simulation.paths,
+  }
 
   useEffect(() => {
     const el = chatRef.current
@@ -140,11 +265,37 @@ export function ScenariosScreen() {
     setRebalPts(strategy.rebalPts)
   }
 
+  const applySavedPlan = (plan: (typeof strategyPlans)[number]) => {
+    setContribution(plan.contribution)
+    setReturnPts(plan.returnPts)
+    setRebalPts(plan.rebalPts)
+    setGoalValue(plan.goalValue)
+    setTargetProbability(plan.targetProbability)
+    setSelectedStrategy('custom')
+  }
+
+  const saveCurrentPlan = () => {
+    saveStrategyPlan({
+      name: `${selected?.name ?? 'Custom plan'} · ${fmt.format(goalValue)}`,
+      contribution,
+      returnPts,
+      rebalPts,
+      goalValue,
+      targetProbability,
+    })
+  }
+
+  const applyOptimizedContribution = () => {
+    if (contributionOptimization.capped) return
+    setContribution(contributionOptimization.requiredContribution)
+    setSelectedStrategy('custom')
+  }
+
   const markCustom = () => setSelectedStrategy('custom')
 
   const send = () => {
     if (!canSend) return
-    void ask(draft)
+    void ask(draft, scenarioContext)
     setDraft('')
   }
 
@@ -155,12 +306,16 @@ export function ScenariosScreen() {
     }
   }
 
-  const reset = () => applyStrategy(STRATEGIES[0])
+  const reset = () => {
+    applyStrategy(STRATEGIES[0])
+    setGoalValue(300000)
+    setTargetProbability(0.75)
+  }
 
   const advisorPrompts = [
-    `Explain the tradeoffs in my ${selected?.name ?? 'custom'} strategy.`,
-    `What is the biggest risk in this scenario if I contribute ${fmt.format(contribution)} monthly?`,
-    `How could I improve this 10-year projection without assuming higher returns?`,
+    `Explain my ${pct(simulation.successProbability)} chance of reaching ${fmt.format(goalValue)} in ${simulation.horizonYears} years, including the percentile range.`,
+    `What is the biggest risk in this scenario if I contribute ${fmt.format(contribution)} monthly? My current risk budget usage is ${pct(analysis.risk.riskBudgetUsed)}.`,
+    `How could I improve my chance of reaching ${fmt.format(goalValue)} without assuming higher returns? The contribution optimizer estimates ${fmt.format(contributionOptimization.requiredContribution)} monthly for ${pct(targetProbability, 0)} confidence.`,
   ]
 
   return (
@@ -168,9 +323,14 @@ export function ScenariosScreen() {
       title="AI Assistant"
       subtitle="Model a theoretical plan and ask AI about it—side by side."
       actions={
-        <button onClick={reset}>
-          <IonIcon icon={refreshOutline} /> Reset baseline
-        </button>
+        <>
+          <button className="primary" onClick={saveCurrentPlan}>
+            <IonIcon icon={bookmarkOutline} /> Save plan
+          </button>
+          <button onClick={reset}>
+            <IonIcon icon={refreshOutline} /> Reset baseline
+          </button>
+        </>
       }
     >
       <div className="strategyLabScreen">
@@ -187,6 +347,32 @@ export function ScenariosScreen() {
             </button>
           ))}
         </section>
+
+        {strategyPlans.length > 0 && (
+          <section className="strategySavedShelf" aria-label="Saved strategy plans">
+            <div className="strategySavedHead">
+              <span><IonIcon icon={bookmarkOutline} /></span>
+              <div><strong>Saved plans</strong><small>Stored on this browser</small></div>
+            </div>
+            <div className="strategySavedList">
+              {strategyPlans.map((plan) => (
+                <div className="strategySavedCard" key={plan.id}>
+                  <button onClick={() => applySavedPlan(plan)}>
+                    <strong>{plan.name}</strong>
+                    <small>{fmt.format(plan.contribution)}/mo · {pct(plan.targetProbability, 0)} confidence</small>
+                  </button>
+                  <button
+                    aria-label={`Remove ${plan.name}`}
+                    className="strategySavedRemove"
+                    onClick={() => removeStrategyPlan(plan.id)}
+                  >
+                    <IonIcon icon={closeOutline} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <div className="strategyLabGrid">
           <main className="strategyModelColumn">
@@ -222,6 +408,144 @@ export function ScenariosScreen() {
                 <div className="strategyLegend">
                   <span><i className="withContributions" /> With contributions</span>
                   <span><i className="growthOnly" /> Growth only</span>
+                </div>
+              </div>
+
+            </section>
+
+            <section className="strategySimulationPanel" aria-label="Monte Carlo strategy simulator">
+              <div className="strategySimulationHead">
+                <div className="strategySimulationTitle">
+                  <span><IonIcon icon={analyticsOutline} /></span>
+                  <div>
+                    <small>Probability lab</small>
+                    <h2>Monte Carlo goal range</h2>
+                    <p>Seeded monthly paths turn one projection into a visible range of outcomes.</p>
+                  </div>
+                </div>
+                <span className="strategyPathBadge">{simulation.paths.toLocaleString()} fixed-seed paths</span>
+              </div>
+
+              <label className="strategyGoalControl">
+                <span className="strategyGoalLabel">
+                  <IonIcon icon={flagOutline} />
+                  <span><strong>Goal at year 10</strong></span>
+                  <b>{fmt.format(goalValue)}</b>
+                </span>
+                <IonRange
+                  aria-label="Ten-year portfolio goal"
+                  min={100000}
+                  max={1000000}
+                  step={25000}
+                  value={goalValue}
+                  onIonInput={(event) => setGoalValue(Number(event.detail.value))}
+                />
+              </label>
+
+              <div className="strategySimulationBody">
+                <div className="strategyDistributionColumn">
+                  <div className="strategyProbabilityHero">
+                    <div
+                      className="strategyProbabilityRing"
+                      style={{ '--probability': `${simulation.successProbability * 360}deg` } as React.CSSProperties}
+                    >
+                      <span><strong>{pct(simulation.successProbability, 0)}</strong><small>goal chance</small></span>
+                    </div>
+                    <div className="strategyTerminalMetrics">
+                      <div><span>Downside · P10</span><strong>{fmt.format(simulation.terminal.p10)}</strong></div>
+                      <div><span>Median · P50</span><strong>{fmt.format(simulation.terminal.p50)}</strong></div>
+                      <div><span>Upside · P90</span><strong>{fmt.format(simulation.terminal.p90)}</strong></div>
+                      <div><span>Above deposits</span><strong>{pct(simulation.preserveContributionsProbability, 0)}</strong></div>
+                    </div>
+                  </div>
+                  <div className="strategyMonteCarloWrap">
+                    <MonteCarloChart simulation={simulation} />
+                    <div className="strategySimulationLegend">
+                      <span><i className="outerBand" /> 10–90% range</span>
+                      <span><i className="innerBand" /> 25–75% range</span>
+                      <span><i className="medianLine" /> Median</span>
+                    </div>
+                  </div>
+
+                  <div className="strategyGoalCoach" aria-label="Contribution optimizer">
+                    <div className="strategyGoalCoachTitle">
+                      <span><IonIcon icon={calculatorOutline} /></span>
+                      <div>
+                        <small>Goal coach</small>
+                        <strong>Find the monthly contribution</strong>
+                        <p>800 shared paths · $50 steps · no return increase.</p>
+                      </div>
+                    </div>
+                    <div className="strategyConfidencePicker" aria-label="Target confidence">
+                      <span>Target confidence</span>
+                      <div>
+                        {[0.6, 0.75, 0.9].map((value) => (
+                          <button
+                            className={targetProbability === value ? 'active' : ''}
+                            key={value}
+                            onClick={() => setTargetProbability(value)}
+                          >
+                            {pct(value, 0)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="strategyOptimizerResult" aria-live="polite">
+                      <span>{contributionOptimization.capped ? 'Required amount' : 'Estimated minimum'}</span>
+                      <strong>
+                        {contributionOptimization.capped
+                          ? `More than ${fmt.format(contributionOptimization.maxContribution)}/mo`
+                          : `${fmt.format(contributionOptimization.requiredContribution)}/month`}
+                      </strong>
+                      <small>
+                        {contributionOptimization.capped
+                          ? `${pct(contributionOptimization.achievedProbability, 0)} chance at the current slider limit`
+                          : contributionOptimization.requiredContribution > contribution
+                            ? `Increase by ${fmt.format(contributionOptimization.requiredContribution - contribution)}/month`
+                            : contributionOptimization.requiredContribution < contribution
+                              ? `Current plan is ${fmt.format(contribution - contributionOptimization.requiredContribution)}/month above this estimate`
+                              : 'Current contribution matches the estimate'}
+                      </small>
+                    </div>
+                    <button
+                      className="strategyApplyOptimizer"
+                      disabled={
+                        contributionOptimization.capped ||
+                        contributionOptimization.requiredContribution === contribution
+                      }
+                      onClick={applyOptimizedContribution}
+                    >
+                      Apply amount <IonIcon icon={arrowForwardOutline} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="strategyComparePanel">
+                  <div className="strategyCompareHead">
+                    <span>Same goal, same random paths</span>
+                    <h3>Compare approaches</h3>
+                  </div>
+                  <div className="strategyCompareList">
+                    {strategyComparisons.map(({ strategy, simulation: comparison }) => {
+                      const result = strategy.id === selectedStrategy ? simulation : comparison
+                      return (
+                        <button
+                          className={strategy.id === selectedStrategy ? 'active' : ''}
+                          key={strategy.id}
+                          onClick={() => applyStrategy(strategy)}
+                        >
+                          <span className="strategyCompareCopy">
+                            <strong>{strategy.name}</strong>
+                            <small>{fmt.format(strategy.contribution)}/month</small>
+                          </span>
+                          <b>{pct(result.successProbability, 0)}</b>
+                          <span className="strategyCompareMedian">Median {fmt.format(result.terminal.p50)}</span>
+                          <span className="strategyCompareTrack"><i style={{ width: `${result.successProbability * 100}%` }} /></span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p>Comparisons reuse one seed so each strategy faces equivalent market paths.</p>
                 </div>
               </div>
             </section>
@@ -275,6 +599,20 @@ export function ScenariosScreen() {
                   <small>{rebalPts >= 75 ? 'Strong target alignment' : rebalPts >= 40 ? 'Gradual transition' : 'Current mix dominates'}</small>
                 </label>
               </div>
+              <div className="strategyRiskContext" aria-label="Current portfolio risk context">
+                <div>
+                  <span>Portfolio volatility</span>
+                  <strong>{pct(analysis.risk.annualizedVolatility)}</strong>
+                </div>
+                <div>
+                  <span>Profile budget</span>
+                  <strong>{pct(analysis.risk.riskBudgetUsed)} used</strong>
+                </div>
+                <div>
+                  <span>Top risk driver</span>
+                  <strong>{analysis.risk.topContributors[0]?.label ?? '—'}</strong>
+                </div>
+              </div>
               <div className="strategyGuardrail">
                 <IonIcon icon={shieldCheckmarkOutline} />
                 <span><strong>Planning guardrail</strong><small>These are deterministic illustrations, not financial advice or guaranteed outcomes.</small></span>
@@ -294,8 +632,9 @@ export function ScenariosScreen() {
 
             <div className="strategyContextChips" aria-label="Advisor context">
               <span>{fmt.format(contribution)}/mo</span>
-              <span>{pct(rebalance, 0)} rebalance</span>
-              <span>{fmt.format(projection.series[10])} at 10Y</span>
+              <span>{fmt.format(goalValue)} goal</span>
+              <span>{pct(simulation.successProbability, 0)} goal chance</span>
+              <span>{fmt.format(simulation.terminal.p50)} median</span>
             </div>
 
             <div className="strategyChat" ref={chatRef} aria-live="polite">
@@ -315,9 +654,9 @@ export function ScenariosScreen() {
 
             <div className="strategyPromptList">
               {advisorPrompts.map((prompt, index) => (
-                <button key={prompt} onClick={() => void ask(prompt)} disabled={advisorPending}>
+                <button key={prompt} onClick={() => void ask(prompt, scenarioContext)} disabled={advisorPending}>
                   <span>{index + 1}</span>
-                  {index === 0 ? 'Explain this plan' : index === 1 ? 'Find the biggest risk' : 'Improve without more return'}
+                  {index === 0 ? 'Explain goal probability' : index === 1 ? 'Find the biggest risk' : 'Improve without more return'}
                   <IonIcon icon={arrowForwardOutline} />
                 </button>
               ))}

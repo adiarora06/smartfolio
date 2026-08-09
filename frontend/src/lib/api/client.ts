@@ -8,10 +8,21 @@
 import type {
   Holding,
   InvestorProfile,
+  PortfolioTransaction,
   StockAnalyzeResponse,
   StockForecast,
+  ValuationSnapshot,
 } from '../../types'
+import type { PerformanceSummary } from '../calculations/performance'
 import type { PortfolioAnalysis } from '../calculations/portfolio'
+import type {
+  AdvisorScenarioContext,
+  ContributionOptimization,
+  ContributionOptimizationOptions,
+  ScenarioInputs,
+  ScenarioSimulation,
+  ScenarioSimulationOptions,
+} from '../calculations/scenario'
 import type { PortfolioInsights } from '../ai/insights'
 
 // `||` (not `??`) so a blank VITE_API_URL in a deploy env falls back instead of
@@ -114,6 +125,59 @@ export function apiAnalyzePortfolio(
   return post<PortfolioAnalyzeResult>('/portfolio/analyze', { profile, holdings })
 }
 
+export function apiCalculatePerformance(
+  transactions: PortfolioTransaction[],
+  valuations: ValuationSnapshot[],
+): Promise<{ performance: PerformanceSummary }> {
+  return post<{ performance: PerformanceSummary }>('/portfolio/performance', {
+    transactions,
+    valuations,
+  })
+}
+
+export function apiSimulateScenario(
+  profile: InvestorProfile,
+  holdings: Holding[],
+  inputs: ScenarioInputs,
+  options: Required<ScenarioSimulationOptions>,
+): Promise<{ simulation: ScenarioSimulation }> {
+  return post<{ simulation: ScenarioSimulation }>('/portfolio/simulate', {
+    profile,
+    holdings,
+    contribution: inputs.contribution,
+    returnAdj: inputs.returnAdj,
+    rebalance: inputs.rebalance,
+    goalValue: options.goalValue,
+    horizonYears: options.horizonYears,
+    paths: options.paths,
+    seed: options.seed,
+  })
+}
+
+export function apiOptimizeContribution(
+  profile: InvestorProfile,
+  holdings: Holding[],
+  inputs: Omit<ScenarioInputs, 'contribution'>,
+  options: Required<ContributionOptimizationOptions>,
+): Promise<{ optimization: ContributionOptimization }> {
+  return post<{ optimization: ContributionOptimization }>(
+    '/portfolio/optimize-contribution',
+    {
+      profile,
+      holdings,
+      returnAdj: inputs.returnAdj,
+      rebalance: inputs.rebalance,
+      goalValue: options.goalValue,
+      targetProbability: options.targetProbability,
+      horizonYears: options.horizonYears,
+      paths: options.paths,
+      seed: options.seed,
+      maxContribution: options.maxContribution,
+      contributionStep: options.contributionStep,
+    },
+  )
+}
+
 export interface AdvisorAnswer {
   answer: string
   narrator: 'llm' | 'template'
@@ -124,10 +188,11 @@ export function apiAskAdvisor(
   profile: InvestorProfile,
   holdings: Holding[],
   stock: StockForecast,
+  scenario?: AdvisorScenarioContext,
 ): Promise<AdvisorAnswer> {
   return post<AdvisorAnswer>(
     '/advisor/ask',
-    { question, profile, holdings, stock },
+    { question, profile, holdings, stock, scenario },
     { timeoutMs: SLOW_TIMEOUT_MS },
   )
 }
@@ -146,6 +211,8 @@ export interface WorkspaceState {
   profile: InvestorProfile | null
   holdings: Holding[]
   memos: ServerMemo[]
+  transactions: PortfolioTransaction[]
+  valuations: ValuationSnapshot[]
 }
 
 export function apiCreateWorkspace(): Promise<{ id: string }> {
@@ -162,6 +229,20 @@ export function apiPutProfile(workspaceId: string, profile: InvestorProfile): Pr
 
 export function apiPutHoldings(workspaceId: string, holdings: Holding[]): Promise<unknown> {
   return put(`/workspaces/${workspaceId}/holdings`, { holdings })
+}
+
+export function apiPutTransactions(
+  workspaceId: string,
+  transactions: PortfolioTransaction[],
+): Promise<unknown> {
+  return put(`/workspaces/${workspaceId}/transactions`, { transactions })
+}
+
+export function apiPutValuations(
+  workspaceId: string,
+  valuations: ValuationSnapshot[],
+): Promise<unknown> {
+  return put(`/workspaces/${workspaceId}/valuations`, { valuations })
 }
 
 export function apiPostMemo(

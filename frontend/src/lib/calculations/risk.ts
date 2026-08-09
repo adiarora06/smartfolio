@@ -44,6 +44,14 @@ export const ASSET_RISK: Record<string, [number, number]> = {
   other: [0.6, 0.18],
 }
 
+/** Annualized volatility budget associated with each investor risk profile. */
+export const VOL_CEILING: Record<string, number> = {
+  conservative: 0.09,
+  balanced: 0.13,
+  growth: 0.18,
+  aggressive: 0.25,
+}
+
 export interface Position {
   label: string
   weight: number
@@ -135,6 +143,18 @@ export function marginalContribution(positions: Position[], index: number): numb
 export function valueAtRisk(volatility: number, horizonYears: number, confidence = 0.95): number {
   if (volatility <= 0 || horizonYears <= 0) return 0
   return Math.abs(normPpf(1 - confidence)) * volatility * Math.sqrt(horizonYears)
+}
+
+/** Expected loss once parametric VaR has already been breached. */
+export function conditionalValueAtRisk(
+  volatility: number,
+  horizonYears: number,
+  confidence = 0.95,
+): number {
+  if (volatility <= 0 || horizonYears <= 0 || confidence <= 0 || confidence >= 1) return 0
+  const z = normPpf(confidence)
+  const density = Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI)
+  return volatility * Math.sqrt(horizonYears) * density / (1 - confidence)
 }
 
 /**

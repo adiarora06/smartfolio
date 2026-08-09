@@ -21,22 +21,28 @@ import type {
   Narrator,
   Page,
   PortfolioImpact,
+  PortfolioTransaction,
   SavedMemo,
+  SavedStrategyPlan,
   Screen,
   StockForecast,
   StockRating,
   StockTab,
+  ValuationSnapshot,
 } from '../types'
 import {
   DEFAULT_PROFILE,
   SETUP_STEPS,
   defaultConnections,
   demoHoldings,
+  demoTransactions,
+  demoValuations,
   initialChat,
 } from '../lib/data/constants'
 import { analyzePortfolio } from '../lib/calculations/portfolio'
 import { analyzeStock } from '../lib/calculations/stock'
 import { computeImpact } from '../lib/calculations/impact'
+import type { AdvisorScenarioContext } from '../lib/calculations/scenario'
 import { buildSavedMemo } from '../lib/ai/memo'
 import { answerAdvisor } from '../lib/ai/advisor'
 import { isNative, successFeedback } from '../lib/native'
@@ -52,6 +58,8 @@ import {
   apiPostMemo,
   apiPutHoldings,
   apiPutProfile,
+  apiPutTransactions,
+  apiPutValuations,
   type AnalysisSummary,
   type HealthResponse,
 } from '../lib/api/client'
@@ -66,6 +74,9 @@ interface LocalSnapshot {
   profile?: InvestorProfile
   holdings?: Holding[]
   stockMemory?: SavedMemo[]
+  strategyPlans?: SavedStrategyPlan[]
+  transactions?: PortfolioTransaction[]
+  valuations?: ValuationSnapshot[]
 }
 
 function loadLocalSnapshot(): LocalSnapshot {
@@ -79,6 +90,7 @@ function loadLocalSnapshot(): LocalSnapshot {
 
 // Guard: while hydrating from the server we suppress the echo-push.
 let suppressSync = false
+let workspaceBootstrap: Promise<void> | null = null
 
 interface AppState {
   // navigation / UI
@@ -97,6 +109,9 @@ interface AppState {
   connections: Connection[]
   chat: ChatMessage[]
   stockMemory: SavedMemo[]
+  strategyPlans: SavedStrategyPlan[]
+  transactions: PortfolioTransaction[]
+  valuations: ValuationSnapshot[]
 
   // current analysis snapshot
   stock: StockForecast
@@ -138,6 +153,23 @@ interface AppState {
   removeHolding: (index: number) => void
   updateHolding: <K extends keyof Holding>(index: number, field: K, value: Holding[K]) => void
   resetHoldings: () => void
+  addTransaction: (
+    transaction: Omit<PortfolioTransaction, 'id' | 'source'> & {
+      source?: PortfolioTransaction['source']
+    },
+  ) => void
+  removeTransaction: (id: string) => void
+  recordValuation: (
+    valuation: Omit<ValuationSnapshot, 'id' | 'source'> & {
+      source?: ValuationSnapshot['source']
+    },
+  ) => void
+  removeValuation: (id: string) => void
+  applyPortfolioImport: (payload: {
+    holdings: Holding[]
+    transactions: PortfolioTransaction[]
+    valuations: ValuationSnapshot[]
+  }) => void
 
   // analyze stock
   runStock: (ticker: string, days: number, opts?: { persist?: boolean }) => Promise<void>
@@ -151,12 +183,16 @@ interface AppState {
   importHoldings: (holdings: Holding[]) => void
 
   // advisor
-  ask: (text: string) => Promise<void>
+  ask: (text: string, scenario?: AdvisorScenarioContext) => Promise<void>
+  saveStrategyPlan: (plan: Omit<SavedStrategyPlan, 'id' | 'createdAt'>) => void
+  removeStrategyPlan: (id: string) => void
 }
 
 const local = loadLocalSnapshot()
 const initialProfile = local.profile ?? { ...DEFAULT_PROFILE }
 const initialHoldings = local.holdings?.length ? local.holdings : demoHoldings()
+const initialTransactions = local.transactions ?? demoTransactions()
+const initialValuations = local.valuations ?? demoValuations()
 const initialStock = analyzeStock('AAPL', 30)
 
 /** Current path, or '' where there is no DOM (Node tests, SSR). */
@@ -187,6 +223,9 @@ export const useStore = create<AppState>((set, get) => ({
   connections: defaultConnections(),
   chat: initialChat(),
   stockMemory: local.stockMemory ?? [],
+  strategyPlans: local.strategyPlans ?? [],
+  transactions: initialTransactions,
+  valuations: initialValuations,
 
   stock: initialStock,
   impact: computeImpact(initialStock, initialHoldings, initialProfile),
@@ -233,7 +272,10 @@ export const useStore = create<AppState>((set, get) => ({
       // Long timeout: a sleeping free-tier server takes ~30-60s to wake.
       const health = await apiHealth({ timeoutMs: 60000 })
       set({ backendOnline: true, health })
-      await bootstrapWorkspace(set, get)
+      workspaceBootstrap ??= bootstrapWorkspace(set, get).finally(() => {
+        workspaceBootstrap = null
+      })
+      await workspaceBootstrap
       void get().refreshHistory()
       // Hydrate the initial forecast from the canonical engine if the user
       // hasn't run an API-backed analysis yet. Not persisted — only
@@ -282,6 +324,56 @@ export const useStore = create<AppState>((set, get) => ({
       holdings: s.holdings.map((h, i) => (i === index ? { ...h, [field]: value } : h)),
     })),
   resetHoldings: () => set({ holdings: demoHoldings() }),
+
+  addTransaction: (transaction) =>
+    set((state) => {
+      const id =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `transaction-${Date.now()}`
+      return {
+        transactions: [
+          { ...transaction, id, source: transaction.source ?? 'manual' },
+          ...state.transactions,
+        ],
+      }
+    }),
+  removeTransaction: (id) =>
+    set((state) => ({
+      transactions: state.transactions.filter((transaction) => transaction.id !== id),
+    })),
+  recordValuation: (valuation) =>
+    set((state) => {
+      const existing = state.valuations.find((snapshot) => snapshot.date === valuation.date)
+      const id =
+        existing?.id ??
+        (typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `valuation-${Date.now()}`)
+      const next: ValuationSnapshot = {
+        ...valuation,
+        benchmarkValue: valuation.benchmarkValue ?? existing?.benchmarkValue ?? null,
+        id,
+        source: valuation.source ?? 'manual',
+      }
+      return {
+        valuations: [
+          ...state.valuations.filter((snapshot) => snapshot.date !== valuation.date),
+          next,
+        ].sort((a, b) => a.date.localeCompare(b.date)),
+      }
+    }),
+  removeValuation: (id) =>
+    set((state) => ({
+      valuations: state.valuations.filter((snapshot) => snapshot.id !== id),
+    })),
+  applyPortfolioImport: (payload) =>
+    set((state) => ({
+      holdings: payload.holdings.length ? payload.holdings : state.holdings,
+      transactions: payload.transactions.length ? payload.transactions : state.transactions,
+      valuations: payload.valuations.length ? payload.valuations : state.valuations,
+      screen: 'portfolio',
+    })),
 
   runStock: async (ticker, days, opts) => {
     const { profile, holdings, workspaceId } = get()
@@ -371,7 +463,36 @@ export const useStore = create<AppState>((set, get) => ({
     set({ holdings, screen: 'portfolio' })
   },
 
-  ask: async (text) => {
+  saveStrategyPlan: (plan) =>
+    set((state) => {
+      const existing = state.strategyPlans.find(
+        (item) =>
+          item.contribution === plan.contribution &&
+          item.returnPts === plan.returnPts &&
+          item.rebalPts === plan.rebalPts &&
+          item.goalValue === plan.goalValue &&
+          item.targetProbability === plan.targetProbability,
+      )
+      const id = existing?.id ??
+        (typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `plan-${Date.now()}`)
+      const saved: SavedStrategyPlan = {
+        ...plan,
+        id,
+        createdAt: new Date().toISOString(),
+      }
+      return {
+        strategyPlans: [
+          saved,
+          ...state.strategyPlans.filter((item) => item.id !== id),
+        ].slice(0, 8),
+      }
+    }),
+  removeStrategyPlan: (id) =>
+    set((state) => ({ strategyPlans: state.strategyPlans.filter((plan) => plan.id !== id) })),
+
+  ask: async (text, scenario) => {
     const q = text.trim()
     if (!q) return
     const { holdings, profile, stock } = get()
@@ -379,11 +500,11 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => ({ chat: [...s.chat, { role: 'user', text: q }], advisorPending: true }))
     let reply: string
     try {
-      reply = (await apiAskAdvisor(q, profile, holdings, stock)).answer
+      reply = (await apiAskAdvisor(q, profile, holdings, stock, scenario)).answer
       set({ backendOnline: true })
     } catch {
       const analysis = analyzePortfolio(holdings, profile)
-      reply = answerAdvisor(q, { analysis, stock })
+      reply = answerAdvisor(q, { analysis, stock, scenario })
       set({ backendOnline: false })
     }
     set((s) => ({ chat: [...s.chat, { role: 'ai', text: reply }], advisorPending: false }))
@@ -408,6 +529,8 @@ async function bootstrapWorkspace(set: Set, get: Get): Promise<void> {
       await Promise.all([
         apiPutProfile(workspaceId, get().profile),
         apiPutHoldings(workspaceId, get().holdings),
+        apiPutTransactions(workspaceId, get().transactions),
+        apiPutValuations(workspaceId, get().valuations),
       ])
       return
     }
@@ -418,6 +541,8 @@ async function bootstrapWorkspace(set: Set, get: Get): Promise<void> {
     try {
       if (state.profile) set({ profile: state.profile })
       if (state.holdings.length) set({ holdings: state.holdings })
+      if (state.transactions.length) set({ transactions: state.transactions })
+      if (state.valuations.length) set({ valuations: state.valuations })
       if (state.memos.length) {
         set({
           stockMemory: state.memos.slice(0, 8).map((m) => ({
@@ -430,6 +555,14 @@ async function bootstrapWorkspace(set: Set, get: Get): Promise<void> {
     } finally {
       suppressSync = false
     }
+    const foundationSeeds: Promise<unknown>[] = []
+    if (!state.transactions.length && get().transactions.length) {
+      foundationSeeds.push(apiPutTransactions(workspaceId, get().transactions))
+    }
+    if (!state.valuations.length && get().valuations.length) {
+      foundationSeeds.push(apiPutValuations(workspaceId, get().valuations))
+    }
+    if (foundationSeeds.length) await Promise.all(foundationSeeds)
   } catch {
     // Workspace gone (e.g. wiped DB) — mint a fresh one next check.
     localStorage.removeItem(LS_WORKSPACE_KEY)
@@ -440,24 +573,45 @@ async function bootstrapWorkspace(set: Set, get: Get): Promise<void> {
 // localStorage mirror always; debounced server push when a workspace is live.
 
 let pushTimer: ReturnType<typeof setTimeout> | undefined
+let pendingServerChanges = {
+  profile: false,
+  holdings: false,
+  transactions: false,
+  valuations: false,
+}
 let prevSlice = {
   profile: useStore.getState().profile,
   holdings: useStore.getState().holdings,
   stockMemory: useStore.getState().stockMemory,
+  strategyPlans: useStore.getState().strategyPlans,
+  transactions: useStore.getState().transactions,
+  valuations: useStore.getState().valuations,
 }
 
 useStore.subscribe((state) => {
   if (
     state.profile === prevSlice.profile &&
     state.holdings === prevSlice.holdings &&
-    state.stockMemory === prevSlice.stockMemory
+    state.stockMemory === prevSlice.stockMemory &&
+    state.strategyPlans === prevSlice.strategyPlans
+    && state.transactions === prevSlice.transactions
+    && state.valuations === prevSlice.valuations
   ) {
     return
   }
+  const profileChanged = state.profile !== prevSlice.profile
+  const holdingsChanged = state.holdings !== prevSlice.holdings
+  const transactionsChanged = state.transactions !== prevSlice.transactions
+  const valuationsChanged = state.valuations !== prevSlice.valuations
+  const serverInputsChanged =
+    profileChanged || holdingsChanged || transactionsChanged || valuationsChanged
   prevSlice = {
     profile: state.profile,
     holdings: state.holdings,
     stockMemory: state.stockMemory,
+    strategyPlans: state.strategyPlans,
+    transactions: state.transactions,
+    valuations: state.valuations,
   }
 
   try {
@@ -467,18 +621,36 @@ useStore.subscribe((state) => {
         profile: state.profile,
         holdings: state.holdings,
         stockMemory: state.stockMemory,
+        strategyPlans: state.strategyPlans,
+        transactions: state.transactions,
+        valuations: state.valuations,
       }),
     )
   } catch {
     // Storage full/unavailable — non-fatal.
   }
 
-  if (suppressSync) return
+  if (suppressSync || !serverInputsChanged) return
+  pendingServerChanges.profile ||= profileChanged
+  pendingServerChanges.holdings ||= holdingsChanged
+  pendingServerChanges.transactions ||= transactionsChanged
+  pendingServerChanges.valuations ||= valuationsChanged
   clearTimeout(pushTimer)
   pushTimer = setTimeout(() => {
-    const { workspaceId, backendOnline, profile, holdings } = useStore.getState()
+    const changes = pendingServerChanges
+    pendingServerChanges = {
+      profile: false,
+      holdings: false,
+      transactions: false,
+      valuations: false,
+    }
+    const { workspaceId, backendOnline, profile, holdings, transactions, valuations } = useStore.getState()
     if (!workspaceId || !backendOnline) return
-    void apiPutProfile(workspaceId, profile).catch(() => undefined)
-    void apiPutHoldings(workspaceId, holdings).catch(() => undefined)
+    if (changes.profile) void apiPutProfile(workspaceId, profile).catch(() => undefined)
+    if (changes.holdings) void apiPutHoldings(workspaceId, holdings).catch(() => undefined)
+    if (changes.transactions) {
+      void apiPutTransactions(workspaceId, transactions).catch(() => undefined)
+    }
+    if (changes.valuations) void apiPutValuations(workspaceId, valuations).catch(() => undefined)
   }, 800)
 })
