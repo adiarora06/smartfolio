@@ -71,6 +71,37 @@ class HoldingRow(Base):
     position: Mapped[int] = mapped_column(Integer)
 
 
+class TransactionRow(Base):
+    __tablename__ = "transactions"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id"), primary_key=True, index=True
+    )
+    date: Mapped[str] = mapped_column(String(10), index=True)
+    type: Mapped[str] = mapped_column(String(16))
+    symbol: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    quantity: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    amount: Mapped[float] = mapped_column(Float)
+    description: Mapped[str] = mapped_column(String(160), default="")
+    source: Mapped[str] = mapped_column(String(16), default="manual")
+    created_at: Mapped[str] = mapped_column(String(32), default=_now)
+
+
+class ValuationRow(Base):
+    __tablename__ = "valuations"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id"), primary_key=True, index=True
+    )
+    date: Mapped[str] = mapped_column(String(10), index=True)
+    value: Mapped[float] = mapped_column(Float)
+    benchmark_symbol: Mapped[str] = mapped_column(String(16), default="VOO")
+    benchmark_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    source: Mapped[str] = mapped_column(String(16), default="manual")
+    created_at: Mapped[str] = mapped_column(String(32), default=_now)
+
+
 class StockRunRow(Base):
     __tablename__ = "stock_runs"
     id: Mapped[str] = mapped_column(String(32), primary_key=True)

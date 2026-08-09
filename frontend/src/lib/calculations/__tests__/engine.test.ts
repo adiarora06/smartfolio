@@ -2,9 +2,11 @@
 
 import { describe, expect, it } from 'vitest'
 import { analyzePortfolio } from '../portfolio'
-import { projectScenario } from '../scenario'
+import { optimizeContribution, projectScenario, simulateScenario } from '../scenario'
 import { computeImpact } from '../impact'
 import { analyzeStock } from '../stock'
+import { calculatePerformance } from '../performance'
+import { parsePortfolioCsv, PORTFOLIO_CSV_TEMPLATE } from '../../import/portfolioCsv'
 import { DEFAULT_PROFILE, demoHoldings } from '../../data/constants'
 
 const holdings = demoHoldings()
@@ -34,6 +36,20 @@ describe('analyzePortfolio', () => {
       )
     })
   })
+
+  it('builds an additive portfolio risk snapshot with stress tests', () => {
+    expect(analysis.risk.annualizedVolatility).toBeGreaterThan(0)
+    expect(analysis.risk.cvar95OneMonth).toBeGreaterThan(analysis.risk.var95OneMonth)
+    expect(analysis.risk.systematicShare + analysis.risk.idiosyncraticShare).toBeCloseTo(1, 8)
+    expect(
+      analysis.risk.topContributors.reduce((sum, item) => sum + item.riskContribution, 0),
+    ).toBeCloseTo(1, 8)
+    expect(analysis.risk.stressTests.map((item) => item.scenario)).toEqual([
+      'market_selloff',
+      'technology_shock',
+      'rate_shock',
+    ])
+  })
 })
 
 describe('projectScenario', () => {
@@ -59,6 +75,66 @@ describe('projectScenario', () => {
     projection.points.forEach(({ years, value }) => {
       expect(value).toBeCloseTo(projection.series[years], 6)
     })
+  })
+})
+
+describe('simulateScenario', () => {
+  const inputs = { contribution: 1000, returnAdj: 0, rebalance: 0.5 }
+  const options = { goalValue: 300000, horizonYears: 10, paths: 400, seed: 20260806 }
+
+  it('is reproducible for the same assumptions and seed', () => {
+    expect(simulateScenario(analysis, inputs, options)).toEqual(
+      simulateScenario(analysis, inputs, options),
+    )
+  })
+
+  it('keeps every annual percentile band ordered', () => {
+    const simulation = simulateScenario(analysis, inputs, options)
+    expect(simulation.points).toHaveLength(11)
+    expect(simulation.points[0].p50).toBe(analysis.value)
+    simulation.points.forEach((point) => {
+      expect(point.p10).toBeLessThanOrEqual(point.p25)
+      expect(point.p25).toBeLessThanOrEqual(point.p50)
+      expect(point.p50).toBeLessThanOrEqual(point.p75)
+      expect(point.p75).toBeLessThanOrEqual(point.p90)
+    })
+  })
+
+  it('improves the same goal odds when contributions rise on shared paths', () => {
+    const lower = simulateScenario(analysis, { ...inputs, contribution: 250 }, options)
+    const higher = simulateScenario(analysis, { ...inputs, contribution: 2500 }, options)
+    expect(higher.successProbability).toBeGreaterThanOrEqual(lower.successProbability)
+    expect(higher.terminal.p50).toBeGreaterThan(lower.terminal.p50)
+  })
+})
+
+describe('optimizeContribution', () => {
+  const inputs = { returnAdj: 0, rebalance: 0.5 }
+
+  it('finds the smallest configured contribution step for a confidence target', () => {
+    const result = optimizeContribution(analysis, inputs, {
+      goalValue: 300000,
+      targetProbability: 0.75,
+      paths: 400,
+      contributionStep: 50,
+    })
+    expect(result.capped).toBe(false)
+    expect(result.requiredContribution % 50).toBe(0)
+    expect(result.achievedProbability).toBeGreaterThanOrEqual(0.75)
+  })
+
+  it('requires at least as much saving for a higher confidence target', () => {
+    const lower = optimizeContribution(analysis, inputs, {
+      goalValue: 300000,
+      targetProbability: 0.6,
+      paths: 300,
+    })
+    const higher = optimizeContribution(analysis, inputs, {
+      goalValue: 300000,
+      targetProbability: 0.9,
+      paths: 300,
+    })
+    expect(higher.requiredContribution).toBeGreaterThanOrEqual(lower.requiredContribution)
   })
 })
 
@@ -92,5 +168,61 @@ describe('analyzeStock', () => {
     const b = analyzeStock('NVDA', 30)
     expect(a.medianTarget).toBe(b.medianTarget)
     expect(a.confidence).toBe(b.confidence)
+  })
+})
+
+describe('calculatePerformance', () => {
+  it('removes deposits from return and compares the same benchmark window', () => {
+    const performance = calculatePerformance(
+      [
+        { id: 'd1', date: '2026-01-02', type: 'deposit', amount: 1000, description: '', source: 'imported' },
+        { id: 'd2', date: '2026-07-01', type: 'deposit', amount: 500, description: '', source: 'imported' },
+      ],
+      [
+        { id: 'v1', date: '2026-01-02', value: 1000, benchmarkSymbol: 'VOO', benchmarkValue: 100, source: 'imported' },
+        { id: 'v2', date: '2026-07-01', value: 1600, benchmarkSymbol: 'VOO', benchmarkValue: 105, source: 'imported' },
+      ],
+    )
+    expect(performance.measured).toBe(true)
+    expect(performance.totalReturn).toBeCloseTo(0.1, 8)
+    expect(performance.benchmarkReturn).toBeCloseTo(0.05, 8)
+    expect(performance.excessReturn).toBeCloseTo(0.05, 8)
+    expect(performance.netContributions).toBe(1500)
+  })
+
+  it('does not claim a return from one valuation', () => {
+    const performance = calculatePerformance([], [
+      { id: 'today', date: '2026-08-08', value: 25000, benchmarkSymbol: 'VOO', source: 'manual' },
+    ])
+    expect(performance.measured).toBe(false)
+    expect(performance.totalReturn).toBe(0)
+  })
+})
+
+describe('parsePortfolioCsv', () => {
+  it('imports holdings, activities, and valuation history from one file', () => {
+    const parsed = parsePortfolioCsv(PORTFOLIO_CSV_TEMPLATE)
+    expect(parsed.errors).toEqual([])
+    expect(parsed.holdings[0].symbol).toBe('AAPL')
+    expect(parsed.transactions[0].type).toBe('deposit')
+    expect(parsed.valuations).toHaveLength(2)
+    expect(parsed.valuations[1].benchmarkValue).toBe(106.5)
+  })
+
+  it('accepts a common holdings-only CSV shape', () => {
+    const parsed = parsePortfolioCsv(
+      'symbol,name,type,asset,sector,value\nMSFT,Microsoft Corp.,stock,us_equity,technology,4500',
+    )
+    expect(parsed.errors).toEqual([])
+    expect(parsed.holdings).toEqual([
+      {
+        symbol: 'MSFT',
+        name: 'Microsoft Corp.',
+        type: 'stock',
+        asset: 'us_equity',
+        sector: 'technology',
+        value: 4500,
+      },
+    ])
   })
 })

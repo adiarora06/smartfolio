@@ -43,14 +43,21 @@ appended server-side, never left to the model.
 ## Features
 
 - **Portfolio workspace** — editable holdings with live-recalculating metric
-  cards, an asset-class donut, and position-weight bars
+  cards, an asset-class donut, position-weight bars, and a deterministic Risk
+  Lab with volatility, beta, VaR/CVaR, risk contribution, and stress replays
+- **Performance foundation** — CSV import for holdings, dated transactions,
+  and account valuations; a persisted activity ledger; cash-flow-adjusted
+  time-weighted return; drawdown; and like-for-like benchmark comparison
 - **Analyze Stock terminal** — forecast bands, backtest, a real agent audit
   trail with per-step timings, saved memos, and replayable run **history**
   (persisted server-side per anonymous workspace)
-- **Scenario lab** — contribution / return / rebalance sliders driving a
-  10-year projection chart (with-contributions vs growth-only)
+- **AI Assistant** — contribution / return / rebalance controls driving a
+  10-year projection, a 2,000-path seeded Monte Carlo goal simulator, fair
+  strategy comparisons, a confidence-based contribution optimizer, locally
+  saved plan snapshots, scenario-aware chat, and live portfolio-risk context
 - **AI advisor** — answers grounded in a fresh deterministic analysis of the
-  exact state you send; works keylessly via templates
+  exact state you send, including the risk budget and top risk contributors;
+  works keylessly via templates
 - **Open Source screen** — the real agent graph and pipeline, matching the
   trace the backend emits
 
@@ -85,8 +92,8 @@ template narration, SQLite persistence.
 
 ## Tests & CI
 
-- `backend/tests` — pytest across the full API surface (17 tests)
-- `frontend/src/**/__tests__` — Vitest over the deterministic engine (11 tests)
+- `backend/tests` — pytest across the full API surface (83 tests)
+- `frontend/src/**/__tests__` — Vitest over the deterministic engine (44 tests)
 - GitHub Actions runs both suites + the frontend build on every push/PR; a
   keep-warm cron pings the free-tier backend every 10 minutes
 

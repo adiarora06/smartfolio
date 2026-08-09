@@ -6,13 +6,30 @@ buy/sell advice.
 """
 from __future__ import annotations
 
-from ...schemas import PortfolioAnalysis, StockForecast
+from ...schemas import AdvisorScenarioContext, PortfolioAnalysis, StockForecast
 from .format import currency, pct, title_case
 from .insights import describe_concentrations, describe_recommendations
 
 
-def answer_advisor(question: str, analysis: PortfolioAnalysis, stock: StockForecast) -> str:
+def answer_advisor(
+    question: str,
+    analysis: PortfolioAnalysis,
+    stock: StockForecast,
+    scenario: AdvisorScenarioContext | None = None,
+) -> str:
     low = question.lower()
+
+    if scenario is not None and any(
+        term in low for term in ("goal", "probability", "chance", "monte", "simulation", "percentile")
+    ):
+        return (
+            f"Across {scenario.paths:,} assumption-driven paths, this plan reached "
+            f"{currency(scenario.goal_value)} by year {scenario.horizon_years} in "
+            f"{pct(scenario.success_probability)} of simulations. The modeled terminal "
+            f"median is {currency(scenario.p50)}, with a 10th–90th percentile range of "
+            f"{currency(scenario.p10)} to {currency(scenario.p90)}. Increasing contributions "
+            "or lowering the target can improve that probability without assuming higher returns."
+        )
 
     if "stock" in low or "ticker" in low or stock.symbol.lower() in low:
         return (
@@ -22,6 +39,19 @@ def answer_advisor(question: str, analysis: PortfolioAnalysis, stock: StockForec
         )
     if "rebalance" in low:
         return "Use future contributions first, then trim concentrated holdings if needed."
+    if any(term in low for term in ("risk", "volatility", "var", "drawdown")):
+        top = analysis.risk.top_contributors[0] if analysis.risk.top_contributors else None
+        top_text = (
+            f" {top.label} contributes {pct(top.risk_contribution)} of modeled risk at "
+            f"{pct(top.weight)} of capital."
+            if top
+            else ""
+        )
+        return (
+            f"Modeled annual volatility is {pct(analysis.risk.annualized_volatility)}, "
+            f"using {pct(analysis.risk.risk_budget_used)} of the "
+            f"{pct(analysis.risk.vol_ceiling)} profile budget.{top_text}"
+        )
     if "connect" in low:
         return "Connect brokerage sync next so SmartFolio can analyze live holdings."
 

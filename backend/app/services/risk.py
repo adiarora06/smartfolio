@@ -60,6 +60,15 @@ ASSET_RISK: Dict[str, Tuple[float, float]] = {
     "other": (0.60, 0.18),
 }
 
+# Annualized volatility budget associated with each investor risk profile.
+# Whole-portfolio diagnostics and stock what-if sizing share this definition.
+VOL_CEILING: Dict[str, float] = {
+    "conservative": 0.09,
+    "balanced": 0.13,
+    "growth": 0.18,
+    "aggressive": 0.25,
+}
+
 
 @dataclass(frozen=True)
 class Position:
@@ -177,6 +186,17 @@ def value_at_risk(volatility: float, horizon_years: float, confidence: float = 0
     if volatility <= 0 or horizon_years <= 0:
         return 0.0
     return abs(norm_ppf(1 - confidence)) * volatility * math.sqrt(horizon_years)
+
+
+def conditional_value_at_risk(
+    volatility: float, horizon_years: float, confidence: float = 0.95
+) -> float:
+    """Expected loss once parametric VaR has already been breached."""
+    if volatility <= 0 or horizon_years <= 0 or not 0 < confidence < 1:
+        return 0.0
+    z = norm_ppf(confidence)
+    density = math.exp(-0.5 * z * z) / math.sqrt(2 * math.pi)
+    return volatility * math.sqrt(horizon_years) * density / (1 - confidence)
 
 
 def max_weight_under_vol(

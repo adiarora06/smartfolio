@@ -13,6 +13,7 @@ import { RETURNS, TARGETS } from '../data/constants'
 import { portfolioValue, riskProfile } from './portfolio'
 import {
   SECTOR_RISK,
+  VOL_CEILING,
   decompose,
   marginalContribution,
   maxWeightUnderVol,
@@ -31,14 +32,6 @@ import type {
 const EQUITY_ASSETS = ['us_equity', 'intl_equity']
 const SINGLE_STOCK_FLAG = 0.2
 const SECTOR_FLAG = 0.35
-
-/** Annualized portfolio volatility each risk profile is willing to carry. */
-const VOL_CEILING: Record<string, number> = {
-  conservative: 0.09,
-  balanced: 0.13,
-  growth: 0.18,
-  aggressive: 0.25,
-}
 
 type ForecastInput = Pick<StockForecast, 'symbol' | 'sector' | 'price'> &
   Partial<Pick<StockForecast, 'vol' | 'days' | 'expected' | 'inputs' | 'fundamentals'>>

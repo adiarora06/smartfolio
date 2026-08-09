@@ -19,6 +19,8 @@ from .db import (
     MemoRow,
     ProfileRow,
     StockRunRow,
+    TransactionRow,
+    ValuationRow,
     WorkspaceRow,
     get_session,
     new_id,
@@ -31,6 +33,10 @@ from .schemas import (
     InvestorProfile,
     MemoIn,
     MemoOut,
+    PortfolioTransaction,
+    TransactionsPut,
+    ValuationSnapshot,
+    ValuationsPut,
     WorkspaceCreateResponse,
     WorkspaceState,
 )
@@ -109,7 +115,54 @@ async def get_state(
         for m in memo_rows
     ]
 
-    return WorkspaceState(profile=profile, holdings=holdings, memos=memos)
+    transaction_rows = (
+        await session.scalars(
+            select(TransactionRow)
+            .where(TransactionRow.workspace_id == workspace_id)
+            .order_by(TransactionRow.date.desc(), TransactionRow.created_at.desc())
+        )
+    ).all()
+    transactions = [
+        PortfolioTransaction(
+            id=row.id,
+            date=row.date,
+            type=row.type,  # type: ignore[arg-type]
+            symbol=row.symbol,
+            quantity=row.quantity,
+            price=row.price,
+            amount=row.amount,
+            description=row.description,
+            source=row.source,  # type: ignore[arg-type]
+        )
+        for row in transaction_rows
+    ]
+
+    valuation_rows = (
+        await session.scalars(
+            select(ValuationRow)
+            .where(ValuationRow.workspace_id == workspace_id)
+            .order_by(ValuationRow.date)
+        )
+    ).all()
+    valuations = [
+        ValuationSnapshot(
+            id=row.id,
+            date=row.date,
+            value=row.value,
+            benchmark_symbol=row.benchmark_symbol,
+            benchmark_value=row.benchmark_value,
+            source=row.source,  # type: ignore[arg-type]
+        )
+        for row in valuation_rows
+    ]
+
+    return WorkspaceState(
+        profile=profile,
+        holdings=holdings,
+        memos=memos,
+        transactions=transactions,
+        valuations=valuations,
+    )
 
 
 @router.put("/workspaces/{workspace_id}/profile")
@@ -142,6 +195,48 @@ async def put_holdings(
         session.add(HoldingRow(workspace_id=workspace_id, position=i, **h.model_dump()))
     await session.commit()
     return {"ok": True, "count": len(body.holdings)}
+
+
+@router.put("/workspaces/{workspace_id}/transactions")
+async def put_transactions(
+    workspace_id: str,
+    body: TransactionsPut,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    await _require_workspace(session, workspace_id)
+    await session.execute(
+        delete(TransactionRow).where(TransactionRow.workspace_id == workspace_id)
+    )
+    for transaction in body.transactions:
+        session.add(
+            TransactionRow(
+                workspace_id=workspace_id,
+                **transaction.model_dump(),
+            )
+        )
+    await session.commit()
+    return {"ok": True, "count": len(body.transactions)}
+
+
+@router.put("/workspaces/{workspace_id}/valuations")
+async def put_valuations(
+    workspace_id: str,
+    body: ValuationsPut,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    await _require_workspace(session, workspace_id)
+    await session.execute(
+        delete(ValuationRow).where(ValuationRow.workspace_id == workspace_id)
+    )
+    for valuation in body.valuations:
+        session.add(
+            ValuationRow(
+                workspace_id=workspace_id,
+                **valuation.model_dump(),
+            )
+        )
+    await session.commit()
+    return {"ok": True, "count": len(body.valuations)}
 
 
 @router.post("/workspaces/{workspace_id}/memos", response_model=MemoOut)

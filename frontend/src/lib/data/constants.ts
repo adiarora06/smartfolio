@@ -9,7 +9,9 @@ import type {
   Goal,
   Holding,
   InvestorProfile,
+  PortfolioTransaction,
   RiskProfileName,
+  ValuationSnapshot,
 } from '../../types'
 
 /** Target allocation by risk profile. */
@@ -71,12 +73,78 @@ export const demoHoldings = (): Holding[] =>
     value,
   }))
 
+/** Dated demo history keeps the performance foundation inspectable without
+ * claiming that today's holdings can recreate a real historical account. */
+export const demoTransactions = (): PortfolioTransaction[] => [
+  {
+    id: 'demo-deposit-2025-01-02',
+    date: '2025-01-02',
+    type: 'deposit',
+    amount: 18000,
+    description: 'Initial portfolio funding',
+    source: 'demo',
+  },
+  {
+    id: 'demo-buy-aapl-2025-01-03',
+    date: '2025-01-03',
+    type: 'buy',
+    symbol: 'AAPL',
+    quantity: 20,
+    price: 200,
+    amount: 4000,
+    description: 'Initial AAPL position',
+    source: 'demo',
+  },
+  {
+    id: 'demo-deposit-2025-04-01',
+    date: '2025-04-01',
+    type: 'deposit',
+    amount: 2000,
+    description: 'Quarterly contribution',
+    source: 'demo',
+  },
+  {
+    id: 'demo-dividend-2025-06-14',
+    date: '2025-06-14',
+    type: 'dividend',
+    symbol: 'AAPL',
+    amount: 120,
+    description: 'Cash dividend',
+    source: 'demo',
+  },
+  {
+    id: 'demo-deposit-2025-07-01',
+    date: '2025-07-01',
+    type: 'deposit',
+    amount: 2000,
+    description: 'Quarterly contribution',
+    source: 'demo',
+  },
+  {
+    id: 'demo-dividend-2025-12-15',
+    date: '2025-12-15',
+    type: 'dividend',
+    symbol: 'VOO',
+    amount: 160,
+    description: 'ETF distribution',
+    source: 'demo',
+  },
+]
+
+export const demoValuations = (): ValuationSnapshot[] => [
+  { id: 'demo-value-2025-01-02', date: '2025-01-02', value: 18000, benchmarkSymbol: 'VOO', benchmarkValue: 100, source: 'demo' },
+  { id: 'demo-value-2025-04-01', date: '2025-04-01', value: 20500, benchmarkSymbol: 'VOO', benchmarkValue: 102.2, source: 'demo' },
+  { id: 'demo-value-2025-07-01', date: '2025-07-01', value: 22900, benchmarkSymbol: 'VOO', benchmarkValue: 105.4, source: 'demo' },
+  { id: 'demo-value-2025-10-01', date: '2025-10-01', value: 21900, benchmarkSymbol: 'VOO', benchmarkValue: 109.1, source: 'demo' },
+  { id: 'demo-value-2026-01-02', date: '2026-01-02', value: 24600, benchmarkSymbol: 'VOO', benchmarkValue: 111.8, source: 'demo' },
+  { id: 'demo-value-2026-08-08', date: '2026-08-08', value: 25000, benchmarkSymbol: 'VOO', benchmarkValue: 115.6, source: 'demo' },
+]
+
 type ConnectionTuple = [name: string, type: string, on: boolean]
 
-// Planned-integration demo toggles. Plaid and the A2A agent card are NOT
-// here — they are real integrations with dedicated cards in ConnectionsScreen.
+// Planned-integration demo toggles. Plaid, CSV import, and the A2A agent card
+// are NOT here — they are real integrations with dedicated cards.
 const CONNECTION_TUPLES: ConnectionTuple[] = [
-  ['Broker CSV Import', 'File import', true],
   ['Market Data API', 'Prices and fundamentals', true],
   ['Stock Forecast Engine', 'Ticker analysis', true],
   ['MCP Tool Server', 'AI tools', false],

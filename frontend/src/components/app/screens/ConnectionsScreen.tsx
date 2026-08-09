@@ -104,6 +104,7 @@ function PlaidCard() {
 export function ConnectionsScreen() {
   const connections = useStore((s) => s.connections)
   const toggleConnection = useStore((s) => s.toggleConnection)
+  const setScreen = useStore((s) => s.setScreen)
   const backendOnline = useStore((s) => s.backendOnline)
   const checkBackend = useStore((s) => s.checkBackend)
 
@@ -133,7 +134,7 @@ export function ConnectionsScreen() {
   return (
     <AppPage
       title="Connections"
-      subtitle="Three live integrations, four planned."
+      subtitle="Four working data paths, three planned."
       actions={<button onClick={() => void exportJson()}>Share Export</button>}
     >
       <Panel>
@@ -148,6 +149,13 @@ export function ConnectionsScreen() {
               </button>
             </div>
             <PlaidCard />
+            <div className="conn on">
+              <strong>Portfolio CSV</strong>
+              <span style={{ color: 'var(--muted)' }}>
+                Import holdings, dated activity, and account valuations from one file
+              </span>
+              <button onClick={() => setScreen('portfolio')}>Open Importer</button>
+            </div>
             <div className={`conn ${backendOnline ? 'on' : ''}`}>
               <strong>A2A Agent Card</strong>
               <span style={{ color: 'var(--muted)' }}>

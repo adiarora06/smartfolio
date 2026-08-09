@@ -14,10 +14,16 @@ import pytest
 from app.marketdata.base import MarketContext, MarketSnapshot
 from app.marketdata.fundamentals import Fundamentals, quality_score
 from app.marketdata.series import PriceSeries, compute_stats
-from app.schemas import Holding, InvestorProfile
+from app.schemas import (
+    ContributionOptimizationInputs,
+    Holding,
+    InvestorProfile,
+    ScenarioSimulationInputs,
+)
 from app.services.backtest import walk_forward
 from app.services.estimate import estimate_from_history, shrinkage_for
 from app.services.impact import compute_impact
+from app.services.portfolio import analyze_portfolio
 from app.services.quant import (
     MARKET_DRIFT,
     QUANTILES,
@@ -31,12 +37,16 @@ from app.services.quant import (
 )
 from app.services.risk import (
     Position,
+    conditional_value_at_risk,
     decompose,
     marginal_contribution,
     max_weight_under_vol,
     positions_from_holdings,
     value_at_risk,
 )
+from app.schemas import PortfolioTransaction, ValuationSnapshot
+from app.services.performance import calculate_performance
+from app.services.scenario import optimize_contribution, simulate_strategy
 from app.services.stock import analyze_stock
 
 
@@ -335,6 +345,12 @@ def test_value_at_risk_scales_with_sqrt_time():
     assert year / quarter == pytest.approx(2.0, rel=1e-6)
 
 
+def test_conditional_var_exceeds_var_at_the_same_confidence():
+    var = value_at_risk(0.20, 1 / 12)
+    tail = conditional_value_at_risk(0.20, 1 / 12)
+    assert tail > var > 0
+
+
 def test_max_weight_respects_the_ceiling():
     positions = _positions()
     candidate = Position("RISKY", 0.0, 1.5, 0.60)
@@ -389,6 +405,98 @@ def _holdings() -> list[Holding]:
             value=30000,
         ),
     ]
+
+
+def test_portfolio_risk_snapshot_is_complete_and_additive():
+    analysis = analyze_portfolio(_holdings(), PROFILE)
+    risk = analysis.risk
+
+    assert 0 < risk.annualized_volatility < 1
+    assert risk.cvar95_one_month > risk.var95_one_month > 0
+    assert risk.risk_budget_used == pytest.approx(
+        risk.annualized_volatility / risk.vol_ceiling
+    )
+    assert risk.systematic_share + risk.idiosyncratic_share == pytest.approx(1.0)
+    assert sum(item.risk_contribution for item in risk.top_contributors) == pytest.approx(
+        1.0, abs=1e-6
+    )
+    assert {item.scenario for item in risk.stress_tests} == {
+        "market_selloff",
+        "technology_shock",
+        "rate_shock",
+    }
+    assert all(item.estimated_return <= 0 for item in risk.stress_tests)
+
+
+def _simulation_inputs(**overrides) -> ScenarioSimulationInputs:
+    values = {
+        "contribution": 1000,
+        "return_adj": 0.0,
+        "rebalance": 0.5,
+        "goal_value": 350000,
+        "horizon_years": 10,
+        "paths": 400,
+        "seed": 20260806,
+    }
+    values.update(overrides)
+    return ScenarioSimulationInputs(**values)
+
+
+def test_strategy_simulation_is_reproducible_and_ordered():
+    analysis = analyze_portfolio(_holdings(), PROFILE)
+    first = simulate_strategy(analysis, _simulation_inputs())
+    second = simulate_strategy(analysis, _simulation_inputs())
+
+    assert first == second
+    assert 0 <= first.success_probability <= 1
+    assert first.points[0].p10 == pytest.approx(analysis.value)
+    assert len(first.points) == 11
+    for point in first.points:
+        assert point.p10 <= point.p25 <= point.p50 <= point.p75 <= point.p90
+
+
+def test_more_contributions_improve_goal_probability_on_shared_paths():
+    analysis = analyze_portfolio(_holdings(), PROFILE)
+    lower = simulate_strategy(analysis, _simulation_inputs(contribution=250))
+    higher = simulate_strategy(analysis, _simulation_inputs(contribution=2500))
+
+    assert higher.success_probability >= lower.success_probability
+    assert higher.terminal.p50 > lower.terminal.p50
+
+
+def test_contribution_optimizer_finds_a_step_that_reaches_the_target():
+    analysis = analyze_portfolio(_holdings(), PROFILE)
+    result = optimize_contribution(
+        analysis,
+        ContributionOptimizationInputs(
+            goal_value=350000,
+            target_probability=0.75,
+            paths=400,
+            contribution_step=50,
+        ),
+    )
+
+    assert result.capped is False
+    assert result.required_contribution % 50 == 0
+    assert result.achieved_probability >= 0.75
+
+
+def test_higher_confidence_requires_at_least_as_much_contribution():
+    analysis = analyze_portfolio(_holdings(), PROFILE)
+    lower = optimize_contribution(
+        analysis,
+        ContributionOptimizationInputs(
+            goal_value=350000, target_probability=0.60, paths=300
+        ),
+    )
+    higher = optimize_contribution(
+        analysis,
+        ContributionOptimizationInputs(
+            goal_value=350000, target_probability=0.90, paths=300
+        ),
+    )
+
+    assert higher.required_contribution >= lower.required_contribution
 
 
 def test_impact_reports_risk_share_above_weight_for_a_volatile_name():
@@ -564,3 +672,68 @@ def test_engine_is_deterministic():
     a = analyze_stock("NVDA", 45)
     b = analyze_stock("NVDA", 45)
     assert a.model_dump() == b.model_dump()
+
+
+def test_performance_removes_external_cash_flows_and_compares_benchmark():
+    transactions = [
+        PortfolioTransaction(
+            id="deposit-1",
+            date="2026-01-02",
+            type="deposit",
+            amount=1000,
+            description="Initial funding",
+            source="imported",
+        ),
+        PortfolioTransaction(
+            id="deposit-2",
+            date="2026-07-01",
+            type="deposit",
+            amount=500,
+            description="Contribution",
+            source="imported",
+        ),
+    ]
+    valuations = [
+        ValuationSnapshot(
+            id="value-1",
+            date="2026-01-02",
+            value=1000,
+            benchmark_symbol="VOO",
+            benchmark_value=100,
+            source="imported",
+        ),
+        ValuationSnapshot(
+            id="value-2",
+            date="2026-07-01",
+            value=1600,
+            benchmark_symbol="VOO",
+            benchmark_value=105,
+            source="imported",
+        ),
+    ]
+
+    performance = calculate_performance(transactions, valuations)
+    assert performance.measured
+    assert performance.net_contributions == 1500
+    assert performance.gain == 100
+    assert performance.total_return == pytest.approx(0.10)
+    assert performance.benchmark_return == pytest.approx(0.05)
+    assert performance.excess_return == pytest.approx(0.05)
+
+
+def test_performance_refuses_to_claim_return_from_one_valuation():
+    performance = calculate_performance(
+        [],
+        [
+            ValuationSnapshot(
+                id="today",
+                date="2026-08-08",
+                value=25000,
+                benchmark_symbol="VOO",
+                source="manual",
+            )
+        ],
+    )
+    assert not performance.measured
+    assert performance.total_return == 0
+    assert performance.benchmark_return is None

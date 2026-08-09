@@ -14,9 +14,23 @@ from ..schemas import (
     Holding,
     InvestorProfile,
     PortfolioAnalysis,
+    PortfolioRiskSnapshot,
+    PortfolioStressTest,
     RecommendationSignal,
+    RiskContribution,
 )
 from .data import RETURNS, TARGETS
+from .risk import (
+    ASSET_RISK,
+    VOL_CEILING,
+    Position,
+    conditional_value_at_risk,
+    decompose,
+    marginal_contribution,
+    positions_from_holdings,
+    risk_inputs,
+    value_at_risk,
+)
 
 EQUITY_ASSETS = ("us_equity", "intl_equity")
 LIQUIDITY_DRAG = {"low": 0.0, "medium": 0.12, "high": 0.25}
@@ -69,6 +83,113 @@ def risk_profile(profile: InvestorProfile) -> Tuple[str, float]:
     return name, score
 
 
+def _stress_return(holding: Holding, scenario: str) -> float:
+    """Deterministic scenario shock for one holding.
+
+    These are explicit educational assumptions, not forecasts. They live in
+    the calculation layer so the UI and AI only report the computed result.
+    """
+    beta, _ = risk_inputs(holding)
+    is_equity = holding.asset in EQUITY_ASSETS
+    if scenario == "market_selloff":
+        if holding.asset == "cash":
+            return 0.0
+        return max(-0.65, -0.20 * beta)
+    if scenario == "technology_shock":
+        if is_equity and holding.sector == "technology":
+            return -0.25
+        if is_equity:
+            return -0.03 * beta
+        if holding.asset == "alternatives":
+            return -0.03
+        return 0.0
+    if holding.asset == "bonds":
+        return -0.08
+    if holding.asset == "cash":
+        return 0.0
+    if is_equity and holding.sector == "real_estate":
+        return -0.12
+    if is_equity:
+        return -0.05 * beta
+    return -0.04 if holding.asset == "alternatives" else 0.0
+
+
+def _risk_snapshot(
+    holdings: List[Holding], profile_name: str, current_return: float, total: float
+) -> PortfolioRiskSnapshot:
+    positions = positions_from_holdings(holdings, total)
+    decomposition = decompose(positions)
+    total_variance = decomposition.volatility**2
+
+    contributors: List[RiskContribution] = []
+    if decomposition.volatility > 0:
+        for index, position in enumerate(positions):
+            share = position.weight * marginal_contribution(positions, index)
+            share /= decomposition.volatility
+            contributors.append(
+                RiskContribution(
+                    label=position.label,
+                    weight=position.weight,
+                    volatility=position.vol,
+                    beta=position.beta,
+                    risk_contribution=max(0.0, share),
+                )
+            )
+    contributors.sort(key=lambda item: item.risk_contribution, reverse=True)
+
+    target_positions = [
+        Position(asset, weight, *ASSET_RISK.get(asset, ASSET_RISK["other"]))
+        for asset, weight in TARGETS[profile_name].items()
+        if weight > 0
+    ]
+    target_volatility = decompose(target_positions).volatility
+    ceiling = VOL_CEILING.get(profile_name, 0.15)
+    one_month = 1.0 / 12.0
+
+    stress_tests = []
+    for scenario in ("market_selloff", "technology_shock", "rate_shock"):
+        estimated_return = (
+            sum(
+                (float(holding.value) / total) * _stress_return(holding, scenario)
+                for holding in holdings
+            )
+            if total > 0
+            else 0.0
+        )
+        stress_tests.append(
+            PortfolioStressTest(
+                scenario=scenario,  # type: ignore[arg-type]
+                estimated_return=estimated_return,
+                dollar_impact=total * estimated_return,
+            )
+        )
+
+    return PortfolioRiskSnapshot(
+        annualized_volatility=decomposition.volatility,
+        target_volatility=target_volatility,
+        beta=decomposition.beta,
+        systematic_share=(decomposition.systematic**2 / total_variance)
+        if total_variance > 0
+        else 0.0,
+        idiosyncratic_share=(decomposition.idiosyncratic**2 / total_variance)
+        if total_variance > 0
+        else 0.0,
+        diversification_ratio=decomposition.diversification_ratio,
+        effective_positions=decomposition.effective_positions,
+        vol_ceiling=ceiling,
+        risk_budget_used=decomposition.volatility / ceiling if ceiling > 0 else 0.0,
+        var95_one_month=value_at_risk(decomposition.volatility, one_month),
+        cvar95_one_month=conditional_value_at_risk(
+            decomposition.volatility, one_month
+        ),
+        return_to_risk=current_return / decomposition.volatility
+        if decomposition.volatility > 0
+        else 0.0,
+        top_contributors=contributors[:6],
+        stress_tests=stress_tests,
+    )
+
+
 def analyze_portfolio(holdings: List[Holding], profile: InvestorProfile) -> PortfolioAnalysis:
     """Full deterministic portfolio diagnosis with structured findings."""
     name, score = risk_profile(profile)
@@ -118,4 +239,5 @@ def analyze_portfolio(holdings: List[Holding], profile: InvestorProfile) -> Port
         value=portfolio_value(holdings),
         current_return=current_return,
         target_return=target_return,
+        risk=_risk_snapshot(holdings, name, current_return, portfolio_value(holdings)),
     )

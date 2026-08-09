@@ -2830,3 +2830,889 @@ button.dark { color: #fff; }
   .analysisWorkbench { grid-template-columns: minmax(0, 1fr) 390px; }
   .strategyLabGrid { grid-template-columns: minmax(0, 1fr) 370px; }
 }
+
+/* Portfolio risk lab ------------------------------------------------------- */
+.portfolioRiskLab {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.07);
+}
+
+.portfolioRiskHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(120deg, #f8fbff 0%, #f4fbf9 100%);
+}
+
+.portfolioRiskTitle,
+.portfolioRiskBudget,
+.portfolioRiskSubhead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.portfolioRiskTitle > span,
+.portfolioRiskSubhead > span {
+  display: grid;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 11px;
+  background: rgba(15, 118, 110, 0.1);
+  color: #0f766e;
+  font-size: 20px;
+}
+
+.portfolioRiskTitle small,
+.portfolioRiskTitle h2,
+.portfolioRiskTitle p,
+.portfolioRiskSubhead h3,
+.portfolioRiskSubhead p,
+.portfolioRiskBudget small,
+.portfolioRiskBudget strong,
+.portfolioRiskMetric span,
+.portfolioRiskMetric strong,
+.portfolioRiskMetric small,
+.portfolioContributionRow strong,
+.portfolioContributionRow small,
+.portfolioStressList strong,
+.portfolioStressList small {
+  display: block;
+}
+
+.portfolioRiskTitle small {
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.portfolioRiskTitle h2 {
+  margin: 2px 0 0;
+  color: #172033;
+  font-size: 21px;
+}
+
+.portfolioRiskTitle p,
+.portfolioRiskSubhead p {
+  margin: 3px 0 0;
+  color: #667085;
+  font-size: 13px;
+}
+
+.portfolioRiskBudget {
+  min-width: 176px;
+  justify-content: center;
+  padding: 11px 14px;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: 12px;
+  background: rgba(15, 118, 110, 0.07);
+  color: #0f766e;
+}
+
+.portfolioRiskBudget.over {
+  border-color: rgba(217, 119, 6, 0.22);
+  background: rgba(217, 119, 6, 0.08);
+  color: #b45309;
+}
+
+.portfolioRiskBudget ion-icon { font-size: 22px; }
+.portfolioRiskBudget small { font-size: 11px; font-weight: 750; }
+.portfolioRiskBudget strong { margin-top: 2px; font-size: 16px; }
+
+.portfolioRiskMetrics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  border-bottom: 1px solid var(--line);
+}
+
+.portfolioRiskMetric {
+  min-width: 0;
+  padding: 16px 18px;
+  border-right: 1px solid var(--line);
+}
+
+.portfolioRiskMetric:last-child { border-right: 0; }
+.portfolioRiskMetric span { color: #667085; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.portfolioRiskMetric strong { margin-top: 4px; color: #172033; font-size: 22px; }
+.portfolioRiskMetric small { margin-top: 3px; color: #8a97aa; font-size: 12px; line-height: 1.3; }
+
+.portfolioRiskDetails {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+}
+
+.portfolioContributionPanel,
+.portfolioStressPanel { min-width: 0; padding: 18px 20px; }
+.portfolioContributionPanel { border-right: 1px solid var(--line); }
+.portfolioRiskSubhead { align-items: flex-start; }
+.portfolioRiskSubhead > span { width: 34px; height: 34px; font-size: 18px; }
+.portfolioRiskSubhead h3 { margin: 0; color: #172033; font-size: 16px; }
+
+.portfolioContributionList,
+.portfolioStressList {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.portfolioContributionRow {
+  display: grid;
+  grid-template-columns: 145px minmax(120px, 1fr) 86px;
+  align-items: center;
+  gap: 14px;
+}
+
+.portfolioContributionRow > div:first-child strong { color: #172033; font-size: 14px; }
+.portfolioContributionRow > div:first-child small { margin-top: 2px; color: #8a97aa; font-size: 11px; }
+
+.portfolioContributionBars {
+  position: relative;
+  display: grid;
+  gap: 5px;
+  padding-block: 2px;
+}
+
+.portfolioContributionBars::before,
+.portfolioContributionBars::after {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 5px;
+  border-radius: 999px;
+  background: #edf2f7;
+  content: '';
+}
+
+.portfolioContributionBars::before { top: 2px; }
+.portfolioContributionBars::after { bottom: 2px; }
+.portfolioContributionBars span { z-index: 1; display: block; height: 5px; border-radius: 999px; }
+.portfolioContributionBars .capital { background: #14b8a6; }
+.portfolioContributionBars .risk { background: #4f46e5; }
+
+.portfolioContributionValues {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  text-align: right;
+}
+
+.portfolioContributionValues span { color: #0f766e; font-size: 12px; font-weight: 750; }
+.portfolioContributionValues strong { color: #4338ca; font-size: 12px; }
+.portfolioRiskEmpty { margin: 4px 0; color: #7b8799; font-size: 13px; }
+
+.portfolioStressPanel {
+  display: flex;
+  flex-direction: column;
+  background: #101a2e;
+  color: #dce7f7;
+}
+
+.portfolioStressPanel .portfolioRiskSubhead > span { background: rgba(96, 165, 250, 0.12); color: #60a5fa; }
+.portfolioStressPanel .portfolioRiskSubhead h3 { color: #fff; }
+.portfolioStressPanel .portfolioRiskSubhead p { color: #8ea2c1; }
+
+.portfolioStressList > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.portfolioStressList > div > span:last-child { text-align: right; }
+.portfolioStressList strong { color: #eff6ff; font-size: 13px; }
+.portfolioStressList > div > span:last-child strong { color: #fca5a5; font-size: 15px; }
+.portfolioStressList small { margin-top: 2px; color: #8295b2; font-size: 11px; }
+
+.portfolioStressPanel > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 42px;
+  margin-top: auto;
+  padding: 10px 12px;
+  border: 1px solid rgba(45, 212, 191, 0.22);
+  border-radius: 10px;
+  background: rgba(20, 184, 166, 0.12);
+  color: #5eead4;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.portfolioRiskFoot {
+  padding: 10px 20px;
+  border-top: 1px solid var(--line);
+  background: #fbfcfe;
+  color: #7b8799;
+  font-size: 11px;
+}
+
+.strategyRiskContext {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0 12px 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--line);
+}
+
+.strategyRiskContext > div {
+  min-width: 0;
+  padding: 9px 11px;
+  background: #f8fafc;
+}
+
+.strategyRiskContext span,
+.strategyRiskContext strong { display: block; }
+.strategyRiskContext span { color: #7b8799; font-size: 10px; font-weight: 750; text-transform: uppercase; }
+.strategyRiskContext strong { margin-top: 2px; overflow: hidden; color: #172033; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Keep every advisor input visible in the narrow desktop rail. */
+.strategyContextChips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: visible;
+}
+
+.strategyContextChips span {
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .portfolioRiskMetrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .portfolioRiskMetric:nth-child(3) { border-right: 0; }
+  .portfolioRiskMetric:nth-child(-n + 3) { border-bottom: 1px solid var(--line); }
+  .portfolioRiskDetails { grid-template-columns: 1fr; }
+  .portfolioContributionPanel { border-right: 0; border-bottom: 1px solid var(--line); }
+}
+
+@media (max-width: 720px) {
+  .portfolioRiskHead { align-items: stretch; flex-direction: column; padding: 14px; }
+  .portfolioRiskBudget { justify-content: flex-start; }
+  .portfolioRiskMetrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .portfolioRiskMetric { padding: 13px; }
+  .portfolioRiskMetric:nth-child(3) { border-right: 1px solid var(--line); }
+  .portfolioRiskMetric:nth-child(2n) { border-right: 0; }
+  .portfolioRiskMetric:nth-child(-n + 4) { border-bottom: 1px solid var(--line); }
+  .portfolioContributionPanel,
+  .portfolioStressPanel { padding: 14px; }
+  .portfolioContributionRow { grid-template-columns: 92px minmax(90px, 1fr) 68px; gap: 8px; }
+  .portfolioContributionRow > div:first-child small { display: none; }
+  .portfolioRiskFoot { padding: 10px 14px; }
+  .strategyRiskContext { grid-template-columns: 1fr; }
+}
+
+/* Monte Carlo strategy simulator ----------------------------------------- */
+.strategySimulationPanel {
+  overflow: hidden;
+  border: 1px solid #dbe3ed;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+}
+
+.strategySimulationHead,
+.strategySimulationTitle,
+.strategyGoalLabel,
+.strategyProbabilityHero {
+  display: flex;
+  align-items: center;
+}
+
+.strategySimulationHead {
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 17px;
+  border-bottom: 1px solid #e7ecf2;
+  background: linear-gradient(120deg, #f8fbff, #f3fbf8);
+}
+
+.strategySimulationTitle { gap: 11px; }
+.strategySimulationTitle > span {
+  display: grid;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(15, 118, 110, 0.1);
+  color: #0f766e;
+  font-size: 20px;
+}
+
+.strategySimulationTitle small,
+.strategySimulationTitle h2,
+.strategySimulationTitle p,
+.strategyGoalLabel strong,
+.strategyGoalLabel small,
+.strategyProbabilityRing strong,
+.strategyProbabilityRing small,
+.strategyTerminalMetrics span,
+.strategyTerminalMetrics strong,
+.strategyCompareHead span,
+.strategyCompareHead h3,
+.strategyCompareCopy strong,
+.strategyCompareCopy small {
+  display: block;
+}
+
+.strategySimulationTitle small {
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.strategySimulationTitle h2 { margin: 1px 0 0; color: #172033; font-size: 19px; }
+.strategySimulationTitle p { margin: 2px 0 0; color: #667085; font-size: 13px; }
+
+.strategyPathBadge {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border: 1px solid rgba(79, 70, 229, 0.14);
+  border-radius: 7px;
+  background: rgba(79, 70, 229, 0.06);
+  color: #4f46e5;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.strategyGoalControl {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.7fr) minmax(260px, 1.3fr);
+  align-items: center;
+  gap: 20px;
+  padding: 11px 17px 9px;
+  border-bottom: 1px solid #e7ecf2;
+}
+
+.strategyGoalLabel { min-width: 0; gap: 9px; }
+.strategyGoalLabel > ion-icon { flex: 0 0 auto; color: #d97706; font-size: 20px; }
+.strategyGoalLabel > span { min-width: 0; }
+.strategyGoalLabel strong { color: #172033; font-size: 14px; }
+.strategyGoalLabel small { overflow: hidden; color: #7b8799; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.strategyGoalLabel b { margin-left: auto; color: #0f766e; font-size: 17px; white-space: nowrap; }
+.strategyGoalControl ion-range { --bar-height: 5px; --knob-size: 20px; padding: 5px 0; }
+
+.strategySimulationBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(225px, 0.65fr);
+  min-width: 0;
+}
+
+.strategyDistributionColumn { min-width: 0; padding: 14px 16px 12px; }
+.strategyProbabilityHero { gap: 14px; }
+
+.strategyProbabilityRing {
+  --probability: 0deg;
+  display: grid;
+  flex: 0 0 auto;
+  width: 104px;
+  height: 104px;
+  padding: 8px;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(#0f766e var(--probability), #e8eef5 0);
+}
+
+.strategyProbabilityRing > span {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-content: center;
+  border-radius: 50%;
+  background: #fff;
+  text-align: center;
+}
+
+.strategyProbabilityRing strong { color: #172033; font-size: 27px; line-height: 1; }
+.strategyProbabilityRing small { margin-top: 4px; color: #667085; font-size: 11px; font-weight: 750; }
+
+.strategyTerminalMetrics {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.strategyTerminalMetrics > div {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #e4eaf1;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.strategyTerminalMetrics span { color: #7b8799; font-size: 11px; font-weight: 750; text-transform: uppercase; }
+.strategyTerminalMetrics strong { margin-top: 2px; overflow: hidden; color: #172033; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+
+.strategyMonteCarloWrap { position: relative; margin-top: 10px; }
+.strategyMonteCarloChart { display: block; width: 100%; height: 176px; border-radius: 9px; background: #f8fafc; }
+.strategyMonteCarloChart text { fill: #718096; font-size: 12px; }
+.strategySimulationLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 6px;
+  color: #667085;
+  font-size: 11px;
+}
+
+.strategySimulationLegend span { display: inline-flex; align-items: center; gap: 4px; }
+.strategySimulationLegend i { display: inline-block; width: 14px; height: 4px; border-radius: 999px; }
+.strategySimulationLegend .outerBand { background: rgba(79, 70, 229, 0.25); }
+.strategySimulationLegend .innerBand { background: rgba(20, 184, 166, 0.35); }
+.strategySimulationLegend .medianLine { background: #0f766e; }
+
+.strategyComparePanel {
+  min-width: 0;
+  padding: 14px;
+  border-left: 1px solid #e4eaf1;
+  background: #101a2e;
+  color: #dce7f7;
+}
+
+.strategyCompareHead span { color: #20b8a5; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.strategyCompareHead h3 { margin: 2px 0 0; color: #fff; font-size: 16px; }
+.strategyCompareList { display: grid; gap: 7px; margin-top: 12px; }
+.strategyCompareList button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px 9px;
+  min-width: 0;
+  padding: 9px 10px;
+  border-color: rgba(148, 163, 184, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+  color: #dce7f7;
+  text-align: left;
+}
+
+.strategyCompareList button.active {
+  border-color: rgba(45, 212, 191, 0.4);
+  background: rgba(20, 184, 166, 0.11);
+}
+
+.strategyCompareCopy { min-width: 0; }
+.strategyCompareCopy strong { overflow: hidden; color: #f8fafc; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.strategyCompareCopy small { margin-top: 1px; overflow: hidden; color: #8ea2c1; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.strategyCompareList button > b { color: #5eead4; font-size: 15px; }
+.strategyCompareMedian { grid-column: 1 / -1; color: #b9c8dc; font-size: 12px; }
+.strategyCompareTrack { grid-column: 1 / -1; height: 4px; overflow: hidden; border-radius: 999px; background: rgba(148, 163, 184, 0.16); }
+.strategyCompareTrack i { display: block; height: 100%; border-radius: inherit; background: #20b8a5; }
+.strategyComparePanel > p { margin: 11px 1px 0; color: #8295b2; font-size: 11px; line-height: 1.45; }
+
+@media (max-width: 1080px) {
+  .strategySimulationBody { grid-template-columns: 1fr; }
+  .strategyComparePanel { border-top: 1px solid #e4eaf1; border-left: 0; }
+  .strategyCompareList { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .strategySimulationHead { align-items: flex-start; flex-direction: column; }
+  .strategyGoalControl { grid-template-columns: 1fr; gap: 2px; }
+  .strategyProbabilityHero { align-items: stretch; flex-direction: column; }
+  .strategyProbabilityRing { align-self: center; }
+  .strategyCompareList { grid-template-columns: 1fr; }
+}
+
+/* Saved strategy snapshots + contribution optimizer ---------------------- */
+.strategySavedShelf {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+  padding: 10px 12px;
+  border: 1px solid #dbe3ed;
+  border-radius: 11px;
+  background: linear-gradient(120deg, #f8fbff, #f4fbf9);
+}
+
+.strategySavedHead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.strategySavedHead > span {
+  display: grid;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(15, 118, 110, 0.1);
+  color: #0f766e;
+}
+
+.strategySavedHead strong,
+.strategySavedHead small,
+.strategySavedCard strong,
+.strategySavedCard small {
+  display: block;
+}
+
+.strategySavedHead strong { color: #172033; font-size: 14px; }
+.strategySavedHead small { margin-top: 1px; color: #7b8799; font-size: 11px; }
+.strategySavedList { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 300px)); gap: 7px; }
+.strategySavedCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  overflow: hidden;
+  border: 1px solid #dce4ed;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.strategySavedCard > button:first-child {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 0;
+  text-align: left;
+}
+
+.strategySavedCard strong { overflow: hidden; color: #172033; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.strategySavedCard small { margin-top: 2px; overflow: hidden; color: #7b8799; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.strategySavedRemove {
+  display: grid;
+  width: 34px;
+  min-height: 100%;
+  place-items: center;
+  border: 0;
+  border-left: 1px solid #e5eaf1;
+  border-radius: 0;
+  color: #98a2b3;
+  padding: 0;
+}
+
+.strategySavedRemove:hover { background: #fff1f2; color: #be123c; }
+
+.strategyGoalCoach {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 11px 18px;
+  align-items: center;
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px solid #dbe3ed;
+  border-radius: 10px;
+  background: linear-gradient(120deg, #f8fbff 0%, #f3fbf8 100%);
+}
+
+.strategyGoalCoachTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.strategyGoalCoachTitle > span {
+  display: grid;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(79, 70, 229, 0.09);
+  color: #4f46e5;
+  font-size: 20px;
+}
+
+.strategyGoalCoachTitle small,
+.strategyGoalCoachTitle strong,
+.strategyGoalCoachTitle p,
+.strategyConfidencePicker > span,
+.strategyOptimizerResult span,
+.strategyOptimizerResult strong,
+.strategyOptimizerResult small {
+  display: block;
+}
+
+.strategyGoalCoachTitle small { color: #4f46e5; font-size: 11px; font-weight: 850; text-transform: uppercase; }
+.strategyGoalCoachTitle strong { margin-top: 1px; color: #172033; font-size: 15px; }
+.strategyGoalCoachTitle p { margin: 2px 0 0; color: #667085; font-size: 12px; }
+.strategyConfidencePicker { justify-self: end; }
+.strategyConfidencePicker > span { margin-bottom: 5px; color: #667085; font-size: 11px; font-weight: 750; text-align: right; }
+.strategyConfidencePicker > div { display: flex; gap: 5px; }
+.strategyConfidencePicker button {
+  min-width: 48px;
+  min-height: 32px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: #fff;
+  color: #667085;
+  font-size: 12px;
+}
+
+.strategyConfidencePicker button.active {
+  border-color: #4f46e5;
+  background: #4f46e5;
+  color: #fff;
+}
+
+.strategyOptimizerResult {
+  min-width: 0;
+  padding-left: 48px;
+}
+
+.strategyOptimizerResult span { color: #667085; font-size: 11px; font-weight: 750; text-transform: uppercase; }
+.strategyOptimizerResult strong { margin-top: 2px; color: #0f766e; font-size: 19px; }
+.strategyOptimizerResult small { margin-top: 2px; color: #667085; font-size: 12px; }
+.strategyApplyOptimizer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 138px;
+  min-height: 42px;
+  border-color: #0f766e;
+  background: #0f766e;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.strategyApplyOptimizer:disabled {
+  border-color: #d9e1ea;
+  background: #e8eef4;
+  color: #8a97aa;
+}
+
+@media (max-width: 1080px) {
+  .strategySavedShelf { grid-template-columns: 1fr; }
+  .strategySavedList { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .strategySavedList { grid-template-columns: 1fr; }
+  .strategyGoalCoach { grid-template-columns: 1fr; }
+  .strategyConfidencePicker { justify-self: start; }
+  .strategyConfidencePicker > span { text-align: left; }
+  .strategyOptimizerResult { padding-left: 0; }
+  .strategyApplyOptimizer { width: 100%; }
+}
+
+/* Portfolio foundation: measured history, benchmark, ledger, and CSV import. */
+.portfolioFoundation {
+  overflow: hidden;
+  border: 1px solid #d7e1eb;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.06);
+}
+
+.foundationHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  padding: 17px 18px;
+  border-bottom: 1px solid #dde5ee;
+  background: linear-gradient(110deg, #fff, #f4faf8);
+}
+
+.foundationHead small,
+.foundationHead h2,
+.foundationHead p,
+.foundationCardHead small,
+.foundationCardHead strong,
+.foundationLedgerHead small,
+.foundationLedgerHead h3 {
+  display: block;
+}
+
+.foundationHead small,
+.foundationCardHead small,
+.foundationLedgerHead small {
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.foundationHead h2 { margin: 2px 0 0; color: #172033; font-size: 21px; }
+.foundationHead p { margin: 3px 0 0; color: #667085; font-size: 14px; }
+.foundationActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.foundationActions button,
+.foundationComposerActions button,
+.foundationLedgerHead button,
+.foundationLedger footer button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.foundationPrimary {
+  border-color: #0f766e;
+  background: #0f766e;
+  color: #fff;
+}
+.foundationPrimary:hover { border-color: #0b5f59; background: #0b5f59; }
+.foundationPrimary:disabled { border-color: #cfd8e3; background: #e4eaf0; color: #7b8799; cursor: not-allowed; }
+.foundationFileInput { display: none; }
+
+.foundationComposer {
+  padding: 14px 18px;
+  border-bottom: 1px solid #dde5ee;
+  background: #f7fafc;
+}
+
+.foundationImportPreview { display: grid; gap: 12px; }
+.foundationImportPreview > div:first-child { display: flex; gap: 10px; align-items: center; }
+.foundationImportPreview > div:first-child > span:last-child { min-width: 0; }
+.foundationImportPreview strong { display: block; overflow: hidden; color: #172033; text-overflow: ellipsis; white-space: nowrap; }
+.foundationImportPreview small { display: block; color: #667085; font-size: 12px; }
+.foundationComposerIcon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(15, 118, 110, 0.1);
+  color: #0f766e;
+  font-size: 20px;
+}
+.foundationImportCounts { display: flex; flex-wrap: wrap; gap: 8px; }
+.foundationImportCounts span { padding: 6px 9px; border: 1px solid #d9e3ed; border-radius: 8px; background: #fff; color: #667085; font-size: 12px; }
+.foundationImportCounts strong { display: inline; color: #172033; }
+.foundationImportErrors { margin: 0; padding: 10px 12px 10px 30px; border: 1px solid #fed7aa; border-radius: 8px; background: #fff7ed; color: #9a3412; font-size: 12px; }
+.foundationComposerActions { display: flex; justify-content: flex-end; gap: 8px; }
+
+.foundationActivityForm {
+  display: grid;
+  grid-template-columns: 150px 150px 130px 140px minmax(180px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+.foundationActivityForm label { font-size: 12px; }
+.foundationActivityForm input,
+.foundationActivityForm select { min-height: 42px; font-size: 14px; }
+.foundationActivityForm .foundationComposerActions { align-self: end; white-space: nowrap; }
+
+.foundationGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(350px, 0.75fr);
+  min-height: 410px;
+}
+
+.foundationPerformanceCard {
+  min-width: 0;
+  padding: 18px;
+  border-right: 1px solid rgba(255, 255, 255, 0.09);
+  background:
+    radial-gradient(circle at 90% 10%, rgba(72, 185, 168, 0.16), transparent 34%),
+    #101a30;
+  color: #dbe7f6;
+}
+
+.foundationCardHead { display: flex; justify-content: space-between; gap: 14px; align-items: center; }
+.foundationCardHead small { color: #69d1c0; }
+.foundationCardHead strong { margin-top: 2px; color: #fff; font-size: 15px; }
+.foundationMeasured { padding: 6px 9px; border: 1px solid rgba(105, 209, 192, 0.35); border-radius: 999px; background: rgba(105, 209, 192, 0.1); color: #8be3d5; font-size: 11px; font-weight: 850; }
+.foundationMeasured.pending { border-color: rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.06); color: #aab6c8; }
+
+.foundationMetrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 16px 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.045);
+}
+.foundationMetrics > div { min-width: 0; padding: 11px 13px; border-right: 1px solid rgba(255, 255, 255, 0.1); }
+.foundationMetrics > div:last-child { border-right: 0; }
+.foundationMetrics span,
+.foundationMetrics strong,
+.foundationMetrics small { display: block; }
+.foundationMetrics span { color: #8fa0b8; font-size: 11px; font-weight: 850; letter-spacing: 0.04em; text-transform: uppercase; }
+.foundationMetrics strong { margin-top: 3px; overflow: hidden; color: #fff; font-size: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.foundationMetrics strong.negative { color: #fda4af; }
+.foundationMetrics small { margin-top: 2px; overflow: hidden; color: #8fa0b8; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+
+.foundationChart { margin: 0; }
+.foundationChart svg { display: block; width: 100%; height: 226px; overflow: visible; }
+.foundationChart text { fill: #8797ad; font-size: 11px; }
+.foundationChartAxis { stroke: rgba(255, 255, 255, 0.12); }
+.foundationChartArea { fill: url(#foundation-area); }
+.foundationPortfolioLine { fill: none; stroke: #69d1c0; stroke-linecap: round; stroke-linejoin: round; stroke-width: 4; }
+.foundationBenchmarkLine { fill: none; stroke: #8fa0b8; stroke-dasharray: 7 7; stroke-linecap: round; stroke-width: 2.5; }
+.foundationPortfolioDot { fill: #69d1c0; stroke: #101a30; stroke-width: 3; }
+.foundationChart figcaption { display: flex; justify-content: flex-end; gap: 16px; color: #a9b6c8; font-size: 11px; }
+.foundationChart figcaption span { display: inline-flex; align-items: center; gap: 6px; }
+.foundationChart figcaption i { width: 18px; height: 3px; border-radius: 9px; background: #69d1c0; }
+.foundationChart figcaption i.benchmarkLegend { height: 0; border-top: 2px dashed #8fa0b8; background: transparent; }
+.foundationChartEmpty { display: grid; min-height: 230px; place-items: center; align-content: center; gap: 5px; color: #8fa0b8; text-align: center; }
+.foundationChartEmpty ion-icon { font-size: 28px; color: #69d1c0; }
+.foundationChartEmpty strong { color: #fff; }
+.foundationChartEmpty span { font-size: 12px; }
+
+.foundationLedger { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; background: #fff; }
+.foundationLedgerHead { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 15px; border-bottom: 1px solid #e1e7ef; }
+.foundationLedgerHead > span { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 10px; background: rgba(15, 118, 110, 0.1); color: #0f766e; font-size: 19px; }
+.foundationLedgerHead h3 { margin: 1px 0 0; font-size: 17px; }
+.foundationLedgerHead button { min-height: 36px; padding: 6px 9px; color: #0f766e; font-size: 12px; }
+
+.foundationActivityList { display: grid; align-content: start; }
+.foundationActivityList > div { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto 32px; gap: 9px; align-items: center; min-width: 0; padding: 11px 13px; border-bottom: 1px solid #edf1f5; }
+.foundationActivityList > div:hover { background: #f9fbfd; }
+.foundationActivityList > div > span:nth-child(2) { min-width: 0; }
+.foundationActivityList strong,
+.foundationActivityList small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.foundationActivityList strong { color: #172033; font-size: 13px; text-transform: capitalize; }
+.foundationActivityList small { margin-top: 1px; color: #7b8799; font-size: 11px; }
+.foundationActivityList b { color: #344054; font-size: 13px; font-variant-numeric: tabular-nums; }
+.foundationActivityList button { display: grid; width: 32px; min-height: 32px; padding: 0; place-items: center; border-color: transparent; color: #98a2b3; }
+.foundationActivityList button:hover { border-color: #fecdd3; background: #fff1f2; color: #be123c; }
+.foundationActivityList > p { margin: 0; padding: 24px; color: #7b8799; text-align: center; }
+.foundationActivityType { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9px; background: #eef2f6; color: #64748b; }
+.foundationActivityType.positive { background: #e9f8f3; color: #0f766e; }
+.foundationActivityType.negative { background: #fff1f2; color: #be123c; }
+.foundationLedger footer { display: flex; align-items: center; gap: 10px; padding: 10px 13px; border-top: 1px solid #e1e7ef; background: #f8fafc; color: #667085; font-size: 11px; }
+.foundationLedger footer button { min-height: 34px; margin-left: auto; padding: 5px 8px; font-size: 11px; }
+
+@media (max-width: 1120px) {
+  .foundationGrid { grid-template-columns: 1fr; }
+  .foundationLedger { border-top: 1px solid #dfe6ee; }
+  .foundationActivityForm { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .foundationActivityForm .foundationDescription { grid-column: span 2; }
+}
+
+@media (max-width: 760px) {
+  .foundationHead { align-items: flex-start; flex-direction: column; }
+  .foundationActions { width: 100%; }
+  .foundationActions button { flex: 1; }
+  .foundationMetrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .foundationMetrics > div:nth-child(2) { border-right: 0; }
+  .foundationMetrics > div:nth-child(-n + 2) { border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+  .foundationActivityForm { grid-template-columns: 1fr 1fr; }
+  .foundationActivityForm .foundationDescription { grid-column: 1 / -1; }
+  .foundationActivityForm .foundationComposerActions { grid-column: 1 / -1; }
+  .foundationComposerActions { flex-wrap: wrap; }
+  .foundationChart svg { height: 190px; }
+  .foundationLedgerHead { grid-template-columns: 38px minmax(0, 1fr); }
+  .foundationLedgerHead button { grid-column: 1 / -1; }
+}

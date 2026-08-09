@@ -21,16 +21,21 @@ import {
 } from '@ionic/react'
 import {
   addOutline,
+  analyticsOutline,
   alertCircleOutline,
   arrowForwardOutline,
   checkmarkCircleOutline,
+  pulseOutline,
   refreshOutline,
+  shieldCheckmarkOutline,
   sparklesOutline,
+  trendingDownOutline,
   trashOutline,
 } from 'ionicons/icons'
 import { MetricCard, MetricGrid, Panel, PanelHead } from '../../shared/ui'
 import { AppPage } from '../../shared/AppPage'
 import { DonutChart, type DonutSegment } from '../../shared/DonutChart'
+import { PortfolioFoundation } from './PortfolioFoundation'
 import type { AssetClass, Holding, HoldingType } from '../../../types'
 
 const ASSET_OPTIONS: Array<[AssetClass, string]> = [
@@ -57,6 +62,30 @@ const ASSET_COLORS: Record<string, string> = {
 /** Asset-class display name ("US Equity", not the title-cased "Us Equity"). */
 const assetLabel = (k: string) =>
   k === 'us_equity' ? 'US Equity' : k === 'intl_equity' ? 'Intl Equity' : title(k)
+
+const STRESS_LABELS = {
+  market_selloff: ['Market selloff', 'Broad market -20%'],
+  technology_shock: ['Technology shock', 'Technology holdings -25%'],
+  rate_shock: ['Rate shock', 'Bonds -8%, rate-sensitive assets lower'],
+} as const
+
+function RiskMetric({
+  label,
+  value,
+  detail,
+}: {
+  label: string
+  value: string
+  detail: string
+}) {
+  return (
+    <div className="portfolioRiskMetric">
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{detail}</small>
+    </div>
+  )
+}
 
 /** Phone layout for one holding: identity + value always visible, the rest
  *  behind a disclosure. Replaces the 7-column table, which reflowed into
@@ -218,11 +247,18 @@ export function PortfolioScreen() {
     .filter((h) => h.value > 0)
     .sort((a, b) => b.value - a.value)
     .slice(0, 6)
+  const risk = analysis.risk
+  const riskBudgetStatus =
+    risk.riskBudgetUsed > 1
+      ? 'Above profile budget'
+      : risk.riskBudgetUsed > 0.85
+        ? 'Near profile budget'
+        : 'Inside profile budget'
 
   return (
     <AppPage
       title="Portfolio"
-      subtitle="Edit holdings — everything recalculates instantly."
+      subtitle="Holdings, measured performance, and risk — updated together."
       actions={
         <>
           <button className="primary" onClick={addHolding}>
@@ -265,6 +301,8 @@ export function PortfolioScreen() {
         />
       </MetricGrid>
       </div>
+
+      <PortfolioFoundation currentValue={analysis.value} />
 
       <div className="portfolioCoreGrid">
       <Panel className="portfolioAllocationPanel">
@@ -337,6 +375,127 @@ export function PortfolioScreen() {
         </button>
       </aside>
       </div>
+
+      <section className="portfolioRiskLab" aria-labelledby="portfolio-risk-title">
+        <header className="portfolioRiskHead">
+          <div className="portfolioRiskTitle">
+            <span><IonIcon icon={analyticsOutline} /></span>
+            <div>
+              <small>Deterministic portfolio model</small>
+              <h2 id="portfolio-risk-title">Risk lab</h2>
+              <p>See which positions carry risk, not just capital, and replay three explicit shocks.</p>
+            </div>
+          </div>
+          <div className={`portfolioRiskBudget ${risk.riskBudgetUsed > 1 ? 'over' : ''}`}>
+            <IonIcon icon={risk.riskBudgetUsed > 1 ? alertCircleOutline : shieldCheckmarkOutline} />
+            <span>
+              <small>{riskBudgetStatus}</small>
+              <strong>{pct(risk.riskBudgetUsed)} used</strong>
+            </span>
+          </div>
+        </header>
+
+        <div className="portfolioRiskMetrics">
+          <RiskMetric
+            label="Annual volatility"
+            value={pct(risk.annualizedVolatility)}
+            detail={`target mix ${pct(risk.targetVolatility)}`}
+          />
+          <RiskMetric
+            label="Portfolio beta"
+            value={risk.beta.toFixed(2)}
+            detail={`${pct(risk.systematicShare)} systematic risk`}
+          />
+          <RiskMetric
+            label="Effective positions"
+            value={risk.effectivePositions.toFixed(1)}
+            detail={`${holdings.length} holdings by count`}
+          />
+          <RiskMetric
+            label="1-month VaR 95%"
+            value={pct(risk.var95OneMonth)}
+            detail={`${fmt.format(analysis.value * risk.var95OneMonth)} modeled threshold`}
+          />
+          <RiskMetric
+            label="Tail loss 95%"
+            value={pct(risk.cvar95OneMonth)}
+            detail="average beyond VaR"
+          />
+          <RiskMetric
+            label="Return / risk"
+            value={risk.returnToRisk.toFixed(2)}
+            detail={`${risk.diversificationRatio.toFixed(2)}× diversification ratio`}
+          />
+        </div>
+
+        <div className="portfolioRiskDetails">
+          <div className="portfolioContributionPanel">
+            <div className="portfolioRiskSubhead">
+              <span><IonIcon icon={pulseOutline} /></span>
+              <div>
+                <h3>Risk contribution</h3>
+                <p>Teal is capital weight. Indigo is modeled share of total volatility.</p>
+              </div>
+            </div>
+            <div className="portfolioContributionList">
+              {risk.topContributors.map((item, index) => (
+                <div className="portfolioContributionRow" key={`${item.label}-${index}`}>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <small>{item.beta.toFixed(2)} beta · {pct(item.volatility)} volatility</small>
+                  </div>
+                  <div className="portfolioContributionBars" aria-label={`${item.label}: ${pct(item.weight)} capital and ${pct(item.riskContribution)} risk`}>
+                    <span className="capital" style={{ width: `${Math.min(item.weight * 100, 100)}%` }} />
+                    <span className="risk" style={{ width: `${Math.min(item.riskContribution * 100, 100)}%` }} />
+                  </div>
+                  <div className="portfolioContributionValues">
+                    <span>{pct(item.weight)}</span>
+                    <strong>{pct(item.riskContribution)}</strong>
+                  </div>
+                </div>
+              ))}
+              {!risk.topContributors.length && (
+                <p className="portfolioRiskEmpty">Add a funded holding to calculate risk contribution.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="portfolioStressPanel">
+            <div className="portfolioRiskSubhead">
+              <span><IonIcon icon={trendingDownOutline} /></span>
+              <div>
+                <h3>Stress replay</h3>
+                <p>Illustrative shocks using the same asset and sector assumptions.</p>
+              </div>
+            </div>
+            <div className="portfolioStressList">
+              {risk.stressTests.map((stress) => {
+                const [label, assumption] = STRESS_LABELS[stress.scenario]
+                return (
+                  <div key={stress.scenario}>
+                    <span>
+                      <strong>{label}</strong>
+                      <small>{assumption}</small>
+                    </span>
+                    <span>
+                      <strong>{pct(stress.estimatedReturn)}</strong>
+                      <small>{fmt.format(stress.dollarImpact)}</small>
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+            <button onClick={() => setScreen('scenarios')}>
+              Model a strategy with AI
+              <IonIcon icon={arrowForwardOutline} />
+            </button>
+          </div>
+        </div>
+
+        <footer className="portfolioRiskFoot">
+          Assumption-driven estimates for education—not forecasts or guarantees. Live market histories will replace assumptions in a later calibration pass.
+        </footer>
+      </section>
 
       <Panel className="portfolioHoldingsPanel">
         <PanelHead title={<span>Holdings <small>{holdings.length} positions</small></span>} />

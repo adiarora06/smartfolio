@@ -30,6 +30,7 @@ from .portfolio import EQUITY_ASSETS, portfolio_value, risk_profile
 from .risk import (
     Position,
     SECTOR_RISK,
+    VOL_CEILING,
     decompose,
     marginal_contribution,
     max_weight_under_vol,
@@ -41,16 +42,6 @@ from .risk import (
 # Same thresholds as the concentration flags in portfolio.py.
 SINGLE_STOCK_FLAG = 0.2
 SECTOR_FLAG = 0.35
-
-# Annualized portfolio volatility each risk profile is willing to carry. These
-# are the ceilings the "max position size" answer is solved against.
-VOL_CEILING: Dict[str, float] = {
-    "conservative": 0.09,
-    "balanced": 0.13,
-    "growth": 0.18,
-    "aggressive": 0.25,
-}
-
 
 def _candidate_position(
     forecast: StockForecast, weight: float
