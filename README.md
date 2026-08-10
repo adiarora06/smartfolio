@@ -5,8 +5,23 @@ diagnostics, an OpenVC-style stock analysis terminal, scenario modeling, and an
 AI advisor — built on a strict rule: **deterministic code calculates every
 number; AI only explains.**
 
-**Live demo:** https://smartfolio-lemon.vercel.app
-**Live API:** https://smartfolio-api-yjcj.onrender.com/health
+[**Live demo**](https://smartfolio-lemon.vercel.app) · [API docs](https://smartfolio-api-yjcj.onrender.com/docs) · [API health](https://smartfolio-api-yjcj.onrender.com/health)
+
+![SmartFolio stock analysis terminal showing a probability range, portfolio impact, and live news signals](docs/product-overview.png)
+
+## What It Does
+
+SmartFolio lets an investor import or edit holdings, inspect deterministic risk and performance metrics, run stock forecasts and backtests, model portfolio scenarios, and ask an AI advisor grounded in the current portfolio state.
+
+## Tech Stack
+
+| Layer | Technologies |
+| --- | --- |
+| Frontend | React 18, TypeScript, Vite, Zustand, Ionic, Capacitor |
+| API and analytics | Python 3.12, FastAPI, Pydantic v2, SQLAlchemy, deterministic portfolio and risk engines |
+| AI workflow | Seven-stage agent pipeline, OpenAI/Anthropic routing and failover, compliance guardrails |
+| Data | Neon Postgres, SQLite fallback, Finnhub, Alpha Vantage |
+| Delivery and quality | Vercel, Render, Docker, Sentry, Pytest, Vitest, GitHub Actions |
 
 ## Architecture
 
@@ -65,14 +80,16 @@ appended server-side, never left to the model.
 
 ```bash
 # Backend (Python 3.12+)
-cd backend
-cp .env.example .env       # keys optional — keyless mode is fully functional
+git clone https://github.com/adiarora06/smartfolio.git
+cd smartfolio/backend
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 
-# Frontend (Node 20+, separate terminal)
-cd frontend
-npm install
+# Frontend (Node 22+, separate terminal)
+cd smartfolio/frontend
+npm ci
 npm run dev                # http://localhost:5173, auto-detects the backend
 ```
 
