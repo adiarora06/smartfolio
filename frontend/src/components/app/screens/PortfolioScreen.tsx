@@ -209,7 +209,7 @@ export function PortfolioScreen() {
   const resetHoldings = useStore((s) => s.resetHoldings)
   const removeHolding = useStore((s) => s.removeHolding)
   const updateHolding = useStore((s) => s.updateHolding)
-  const setScreen = useStore((s) => s.setScreen)
+  const openAssistant = useStore((s) => s.openAssistant)
 
   // Donut segments from the live asset-class allocation.
   const segments: DonutSegment[] = Object.entries(analysis.current)
@@ -254,6 +254,47 @@ export function PortfolioScreen() {
       : risk.riskBudgetUsed > 0.85
         ? 'Near profile budget'
         : 'Inside profile budget'
+  const topRiskDriver = risk.topContributors[0]
+  const gapSummary = priorityGaps.length
+    ? priorityGaps
+        .map(([asset, delta]) => `${delta >= 0 ? 'add' : 'trim'} ${pct(Math.abs(delta))} ${assetLabel(asset)}`)
+        .join(', ')
+    : 'no material allocation gaps'
+
+  const openRebalanceAssistant = () => {
+    openAssistant({
+      origin: 'portfolio',
+      kind: 'rebalance_plan',
+      title: 'Portfolio rebalance priorities',
+      summary: `The ${title(analysis.riskProfileName)} target currently calls for ${gapSummary}. Modeled risk-budget use is ${pct(risk.riskBudgetUsed)}.`,
+      suggestedQuestion: `Build a gradual rebalance plan around these priorities: ${gapSummary}. Use future contributions first and explain the risk trade-offs.`,
+      facts: {
+        'Portfolio value': fmt.format(analysis.value),
+        'Risk profile': title(analysis.riskProfileName),
+        'Risk budget': `${pct(risk.riskBudgetUsed)} used`,
+        'Top risk driver': topRiskDriver?.label ?? 'No material driver',
+      },
+    })
+  }
+
+  const openRiskAssistant = () => {
+    const topDriverSummary = topRiskDriver
+      ? `${topRiskDriver.label} contributes ${pct(topRiskDriver.riskContribution)} of modeled risk at ${pct(topRiskDriver.weight)} of capital`
+      : 'No individual holding is a material modeled risk driver'
+    openAssistant({
+      origin: 'portfolio',
+      kind: 'risk_driver',
+      title: 'Portfolio risk model',
+      summary: `Annualized volatility is ${pct(risk.annualizedVolatility)} and ${pct(risk.riskBudgetUsed)} of the profile budget is in use. ${topDriverSummary}.`,
+      suggestedQuestion: `Explain my largest modeled risk driver and show how I could lower risk without abandoning my ${title(analysis.riskProfileName)} target.`,
+      facts: {
+        'Annual volatility': pct(risk.annualizedVolatility),
+        'Risk budget': `${pct(risk.riskBudgetUsed)} used`,
+        'Top risk driver': topRiskDriver?.label ?? 'No material driver',
+        '1-month VaR 95%': pct(risk.var95OneMonth),
+      },
+    })
+  }
 
   return (
     <AppPage
@@ -369,7 +410,7 @@ export function PortfolioScreen() {
           <strong>{title(analysis.riskProfileName)}</strong>
           <small>{analysis.concentrations.length ? `${analysis.concentrations.length} concentration flags to model` : 'No concentration flags'}</small>
         </div>
-        <button className="portfolioStrategyButton" onClick={() => setScreen('scenarios')}>
+        <button className="portfolioStrategyButton" onClick={openRebalanceAssistant}>
           Simulate this plan
           <IonIcon icon={arrowForwardOutline} />
         </button>
@@ -485,7 +526,7 @@ export function PortfolioScreen() {
                 )
               })}
             </div>
-            <button onClick={() => setScreen('scenarios')}>
+            <button onClick={openRiskAssistant}>
               Model a strategy with AI
               <IonIcon icon={arrowForwardOutline} />
             </button>

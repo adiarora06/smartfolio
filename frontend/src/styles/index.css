@@ -3716,3 +3716,546 @@ button.dark { color: #fff; }
   .foundationLedgerHead { grid-template-columns: 38px minmax(0, 1fr); }
   .foundationLedgerHead button { grid-column: 1 / -1; }
 }
+
+/* ==========================================================================
+   FINAL DESKTOP LEGIBILITY + ACCESSIBILITY GUARDRAILS
+   New feature sections are declared after the original readability layer, so
+   keep this block last to prevent compact component defaults from shrinking
+   meaningful copy below the desktop reading scale.
+   ========================================================================== */
+
+@media (min-width: 992px) {
+  .splitMain {
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  .splitMain p {
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  .splitMain button {
+    min-height: 44px;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .splitMain input,
+  .splitMain select,
+  .splitMain textarea {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .splitMain label,
+  .splitMain small,
+  .splitMain figcaption,
+  .splitMain .thead {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .splitMain ion-segment-button,
+  .splitMain ion-range {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .eventPin {
+    width: 44px;
+    min-height: 44px;
+  }
+
+  .strategySavedCard {
+    grid-template-columns: minmax(0, 1fr) 44px;
+  }
+
+  .strategySavedRemove { width: 44px; }
+
+  .foundationActivityList > div {
+    grid-template-columns: 34px minmax(0, 1fr) auto 44px;
+  }
+
+  .foundationActivityList button { width: 44px; }
+
+  .desktopPageHeader p { font-size: 18px; }
+  .desktopPageActions button { font-size: 15px; }
+
+  /* Navigation and Overview supporting copy. */
+  .sidebarStatus strong,
+  .sidebarStatus small,
+  .overviewValueCard > span,
+  .overviewValueMeta,
+  .overviewCardHead > span,
+  .overviewCardHead b,
+  .overviewFitCard > strong small,
+  .overviewFitCard p,
+  .overviewTargetCard p,
+  .overviewTargetDelta span,
+  .overviewTargetDelta small,
+  .overviewSectionHead > div > span,
+  .overviewSectionHead > button,
+  .overviewLiveBadge,
+  .overviewPathPanel .folioAxisText,
+  .overviewPathPanel .folioModelNote,
+  .overviewSmartMove small,
+  .overviewSmartMove em,
+  .overviewSignalList small,
+  .overviewGapValues,
+  .overviewGapGrid .need,
+  .overviewGapGrid .trim {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  /* Analyze labels, chart annotations, evidence, and status copy. */
+  .analysisEyebrow,
+  .analysisIdentity > div:last-child span,
+  .analysisFreshness span,
+  .analysisFreshness small,
+  .analysisStatus,
+  .decisionMetric span,
+  .decisionMetric small,
+  .forecastStageHead > div:first-child > span,
+  .forecastLegend,
+  .forecastStage .svgbox text,
+  .effectHeader > div > span,
+  .priceSummary span,
+  .effectVerdict,
+  .effectRow,
+  .researchTools summary,
+  .newsRailHead > div > span,
+  .newsCount,
+  .newsSignalCopy small,
+  .sentimentLabel,
+  .newsEmpty,
+  .newsRailFooter p,
+  .advisorShortcut {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .forecastStage figcaption { font-size: 14px !important; }
+
+  /* Price ranges are decision-critical and must never be ellipsized. */
+  .decisionMetric:nth-child(2) strong {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* Portfolio and risk-lab supporting copy. */
+  .portfolioSummaryBand .metric span,
+  .portfolioSummaryBand .metric small,
+  .portfolioScreen .head h2 small,
+  .portfolioHoldingsPanel .thead,
+  .portfolioRebalanceHead small,
+  .portfolioGapList strong,
+  .portfolioGapList small,
+  .portfolioGapList b,
+  .portfolioRebalanceSummary span,
+  .portfolioRebalanceSummary small,
+  .portfolioRiskTitle small,
+  .portfolioRiskTitle p,
+  .portfolioRiskSubhead p,
+  .portfolioRiskBudget small,
+  .portfolioRiskMetric span,
+  .portfolioRiskMetric small,
+  .portfolioContributionRow > div:first-child small,
+  .portfolioContributionValues span,
+  .portfolioContributionValues strong,
+  .portfolioRiskEmpty,
+  .portfolioStressList strong,
+  .portfolioStressList small,
+  .portfolioRiskFoot,
+  .strategyRiskContext span,
+  .strategyRiskContext strong {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  /* AI Assistant, simulation, saved plans, and optimization copy. */
+  .strategyPresetStrip button span,
+  .strategyPresetStrip button small,
+  .strategyPanelHead > div > span,
+  .strategyAssumptionBadge,
+  .strategyCustomState,
+  .strategyMetricStrip span,
+  .strategyMetricStrip small,
+  .strategyProjectionChart text,
+  .strategyLegend,
+  .strategyControlGrid label > span,
+  .strategyControlGrid label small,
+  .strategyGuardrail strong,
+  .strategyGuardrail small,
+  .strategyAdvisorHead small,
+  .advisorStatus,
+  .strategyContextChips span,
+  .strategyPromptList button > span,
+  .strategySimulationTitle small,
+  .strategySimulationTitle p,
+  .strategyPathBadge,
+  .strategyGoalLabel small,
+  .strategyProbabilityRing small,
+  .strategyTerminalMetrics span,
+  .strategyMonteCarloChart text,
+  .strategySimulationLegend,
+  .strategyCompareHead span,
+  .strategyCompareCopy strong,
+  .strategyCompareCopy small,
+  .strategyCompareMedian,
+  .strategyComparePanel > p,
+  .strategySavedHead small,
+  .strategySavedCard strong,
+  .strategySavedCard small,
+  .strategyGoalCoachTitle small,
+  .strategyGoalCoachTitle p,
+  .strategyConfidencePicker > span,
+  .strategyOptimizerResult span,
+  .strategyOptimizerResult small {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  /* Performance history and activity ledger supporting copy. */
+  .foundationHead small,
+  .foundationImportPreview small,
+  .foundationImportCounts span,
+  .foundationImportErrors,
+  .foundationActivityForm label,
+  .foundationMeasured,
+  .foundationMetrics span,
+  .foundationMetrics small,
+  .foundationChart text,
+  .foundationChart figcaption,
+  .foundationChartEmpty span,
+  .foundationLedgerHead small,
+  .foundationActivityList strong,
+  .foundationActivityList small,
+  .foundationActivityList b,
+  .foundationLedger footer,
+  .foundationLedger footer button {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  /* Preserve full decision context instead of silently clipping it. */
+  .strategyGoalLabel small,
+  .strategyRiskContext strong,
+  .strategyCompareCopy strong,
+  .strategyCompareCopy small,
+  .strategySavedCard strong,
+  .strategySavedCard small,
+  .foundationMetrics small,
+  .foundationActivityList strong,
+  .foundationActivityList small {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* Darken low-contrast muted copy on light surfaces. */
+  .sidebarStatus small,
+  .overviewGapValues,
+  .portfolioRiskMetric small,
+  .portfolioContributionRow > div:first-child small,
+  .portfolioRiskEmpty,
+  .portfolioRiskFoot,
+  .strategyRiskContext span,
+  .strategyGoalLabel small,
+  .strategyTerminalMetrics span,
+  .strategySavedHead small,
+  .strategySavedCard small,
+  .foundationActivityList small,
+  .foundationActivityList > p,
+  .strategyApplyOptimizer:disabled,
+  .foundationPrimary:disabled {
+    color: #667085;
+  }
+
+  /* Muted annotations on navy surfaces need a lighter, not darker, token. */
+  .portfolioStressList small,
+  .strategyCompareCopy small,
+  .strategyComparePanel > p,
+  .foundationMetrics span,
+  .foundationMetrics small,
+  .foundationChart figcaption,
+  .foundationChartEmpty {
+    color: #aab6c8;
+  }
+
+  .foundationChart text,
+  .strategyMonteCarloChart text,
+  .strategyProjectionChart text {
+    fill: #8fa0b8;
+  }
+
+  /* Keyboard focus remains visible against both light and dark surfaces. */
+  :where(
+    a[href],
+    button,
+    input,
+    select,
+    textarea,
+    summary,
+    [role='button'],
+    [tabindex]:not([tabindex='-1'])
+  ):focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 3px;
+  }
+
+  .desktopSidebar ion-item:focus-within,
+  .splitMain ion-item:focus-within,
+  .splitMain ion-button:focus-within,
+  .splitMain ion-segment-button:focus-within {
+    outline: 3px solid #2563eb;
+    outline-offset: -3px;
+  }
+
+  .desktopSidebar ion-item:focus-within,
+  .splitMain ion-item:focus-within {
+    --background: #eef6ff;
+  }
+
+  .terminal :where(button, input, select, textarea, summary):focus-visible,
+  .analysisWorkbench :where(button, input, select, textarea, summary):focus-visible,
+  .strategyAdvisorPanel :where(button, input, select, textarea, summary):focus-visible,
+  .portfolioStressPanel :where(button, input, select, textarea, summary):focus-visible,
+  .strategyComparePanel :where(button, input, select, textarea, summary):focus-visible,
+  .foundationPerformanceCard :where(button, input, select, textarea, summary):focus-visible {
+    outline-color: #5eead4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within { scroll-behavior: auto; }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Context-aware AI Assistant handoff. */
+.strategySourceContext {
+  border: 1px solid rgba(29, 78, 216, .22);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 0 0, rgba(45, 212, 191, .14), transparent 42%),
+    linear-gradient(135deg, #f8fbff 0%, #f5f3ff 100%);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, .08);
+  padding: 16px 18px;
+}
+
+.strategySourceContextHead {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.strategySourceContextHead > span {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: #0f766e;
+  color: #fff;
+  font-size: 20px;
+}
+
+.strategySourceContextHead small {
+  display: block;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.strategySourceContextHead h2 {
+  margin: 2px 0 3px;
+  font-size: 20px;
+  letter-spacing: -.02em;
+}
+
+.strategySourceContextHead p {
+  margin: 0;
+  color: #475467;
+  line-height: 1.5;
+}
+
+.strategySourceContextHead > button {
+  width: 42px;
+  min-height: 42px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, .72);
+}
+
+.strategySourceContext dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0 0 54px;
+}
+
+.strategySourceContext dl > div {
+  min-width: 0;
+  border: 1px solid rgba(148, 163, 184, .28);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .78);
+  padding: 9px 10px;
+}
+
+.strategySourceContext dt {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.strategySourceContext dd {
+  margin: 2px 0 0;
+  color: #101828;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.strategyMessageSource {
+  display: block;
+  margin-bottom: 5px;
+  color: #0f766e;
+  font-weight: 850;
+}
+
+/* Honest integration states: availability is separate from configuration. */
+.connectionCard {
+  min-height: 196px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  align-content: start;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .05);
+}
+
+.connectionCardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.connectionCardHead strong { font-size: 17px; }
+
+.connectionDescription {
+  color: #475467;
+  line-height: 1.5;
+}
+
+.connectionBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border: 1px solid #d0d5dd;
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: #f9fafb;
+  color: #475467;
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.connectionBadge--available,
+.connectionBadge--ready,
+.connectionBadge--connected {
+  border-color: rgba(5, 150, 105, .28);
+  background: #ecfdf3;
+  color: #067647;
+}
+
+.connectionBadge--checking,
+.connectionBadge--connecting {
+  border-color: rgba(37, 99, 235, .25);
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.connectionBadge--setup-required {
+  border-color: rgba(217, 119, 6, .28);
+  background: #fffaeb;
+  color: #b54708;
+}
+
+.connectionBadge--offline,
+.connectionBadge--error {
+  border-color: rgba(220, 38, 38, .24);
+  background: #fff1f3;
+  color: #b42318;
+}
+
+.connectionBadge--planned {
+  border-color: #d0d5dd;
+  background: #f2f4f7;
+  color: #475467;
+}
+
+.connectionCard--planned {
+  min-height: 130px;
+  grid-template-rows: auto 1fr;
+  border-style: dashed;
+  background: #f8fafc;
+  box-shadow: none;
+}
+
+.connectionResult {
+  border-radius: 9px;
+  padding: 8px 10px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 750;
+}
+
+.connectionResult--connected { background: #ecfdf3; color: #067647; }
+.connectionResult--error { background: #fff1f3; color: #b42318; }
+
+@media (min-width: 1200px) {
+  .connectionAvailableGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 992px) {
+  .strategySourceContextHead small,
+  .strategySourceContext dt,
+  .strategyMessageSource,
+  .connectionBadge,
+  .connectionDescription,
+  .connectionResult {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .strategyMetricStrip small {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 760px) {
+  .strategySourceContext dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-left: 0;
+  }
+}

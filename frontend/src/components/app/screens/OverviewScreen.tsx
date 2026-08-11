@@ -34,6 +34,7 @@ export function OverviewScreen() {
   const analysis = usePortfolioAnalysis()
   const stock = useStore((s) => s.stock)
   const setScreen = useStore((s) => s.setScreen)
+  const openAssistant = useStore((s) => s.openAssistant)
   const checkBackend = useStore((s) => s.checkBackend)
 
   const refresh = async () => {
@@ -52,6 +53,29 @@ export function OverviewScreen() {
     .slice(0, 4)
   const topConcern = analysis.concentrations[0]
 
+  const openAllocationAssistant = () => {
+    if (!smartMove) {
+      setScreen('scenarios')
+      return
+    }
+    const current = analysis.current[smartMove.asset] ?? 0
+    const target = analysis.target[smartMove.asset] ?? 0
+    const asset = assetName(smartMove.asset)
+    openAssistant({
+      origin: 'overview',
+      kind: 'allocation_gap',
+      title: `${asset} allocation gap`,
+      summary: `${asset} is ${pct(current)} of the portfolio versus a ${pct(target)} target, a ${pct(smartMove.delta)} gap for the ${title(analysis.riskProfileName)} profile.`,
+      suggestedQuestion: `How can I rebalance gradually to close my ${pct(smartMove.delta)} ${asset} gap, and what trade-offs should I consider without assuming higher returns?`,
+      facts: {
+        Current: pct(current),
+        Target: pct(target),
+        Gap: pct(smartMove.delta),
+        'Risk profile': title(analysis.riskProfileName),
+      },
+    })
+  }
+
   return (
     <AppPage
       title="Overview"
@@ -59,7 +83,7 @@ export function OverviewScreen() {
       actions={
         <>
           <button onClick={() => setScreen('stock')}>Analyze stock</button>
-          <button className="primary" onClick={() => setScreen('scenarios')}>
+          <button className="primary" onClick={openAllocationAssistant}>
             Open AI Assistant
             <IonIcon icon={arrowForwardOutline} />
           </button>
@@ -124,7 +148,7 @@ export function OverviewScreen() {
         </section>
 
         {smartMove && (
-          <button className="smartMove" type="button" onClick={() => setScreen('advisor')}>
+          <button className="smartMove" type="button" onClick={openAllocationAssistant}>
             <span className="smartMoveIcon"><IonIcon icon={sparklesOutline} aria-hidden="true" /></span>
             <span className="smartMoveCopy">
               <span className="smartMoveLabel">Smart Move <em>AI-supported</em></span>
@@ -211,13 +235,13 @@ export function OverviewScreen() {
                   <span>Decision queue</span>
                   <h2>What to act on</h2>
                 </div>
-                <button aria-label="Open AI Assistant" onClick={() => setScreen('scenarios')}>
+                <button aria-label="Open AI Assistant with allocation context" onClick={openAllocationAssistant}>
                   <IonIcon icon={compassOutline} />
                 </button>
               </div>
 
               {smartMove && (
-                <button className="overviewSmartMove" onClick={() => setScreen('scenarios')}>
+                <button className="overviewSmartMove" onClick={openAllocationAssistant}>
                   <span><IonIcon icon={sparklesOutline} /></span>
                   <span>
                     <small>Best next simulation</small>

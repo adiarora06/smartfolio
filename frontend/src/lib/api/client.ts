@@ -6,6 +6,7 @@
 // lib/calculations + lib/ai, so the static deploy keeps working offline.
 
 import type {
+  AssistantSourceContext,
   Holding,
   InvestorProfile,
   PortfolioTransaction,
@@ -189,10 +190,21 @@ export function apiAskAdvisor(
   holdings: Holding[],
   stock: StockForecast,
   scenario?: AdvisorScenarioContext,
+  sourceContext?: AssistantSourceContext,
 ): Promise<AdvisorAnswer> {
+  const visibleSource = sourceContext
+    ? {
+        origin: sourceContext.origin,
+        kind: sourceContext.kind,
+        title: sourceContext.title,
+        summary: sourceContext.summary,
+        suggestedQuestion: sourceContext.suggestedQuestion,
+        facts: sourceContext.facts,
+      }
+    : undefined
   return post<AdvisorAnswer>(
     '/advisor/ask',
-    { question, profile, holdings, stock, scenario },
+    { question, profile, holdings, stock, scenario, sourceContext: visibleSource },
     { timeoutMs: SLOW_TIMEOUT_MS },
   )
 }
@@ -268,8 +280,13 @@ export function apiListAnalyses(workspaceId: string, limit = 20): Promise<Analys
 }
 
 /** A full stored run — same shape the live analyze endpoint returns. */
-export function apiGetAnalysis(analysisId: string): Promise<StockAnalyzeResponse> {
-  return request<StockAnalyzeResponse>(`/analyses/${analysisId}`)
+export function apiGetAnalysis(
+  analysisId: string,
+  workspaceId: string,
+): Promise<StockAnalyzeResponse> {
+  return request<StockAnalyzeResponse>(`/analyses/${analysisId}`, {
+    headers: { 'X-Workspace-Id': workspaceId },
+  })
 }
 
 // --- Plaid brokerage sync ----------------------------------------------------

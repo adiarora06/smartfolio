@@ -14,6 +14,8 @@
 import { create } from 'zustand'
 import type {
   AgentEvent,
+  AssistantHandoff,
+  AssistantSourceContext,
   ChatMessage,
   Connection,
   Holding,
@@ -102,6 +104,8 @@ interface AppState {
   running: boolean
   /** An advisor answer is in flight. */
   advisorPending: boolean
+  /** Evidence carried from a recommendation into AI Assistant. */
+  assistantHandoff: AssistantHandoff | null
 
   // domain inputs
   profile: InvestorProfile
@@ -139,6 +143,8 @@ interface AppState {
   goToPage: (page: Page) => void
   openDemo: () => void
   setScreen: (screen: Screen) => void
+  openAssistant: (context: AssistantSourceContext) => void
+  clearAssistantHandoff: () => void
   /** Set `screen` without navigating (router -> store sync only). */
   syncScreen: (screen: Screen) => void
   setStockTab: (tab: StockTab) => void
@@ -183,7 +189,11 @@ interface AppState {
   importHoldings: (holdings: Holding[]) => void
 
   // advisor
-  ask: (text: string, scenario?: AdvisorScenarioContext) => Promise<void>
+  ask: (
+    text: string,
+    scenario?: AdvisorScenarioContext,
+    sourceContext?: AssistantSourceContext,
+  ) => Promise<void>
   saveStrategyPlan: (plan: Omit<SavedStrategyPlan, 'id' | 'createdAt'>) => void
   removeStrategyPlan: (id: string) => void
 }
@@ -217,6 +227,7 @@ export const useStore = create<AppState>((set, get) => ({
   stockTab: 'forecast',
   running: false,
   advisorPending: false,
+  assistantHandoff: null,
 
   profile: initialProfile,
   holdings: initialHoldings,
@@ -250,8 +261,10 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   loadStoredRun: async (analysisId) => {
+    const { workspaceId } = get()
+    if (!workspaceId) return
     try {
-      const r = await apiGetAnalysis(analysisId)
+      const r = await apiGetAnalysis(analysisId, workspaceId)
       set({
         stock: r.forecast,
         impact: r.impact,
@@ -298,6 +311,18 @@ export const useStore = create<AppState>((set, get) => ({
     set({ screen })
     navigateTo(screen)
   },
+  openAssistant: (context) => {
+    const id =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `assistant-${Date.now()}`
+    set({
+      assistantHandoff: { ...context, id, createdAt: new Date().toISOString() },
+      screen: 'scenarios',
+    })
+    navigateTo('scenarios')
+  },
+  clearAssistantHandoff: () => set({ assistantHandoff: null }),
   /** State-only setter used by ScreenSync — must not navigate (would loop). */
   syncScreen: (screen) => set({ screen }),
   setStockTab: (stockTab) => set({ stockTab }),
@@ -492,19 +517,22 @@ export const useStore = create<AppState>((set, get) => ({
   removeStrategyPlan: (id) =>
     set((state) => ({ strategyPlans: state.strategyPlans.filter((plan) => plan.id !== id) })),
 
-  ask: async (text, scenario) => {
+  ask: async (text, scenario, sourceContext) => {
     const q = text.trim()
     if (!q) return
     const { holdings, profile, stock } = get()
     // Show the user's message immediately; the answer follows.
-    set((s) => ({ chat: [...s.chat, { role: 'user', text: q }], advisorPending: true }))
+    set((s) => ({
+      chat: [...s.chat, { role: 'user', text: q, sourceContext }],
+      advisorPending: true,
+    }))
     let reply: string
     try {
-      reply = (await apiAskAdvisor(q, profile, holdings, stock, scenario)).answer
+      reply = (await apiAskAdvisor(q, profile, holdings, stock, scenario, sourceContext)).answer
       set({ backendOnline: true })
     } catch {
       const analysis = analyzePortfolio(holdings, profile)
-      reply = answerAdvisor(q, { analysis, stock, scenario })
+      reply = answerAdvisor(q, { analysis, stock, scenario, sourceContext })
       set({ backendOnline: false })
     }
     set((s) => ({ chat: [...s.chat, { role: 'ai', text: reply }], advisorPending: false }))

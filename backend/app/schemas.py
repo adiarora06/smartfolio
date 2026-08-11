@@ -542,12 +542,30 @@ class StockAnalyzeResponse(ApiModel):
     narrator: Narrator
 
 
+class AdvisorSourceContext(ApiModel):
+    """Visible evidence that launched the assistant from another workspace."""
+
+    origin: Literal["overview", "portfolio", "analyze"]
+    kind: Literal[
+        "allocation_gap",
+        "rebalance_plan",
+        "risk_driver",
+        "stock_analysis",
+        "news_signal",
+    ]
+    title: str = Field(max_length=160)
+    summary: str = Field(max_length=1000)
+    suggested_question: str = Field(max_length=1000)
+    facts: Dict[str, str] = Field(default_factory=dict)
+
+
 class AdvisorAskRequest(ApiModel):
     question: str = Field(max_length=2000)
     profile: InvestorProfile
     holdings: List[Holding] = Field(max_length=200)
     stock: StockForecast
     scenario: Optional[AdvisorScenarioContext] = None
+    source_context: Optional[AdvisorSourceContext] = None
 
 
 class AdvisorAskResponse(ApiModel):

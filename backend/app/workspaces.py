@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -282,10 +282,20 @@ async def list_analyses(
 
 @router.get("/analyses/{analysis_id}")
 async def get_analysis(
-    analysis_id: str, session: AsyncSession = Depends(get_session)
+    analysis_id: str,
+    x_workspace_id: Optional[str] = Header(default=None, alias="X-Workspace-Id"),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
-    """The roadmap's GET /analyses/{id} — a full stored run, replayable."""
-    row = await session.get(StockRunRow, analysis_id)
+    """Replay a stored run only inside the requesting anonymous workspace."""
+    if not x_workspace_id:
+        raise HTTPException(status_code=401, detail="workspace header required")
+
+    row = await session.scalar(
+        select(StockRunRow).where(
+            StockRunRow.id == analysis_id,
+            StockRunRow.workspace_id == x_workspace_id,
+        )
+    )
     if row is None:
         raise HTTPException(status_code=404, detail="analysis not found")
     return row.result

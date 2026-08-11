@@ -6,7 +6,12 @@ buy/sell advice.
 """
 from __future__ import annotations
 
-from ...schemas import AdvisorScenarioContext, PortfolioAnalysis, StockForecast
+from ...schemas import (
+    AdvisorScenarioContext,
+    AdvisorSourceContext,
+    PortfolioAnalysis,
+    StockForecast,
+)
 from .format import currency, pct, title_case
 from .insights import describe_concentrations, describe_recommendations
 
@@ -16,6 +21,7 @@ def answer_advisor(
     analysis: PortfolioAnalysis,
     stock: StockForecast,
     scenario: AdvisorScenarioContext | None = None,
+    source_context: AdvisorSourceContext | None = None,
 ) -> str:
     low = question.lower()
 
@@ -31,6 +37,17 @@ def answer_advisor(
             "or lowering the target can improve that probability without assuming higher returns."
         )
 
+    if (
+        source_context is not None
+        and source_context.kind in ("allocation_gap", "rebalance_plan")
+        and any(term in low for term in ("rebalance", "allocation", "gap", "close"))
+    ):
+        return (
+            f"{source_context.summary} Direct future contributions toward the underweight "
+            "assets first, then reassess before trimming concentrated positions. This lowers "
+            "turnover while moving the portfolio toward its target."
+        )
+
     if "stock" in low or "ticker" in low or stock.symbol.lower() in low:
         return (
             f"{stock.symbol} is rated {stock.rating.lower()} in Analyze Stock, "
@@ -38,7 +55,8 @@ def answer_advisor(
             f"{pct(stock.expected)}. Check {title_case(stock.sector)} concentration before adding."
         )
     if "rebalance" in low:
-        return "Use future contributions first, then trim concentrated holdings if needed."
+        evidence = f"{source_context.summary} " if source_context is not None else ""
+        return f"{evidence}Use future contributions first, then trim concentrated holdings if needed."
     if any(term in low for term in ("risk", "volatility", "var", "drawdown")):
         top = analysis.risk.top_contributors[0] if analysis.risk.top_contributors else None
         top_text = (

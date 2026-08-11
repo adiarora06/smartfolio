@@ -17,7 +17,7 @@ import type {
 /** Target allocation by risk profile. */
 export const TARGETS: Record<RiskProfileName, AllocationMap> = {
   conservative: { us_equity: 0.3, intl_equity: 0.1, bonds: 0.45, cash: 0.1, alternatives: 0.05 },
-  balanced: { us_equity: 0.45, intl_equity: 0.2, bonds: 0.25, cash: 0.25, alternatives: 0.05 },
+  balanced: { us_equity: 0.45, intl_equity: 0.2, bonds: 0.25, cash: 0.05, alternatives: 0.05 },
   growth: { us_equity: 0.6, intl_equity: 0.25, bonds: 0.1, cash: 0.03, alternatives: 0.02 },
   aggressive: { us_equity: 0.7, intl_equity: 0.22, bonds: 0.03, cash: 0.02, alternatives: 0.03 },
 }

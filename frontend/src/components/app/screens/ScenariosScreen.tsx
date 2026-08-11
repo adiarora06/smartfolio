@@ -79,6 +79,12 @@ const STRATEGIES: StrategyPreset[] = [
   },
 ]
 
+const ASSISTANT_ORIGIN_LABELS = {
+  overview: 'Overview',
+  portfolio: 'Portfolio',
+  analyze: 'Analyze',
+} as const
+
 /** Two-line SVG projection chart: with contributions vs growth only. */
 function ProjectionChart({ projection }: { projection: ScenarioProjection }) {
   const W = 560
@@ -175,7 +181,9 @@ export function ScenariosScreen() {
   const analysis = usePortfolioAnalysis()
   const chat = useStore((s) => s.chat)
   const advisorPending = useStore((s) => s.advisorPending)
+  const assistantHandoff = useStore((s) => s.assistantHandoff)
   const ask = useStore((s) => s.ask)
+  const clearAssistantHandoff = useStore((s) => s.clearAssistantHandoff)
   const strategyPlans = useStore((s) => s.strategyPlans)
   const saveStrategyPlan = useStore((s) => s.saveStrategyPlan)
   const removeStrategyPlan = useStore((s) => s.removeStrategyPlan)
@@ -189,6 +197,8 @@ export function ScenariosScreen() {
   const [selectedStrategy, setSelectedStrategy] = useState('baseline')
   const [draft, setDraft] = useState('')
   const chatRef = useRef<HTMLDivElement>(null)
+  const composerRef = useRef<HTMLTextAreaElement>(null)
+  const lastHandoffId = useRef<string | null>(null)
 
   const returnAdj = returnPts / 100
   const rebalance = rebalPts / 100
@@ -258,6 +268,17 @@ export function ScenariosScreen() {
     if (el) el.scrollTop = el.scrollHeight
   }, [chat, advisorPending])
 
+  useEffect(() => {
+    if (!assistantHandoff || lastHandoffId.current === assistantHandoff.id) return
+    lastHandoffId.current = assistantHandoff.id
+    setDraft(assistantHandoff.suggestedQuestion)
+    const timer = window.setTimeout(() => {
+      composerRef.current?.focus()
+      composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 80)
+    return () => window.clearTimeout(timer)
+  }, [assistantHandoff])
+
   const applyStrategy = (strategy: StrategyPreset) => {
     setSelectedStrategy(strategy.id)
     setContribution(strategy.contribution)
@@ -295,7 +316,7 @@ export function ScenariosScreen() {
 
   const send = () => {
     if (!canSend) return
-    void ask(draft, scenarioContext)
+    void ask(draft, scenarioContext, assistantHandoff ?? undefined)
     setDraft('')
   }
 
@@ -334,10 +355,32 @@ export function ScenariosScreen() {
       }
     >
       <div className="strategyLabScreen">
+        {assistantHandoff && (
+          <section className="strategySourceContext" aria-labelledby="assistant-source-title">
+            <div className="strategySourceContextHead">
+              <span><IonIcon icon={sparklesOutline} /></span>
+              <div>
+                <small>From {ASSISTANT_ORIGIN_LABELS[assistantHandoff.origin]}</small>
+                <h2 id="assistant-source-title">{assistantHandoff.title}</h2>
+                <p>{assistantHandoff.summary}</p>
+              </div>
+              <button onClick={clearAssistantHandoff} aria-label="Dismiss assistant source context">
+                <IonIcon icon={closeOutline} />
+              </button>
+            </div>
+            <dl>
+              {Object.entries(assistantHandoff.facts).map(([label, value]) => (
+                <div key={label}><dt>{label}</dt><dd>{value}</dd></div>
+              ))}
+            </dl>
+          </section>
+        )}
+
         <section className="strategyPresetStrip" aria-label="Strategy presets">
           {STRATEGIES.map((strategy) => (
             <button
               className={selectedStrategy === strategy.id ? 'active' : ''}
+              aria-pressed={selectedStrategy === strategy.id}
               key={strategy.id}
               onClick={() => applyStrategy(strategy)}
             >
@@ -482,6 +525,7 @@ export function ScenariosScreen() {
                         {[0.6, 0.75, 0.9].map((value) => (
                           <button
                             className={targetProbability === value ? 'active' : ''}
+                            aria-pressed={targetProbability === value}
                             key={value}
                             onClick={() => setTargetProbability(value)}
                           >
@@ -531,6 +575,7 @@ export function ScenariosScreen() {
                       return (
                         <button
                           className={strategy.id === selectedStrategy ? 'active' : ''}
+                          aria-pressed={strategy.id === selectedStrategy}
                           key={strategy.id}
                           onClick={() => applyStrategy(strategy)}
                         >
@@ -641,7 +686,14 @@ export function ScenariosScreen() {
               {chat.map((message, index) => (
                 <div className={`strategyMessage ${message.role}`} key={index}>
                   {message.role === 'ai' && <span className="strategyAiIcon"><IonIcon icon={chatbubbleEllipsesOutline} /></span>}
-                  <p>{message.text}</p>
+                  <p>
+                    {message.sourceContext && (
+                      <small className="strategyMessageSource">
+                        From {ASSISTANT_ORIGIN_LABELS[message.sourceContext.origin]} · {message.sourceContext.title}
+                      </small>
+                    )}
+                    {message.text}
+                  </p>
                 </div>
               ))}
               {advisorPending && (
@@ -654,7 +706,11 @@ export function ScenariosScreen() {
 
             <div className="strategyPromptList">
               {advisorPrompts.map((prompt, index) => (
-                <button key={prompt} onClick={() => void ask(prompt, scenarioContext)} disabled={advisorPending}>
+                <button
+                  key={prompt}
+                  onClick={() => void ask(prompt, scenarioContext, assistantHandoff ?? undefined)}
+                  disabled={advisorPending}
+                >
                   <span>{index + 1}</span>
                   {index === 0 ? 'Explain goal probability' : index === 1 ? 'Find the biggest risk' : 'Improve without more return'}
                   <IonIcon icon={arrowForwardOutline} />
@@ -664,6 +720,7 @@ export function ScenariosScreen() {
 
             <div className="strategyComposer">
               <textarea
+                ref={composerRef}
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={onKeyDown}

@@ -109,8 +109,9 @@ async def stocks_analyze(
     """Full pipeline run: forecast + what-if impact + real agent trace + memo.
 
     When an X-Workspace-Id header is present, the run is persisted so it shows
-    up in the workspace's analysis history (GET /analyses/{id}). Persistence is
-    a background task — the client never waits on the DB write.
+    up in the workspace's analysis history. Replaying it with GET
+    /analyses/{id} requires the same workspace header. Persistence is a
+    background task — the client never waits on the DB write.
     """
     resp = await run_stock_analysis(req)
     if x_workspace_id:
@@ -123,8 +124,15 @@ async def stocks_analyze(
 async def advisor_ask(request: Request, req: AdvisorAskRequest) -> AdvisorAskResponse:
     """Advisor answer grounded in a fresh deterministic analysis of the sent state."""
     analysis = analyze_portfolio(req.holdings, req.profile)
-    template = answer_advisor(req.question, analysis, req.stock, req.scenario)
+    template = answer_advisor(
+        req.question, analysis, req.stock, req.scenario, req.source_context
+    )
     answer, narrator = await answer_question(
-        req.question, analysis, req.stock, template, req.scenario
+        req.question,
+        analysis,
+        req.stock,
+        template,
+        req.scenario,
+        req.source_context,
     )
     return AdvisorAskResponse(answer=answer, narrator=narrator)

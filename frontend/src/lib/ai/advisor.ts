@@ -9,17 +9,18 @@
 import { fmt, pct, title } from '../format'
 import type { PortfolioAnalysis } from '../calculations/portfolio'
 import type { AdvisorScenarioContext } from '../calculations/scenario'
-import type { StockForecast } from '../../types'
+import type { AssistantSourceContext, StockForecast } from '../../types'
 import { describeConcentrations, describeRecommendations } from './insights'
 
 export interface AdvisorContext {
   analysis: PortfolioAnalysis
   stock: StockForecast
   scenario?: AdvisorScenarioContext
+  sourceContext?: AssistantSourceContext
 }
 
 export function answerAdvisor(question: string, ctx: AdvisorContext): string {
-  const { analysis, stock, scenario } = ctx
+  const { analysis, stock, scenario, sourceContext } = ctx
   const low = question.toLowerCase()
 
   if (
@@ -39,6 +40,14 @@ export function answerAdvisor(question: string, ctx: AdvisorContext): string {
     )}. Increasing contributions or lowering the target can improve that probability without assuming higher returns.`
   }
 
+  if (
+    sourceContext &&
+    ['allocation_gap', 'rebalance_plan'].includes(sourceContext.kind) &&
+    ['rebalance', 'allocation', 'gap', 'close'].some((term) => low.includes(term))
+  ) {
+    return `${sourceContext.summary} Direct future contributions toward the underweight assets first, then reassess before trimming concentrated positions. This lowers turnover while moving the portfolio toward its target.`
+  }
+
   if (low.includes('stock') || low.includes('ticker') || low.includes(stock.symbol.toLowerCase())) {
     return `${stock.symbol} is rated ${stock.rating.toLowerCase()} in Analyze Stock, with median target ${fmt.format(
       stock.medianTarget,
@@ -47,7 +56,8 @@ export function answerAdvisor(question: string, ctx: AdvisorContext): string {
     )} concentration before adding.`
   }
   if (low.includes('rebalance')) {
-    return 'Use future contributions first, then trim concentrated holdings if needed.'
+    const evidence = sourceContext ? `${sourceContext.summary} ` : ''
+    return `${evidence}Use future contributions first, then trim concentrated holdings if needed.`
   }
   if (['risk', 'volatility', 'var', 'drawdown'].some((term) => low.includes(term))) {
     const top = analysis.risk.topContributors[0]

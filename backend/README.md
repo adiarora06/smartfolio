@@ -100,7 +100,7 @@ cloud deploys (install an async driver, e.g. `pip install asyncpg`, and use
 (`POST /workspaces`), keeps it in localStorage, hydrates via
 `GET /workspaces/{id}/state`, and saves with debounced PUTs. Analysis runs sent
 with an `X-Workspace-Id` header are stored and replayable via
-`GET /analyses/{id}`.
+`GET /analyses/{id}` when the same workspace header is provided.
 
 ## Config
 

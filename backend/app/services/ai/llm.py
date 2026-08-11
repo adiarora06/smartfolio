@@ -22,6 +22,7 @@ from openai import AsyncOpenAI
 from ...config import settings
 from ...schemas import (
     AdvisorScenarioContext,
+    AdvisorSourceContext,
     Narrator,
     PortfolioAnalysis,
     PortfolioImpact,
@@ -205,6 +206,7 @@ async def answer_question(
     stock: StockForecast,
     template_answer: str,
     scenario: AdvisorScenarioContext | None = None,
+    source_context: AdvisorSourceContext | None = None,
 ) -> Tuple[str, Narrator]:
     """Advisor answer + which engine produced it."""
     if not settings.llm_enabled:
@@ -238,6 +240,8 @@ async def answer_question(
     }
     if scenario is not None:
         context["strategySimulation"] = scenario.model_dump(by_alias=True)
+    if source_context is not None:
+        context["sourceContext"] = source_context.model_dump(by_alias=True)
     user = (
         f"User question: {question}\n\n"
         f"JSON context:\n{json.dumps(context, indent=2)}"

@@ -210,6 +210,33 @@ def test_advisor_receives_visible_scenario_context(client):
     assert "$300,000" in r.json()["answer"]
 
 
+def test_advisor_receives_visible_source_context(client):
+    stock = client.post("/stocks/analyze", json={"ticker": "AAPL", "days": 30}).json()[
+        "forecast"
+    ]
+    summary = "International Equity is 6.0% versus a 25.0% target."
+    r = client.post(
+        "/advisor/ask",
+        json={
+            "question": "How should I rebalance this gap?",
+            "profile": PROFILE,
+            "holdings": HOLDINGS,
+            "stock": stock,
+            "sourceContext": {
+                "origin": "overview",
+                "kind": "allocation_gap",
+                "title": "International Equity allocation gap",
+                "summary": summary,
+                "suggestedQuestion": "How can I close this gap gradually?",
+                "facts": {"Current": "6.0%", "Target": "25.0%"},
+            },
+        },
+    )
+
+    assert r.status_code == 200
+    assert summary in r.json()["answer"]
+
+
 def test_workspace_lifecycle(client):
     ws = client.post("/workspaces").json()["id"]
 
@@ -311,7 +338,10 @@ def test_portfolio_performance_endpoint(client):
 
 def test_workspace_404(client):
     assert client.get("/workspaces/does-not-exist/state").status_code == 404
-    assert client.get("/analyses/does-not-exist").status_code == 404
+    assert client.get(
+        "/analyses/does-not-exist",
+        headers={"X-Workspace-Id": "does-not-exist"},
+    ).status_code == 404
 
 
 def test_oversized_holdings_rejected(client):
@@ -362,6 +392,7 @@ def test_plaid_unconfigured_returns_503(client):
 
 def test_analysis_persisted_via_header(client):
     ws = client.post("/workspaces").json()["id"]
+    other_ws = client.post("/workspaces").json()["id"]
     r = client.post(
         "/stocks/analyze",
         json={"ticker": "NVDA", "days": 30},
@@ -372,5 +403,17 @@ def test_analysis_persisted_via_header(client):
     runs = client.get(f"/workspaces/{ws}/analyses").json()
     assert len(runs) == 1
     assert runs[0]["symbol"] == "NVDA"
-    full = client.get(f"/analyses/{runs[0]['id']}").json()
+    analysis_url = f"/analyses/{runs[0]['id']}"
+    full = client.get(
+        analysis_url,
+        headers={"X-Workspace-Id": ws},
+    ).json()
     assert full["forecast"]["symbol"] == "NVDA"
+
+    # A run is a workspace-owned resource. Missing or different workspace
+    # context must never reveal its payload.
+    assert client.get(analysis_url).status_code == 401
+    assert client.get(
+        analysis_url,
+        headers={"X-Workspace-Id": other_ws},
+    ).status_code == 404

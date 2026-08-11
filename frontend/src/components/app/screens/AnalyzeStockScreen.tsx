@@ -36,6 +36,7 @@ const TABS: Array<[StockTab, string]> = [
 
 export function AnalyzeStockScreen() {
   const stock = useStore((s) => s.stock)
+  const impact = useStore((s) => s.impact)
   const stockSource = useStore((s) => s.stockSource)
   const running = useStore((s) => s.running)
   const narrator = useStore((s) => s.narrator)
@@ -43,7 +44,7 @@ export function AnalyzeStockScreen() {
   const stockTab = useStore((s) => s.stockTab)
   const stockMemory = useStore((s) => s.stockMemory)
   const setStockTab = useStore((s) => s.setStockTab)
-  const setScreen = useStore((s) => s.setScreen)
+  const openAssistant = useStore((s) => s.openAssistant)
   const runStock = useStore((s) => s.runStock)
   const resetStock = useStore((s) => s.resetStock)
   const addStockToPortfolio = useStore((s) => s.addStockToPortfolio)
@@ -72,6 +73,22 @@ export function AnalyzeStockScreen() {
     if (!running && ticker.trim()) void runStock(ticker, Number(horizon))
   }
 
+  const openStockAssistant = () => {
+    openAssistant({
+      origin: 'analyze',
+      kind: 'stock_analysis',
+      title: `${stock.symbol} analysis`,
+      summary: `${stock.symbol} is rated ${stock.rating.toLowerCase()} with a ${pct(stock.probGain)} modeled probability of gain over ${stock.days} days and a ${fmt.format(stock.q25Target)}–${fmt.format(stock.q75Target)} likely range.`,
+      suggestedQuestion: `Explain the ${stock.symbol} analysis in the context of my portfolio. Focus on the likely range, downside risk, and concentration impact.`,
+      facts: {
+        Price: fmt.format(stock.price),
+        'Likely range': `${fmt.format(stock.q25Target)}–${fmt.format(stock.q75Target)}`,
+        'P(gain)': pct(stock.probGain),
+        'Portfolio weight': impact ? pct(impact.newWeight) : 'Current holdings only',
+      },
+    })
+  }
+
   return (
     <AppPage
       title="Analyze"
@@ -84,7 +101,7 @@ export function AnalyzeStockScreen() {
         <>
           <button onClick={addStockToPortfolio}>Add To Portfolio</button>
           <button onClick={saveMemo}>Save Memo</button>
-          <button className="primary" onClick={() => setScreen('advisor')}>
+          <button className="primary" onClick={openStockAssistant}>
             Ask Advisor
           </button>
         </>
@@ -291,7 +308,7 @@ function DesktopAnalysis({
   const holdings = useStore((s) => s.holdings)
   const addStockToPortfolio = useStore((s) => s.addStockToPortfolio)
   const saveMemo = useStore((s) => s.saveMemo)
-  const setScreen = useStore((s) => s.setScreen)
+  const openAssistant = useStore((s) => s.openAssistant)
   const runStock = useStore((s) => s.runStock)
   const [mode, setMode] = useState<'price' | 'impact'>('impact')
   const [newsFilter, setNewsFilter] = useState<NewsFilter>('all')
@@ -312,6 +329,28 @@ function DesktopAnalysis({
   const analyzeTicker = (symbol: string) => {
     setTicker(symbol)
     if (!running) void runStock(symbol, Number(horizon))
+  }
+
+  const openNewsAssistant = () => {
+    const activeNews = news.find((item) => item.title === selectedNews) ?? news[0]
+    const tone = activeNews ? signalTone(activeNews) : 'mixed'
+    openAssistant({
+      origin: 'analyze',
+      kind: activeNews ? 'news_signal' : 'stock_analysis',
+      title: activeNews ? `${stock.symbol} news signal` : `${stock.symbol} analysis`,
+      summary: activeNews
+        ? `A ${signalLabel(tone).toLowerCase()} signal for ${stock.symbol}: “${activeNews.title}”. The stock is rated ${stock.rating.toLowerCase()} over the ${stock.days}-day model horizon.`
+        : `${stock.symbol} is rated ${stock.rating.toLowerCase()} over the ${stock.days}-day model horizon.`,
+      suggestedQuestion: activeNews
+        ? `How could this ${signalLabel(tone).toLowerCase()} news signal affect the ${stock.symbol} outlook and my portfolio risk? Separate facts from assumptions.`
+        : `Explain the ${stock.symbol} outlook and its effect on my portfolio risk.`,
+      facts: {
+        Ticker: stock.symbol,
+        Signal: activeNews ? signalLabel(tone) : stock.rating,
+        'Model horizon': `${stock.days} days`,
+        'P(gain)': pct(stock.probGain),
+      },
+    })
   }
 
   return (
@@ -340,6 +379,7 @@ function DesktopAnalysis({
           {QUICK_TICKERS.map((symbol) => (
             <button
               className={stock.symbol === symbol ? 'active' : ''}
+              aria-pressed={stock.symbol === symbol}
               key={symbol}
               onClick={() => analyzeTicker(symbol)}
             >
@@ -359,6 +399,7 @@ function DesktopAnalysis({
           ].map(([days, label]) => (
             <button
               className={Number(horizon) === Number(days) ? 'active' : ''}
+              aria-pressed={Number(horizon) === Number(days)}
               key={days}
               onClick={() => setHorizon(days)}
             >
@@ -466,6 +507,7 @@ function DesktopAnalysis({
             {(['all', 'positive', 'negative', 'mixed'] as const).map((filter) => (
               <button
                 className={newsFilter === filter ? 'active' : ''}
+                aria-pressed={newsFilter === filter}
                 key={filter}
                 onClick={() => {
                   setNewsFilter(filter)
@@ -524,7 +566,7 @@ function DesktopAnalysis({
                 ? 'Sample signals are shown until a live analysis returns current coverage.'
                 : 'Sentiment is an estimate, not a forecast.'}
             </p>
-            <button className="advisorShortcut" onClick={() => setScreen('advisor')}>
+            <button className="advisorShortcut" onClick={openNewsAssistant}>
               <IonIcon icon={chatbubbleEllipsesOutline} />
               Ask Advisor
               <IonIcon icon={arrowForwardOutline} />

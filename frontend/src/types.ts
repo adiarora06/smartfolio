@@ -100,9 +100,28 @@ export interface Connection {
   on: boolean
 }
 
+export type AssistantOrigin = 'overview' | 'portfolio' | 'analyze'
+
+/** The visible evidence that launched AI Assistant from another workspace. */
+export interface AssistantSourceContext {
+  origin: AssistantOrigin
+  kind: 'allocation_gap' | 'rebalance_plan' | 'risk_driver' | 'stock_analysis' | 'news_signal'
+  title: string
+  summary: string
+  suggestedQuestion: string
+  facts: Record<string, string>
+}
+
+/** Ephemeral handoff used to focus the assistant composer after navigation. */
+export interface AssistantHandoff extends AssistantSourceContext {
+  id: string
+  createdAt: string
+}
+
 export interface ChatMessage {
   role: 'ai' | 'user'
   text: string
+  sourceContext?: AssistantSourceContext
 }
 
 export interface SavedMemo {
