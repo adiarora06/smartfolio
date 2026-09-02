@@ -15,10 +15,13 @@ from app.marketdata.base import MarketContext, MarketSnapshot
 from app.marketdata.fundamentals import Fundamentals, quality_score
 from app.marketdata.series import PriceSeries, compute_stats
 from app.schemas import (
+    ContributionOptimization,
     ContributionOptimizationInputs,
     Holding,
     InvestorProfile,
     ScenarioSimulationInputs,
+    ScenarioLabRequest,
+    ScenarioStrategy,
 )
 from app.services.backtest import walk_forward
 from app.services.estimate import estimate_from_history, shrinkage_for
@@ -46,7 +49,7 @@ from app.services.risk import (
 )
 from app.schemas import PortfolioTransaction, ValuationSnapshot
 from app.services.performance import calculate_performance
-from app.services.scenario import optimize_contribution, simulate_strategy
+from app.services.scenario import optimize_contribution, run_scenario_lab, simulate_strategy
 from app.services.stock import analyze_stock
 
 
@@ -497,6 +500,80 @@ def test_higher_confidence_requires_at_least_as_much_contribution():
     )
 
     assert higher.required_contribution >= lower.required_contribution
+
+
+def test_scenario_lab_returns_one_atomic_backend_result():
+    analysis = analyze_portfolio(_holdings(), PROFILE)
+    request = ScenarioLabRequest(
+        profile=PROFILE,
+        holdings=_holdings(),
+        primary=ScenarioStrategy(
+            id="custom", contribution=900, return_adj=0.0, rebalance=0.5
+        ),
+        strategies=[
+            ScenarioStrategy(
+                id="baseline", contribution=750, return_adj=0.0, rebalance=0.5
+            ),
+            ScenarioStrategy(
+                id="accelerate", contribution=1500, return_adj=0.02, rebalance=0.65
+            ),
+        ],
+        goal_value=300000,
+        target_probability=0.75,
+        simulation_paths=200,
+        optimization_paths=200,
+    )
+
+    result = run_scenario_lab(analysis, request)
+
+    assert result.simulation.paths == 200
+    assert [comparison.id for comparison in result.comparisons] == [
+        "baseline",
+        "accelerate",
+    ]
+    assert result.comparisons[1].simulation.terminal.p50 > result.comparisons[0].simulation.terminal.p50
+    assert result.optimization.target_probability == pytest.approx(0.75)
+
+
+def test_scenario_lab_reuses_an_identical_primary_comparison(monkeypatch):
+    analysis = analyze_portfolio(_holdings(), PROFILE)
+    baseline = ScenarioStrategy(
+        id="baseline", contribution=750, return_adj=0.0, rebalance=0.5
+    )
+    request = ScenarioLabRequest(
+        profile=PROFILE,
+        holdings=_holdings(),
+        primary=baseline,
+        strategies=[baseline],
+        goal_value=300000,
+        simulation_paths=100,
+        optimization_paths=100,
+    )
+    calls = 0
+    original = simulate_strategy
+
+    def counted_simulation(analysis, inputs):
+        nonlocal calls
+        calls += 1
+        return original(analysis, inputs)
+
+    monkeypatch.setattr("app.services.scenario.simulate_strategy", counted_simulation)
+    monkeypatch.setattr(
+        "app.services.scenario.optimize_contribution",
+        lambda analysis, inputs: ContributionOptimization(
+            target_probability=inputs.target_probability,
+            required_contribution=750,
+            achieved_probability=0.75,
+            capped=False,
+            max_contribution=inputs.max_contribution,
+            contribution_step=inputs.contribution_step,
+        ),
+    )
+    result = run_scenario_lab(analysis, request)
+
+    # The primary and comparison share one distribution calculation.
+    assert result.comparisons[0].simulation == result.simulation
+    assert calls == 1
 
 
 def test_impact_reports_risk_share_above_weight_for_a_volatile_name():

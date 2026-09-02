@@ -63,12 +63,11 @@ html {
 /* Nested scrollers must not chain to the page/webview. */
 .chat, .table { overscroll-behavior: contain; }
 
-/* --- Safe areas + native shell ----------------------------------------- */
+/* --- Safe areas + browser shell ---------------------------------------- */
 
 .top { padding-top: env(safe-area-inset-top); }
 
-/* Capacitor sets no URL bar, so dvh == vh there; dvh still fixes mobile
-   Safari, where the base file's 100vh includes the collapsing chrome. */
+/* dvh keeps the shell stable around collapsing browser chrome. */
 .hero { min-height: auto; }
 
 @media (min-width: 721px) {
@@ -4228,6 +4227,43 @@ button.dark { color: #fff; }
 
 .connectionResult--connected { background: #ecfdf3; color: #067647; }
 .connectionResult--error { background: #fff1f3; color: #b42318; }
+
+.strategyEngineState {
+  min-height: 360px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  padding: 48px;
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--card);
+}
+
+.strategyEngineState > ion-icon {
+  width: 34px;
+  height: 34px;
+  color: var(--teal);
+}
+
+.strategyEngineState h2,
+.strategyEngineState p {
+  margin: 0;
+}
+
+.strategyEngineState p {
+  max-width: 600px;
+  color: var(--muted);
+}
+
+.strategyPathBadgeError {
+  min-height: 32px;
+  padding: 5px 10px;
+  color: var(--red);
+  border-color: rgba(185, 28, 28, 0.3);
+  background: rgba(185, 28, 28, 0.06);
+}
 
 @media (min-width: 1200px) {
   .connectionAvailableGrid {

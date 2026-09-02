@@ -17,7 +17,7 @@ SmartFolio lets an investor import or edit holdings, inspect deterministic risk 
 
 | Layer | Technologies |
 | --- | --- |
-| Frontend | React 18, TypeScript, Vite, Zustand, Ionic, Capacitor |
+| Frontend | React 18, TypeScript, Vite, Zustand, Ionic web components |
 | API and analytics | Python 3.12, FastAPI, Pydantic v2, SQLAlchemy, deterministic portfolio and risk engines |
 | AI workflow | Seven-stage agent pipeline, OpenAI/Anthropic routing and failover, compliance guardrails |
 | Data | Neon Postgres, SQLite fallback, Finnhub, Alpha Vantage |
@@ -109,8 +109,8 @@ template narration, SQLite persistence.
 
 ## Tests & CI
 
-- `backend/tests` — pytest across the full API surface (83 tests)
-- `frontend/src/**/__tests__` — Vitest over the deterministic engine (44 tests)
+- `backend/tests` — pytest contracts across the full API and financial engine
+- `frontend/src/**/__tests__` — Vitest coverage for browser behavior and fallbacks
 - GitHub Actions runs both suites + the frontend build on every push/PR; a
   keep-warm cron pings the free-tier backend every 10 minutes
 

@@ -2,9 +2,6 @@
 from __future__ import annotations
 
 import pytest
-from fastapi.testclient import TestClient
-
-from app.main import create_app
 
 PROFILE = {
     "age": 30,
@@ -20,44 +17,6 @@ HOLDINGS = [
     {"symbol": "AAPL", "name": "Apple", "type": "stock", "asset": "us_equity", "sector": "technology", "value": 12000},
     {"symbol": "VTI", "name": "Vanguard Total Market", "type": "etf", "asset": "us_equity", "sector": "broad_market", "value": 20000},
 ]
-
-
-def test_native_origin_allowed_by_default(client):
-    """The iOS webview origin is allowed under the default configuration."""
-    r = client.get(
-        "/health",
-        headers={"Origin": "capacitor://localhost"},
-    )
-    assert r.status_code == 200
-    assert r.headers.get("access-control-allow-origin") == "capacitor://localhost"
-
-
-def test_native_origins_survive_configured_override(monkeypatch):
-    """The native schemes must survive SMARTFOLIO_CORS_ORIGINS being set.
-
-    That env var *replaces* the defaults, so the native schemes are unioned in
-    separately. This is the test that actually exercises that path: the
-    default-config tests above would still pass if the union were dropped and
-    the schemes were merely added to DEFAULT_CORS_ORIGINS — but production
-    sets the env var, so that arrangement would lock the app out.
-    """
-    monkeypatch.setenv("SMARTFOLIO_CORS_ORIGINS", "https://example.com")
-
-    # create_app() reads the env var, so build a fresh app under the override.
-    with TestClient(create_app()) as c:
-        for origin in (
-            "capacitor://localhost",
-            "ionic://localhost",
-            "https://example.com",
-        ):
-            r = c.get("/health", headers={"Origin": origin})
-            assert r.status_code == 200, origin
-            assert r.headers.get("access-control-allow-origin") == origin, origin
-
-        # The old default is gone — proof the env var really did replace it,
-        # which is what makes the union necessary in the first place.
-        r = c.get("/health", headers={"Origin": "https://smartfolio-lemon.vercel.app"})
-        assert r.headers.get("access-control-allow-origin") is None
 
 
 def test_web_origin_still_allowed(client):
@@ -130,20 +89,41 @@ def test_portfolio_analyze(client):
     assert len(analysis["risk"]["stressTests"]) == 3
 
 
-def test_portfolio_simulate_returns_seeded_percentile_fan(client):
+def test_scenario_lab_returns_seeded_comparisons_and_optimizer(client):
     payload = {
         "profile": PROFILE,
         "holdings": HOLDINGS,
-        "contribution": 1000,
-        "returnAdj": 0,
-        "rebalance": 0.5,
+        "primary": {
+            "id": "current",
+            "contribution": 1000,
+            "returnAdj": 0,
+            "rebalance": 0.5,
+        },
+        "strategies": [
+            {
+                "id": "baseline",
+                "contribution": 750,
+                "returnAdj": 0,
+                "rebalance": 0.5,
+            },
+            {
+                "id": "accelerate",
+                "contribution": 1500,
+                "returnAdj": 0.02,
+                "rebalance": 0.65,
+            },
+        ],
         "goalValue": 300000,
+        "targetProbability": 0.75,
         "horizonYears": 10,
-        "paths": 300,
+        "simulationPaths": 300,
+        "optimizationPaths": 300,
         "seed": 20260806,
+        "maxContribution": 5000,
+        "contributionStep": 50,
     }
-    first = client.post("/portfolio/simulate", json=payload)
-    second = client.post("/portfolio/simulate", json=payload)
+    first = client.post("/portfolio/scenario-lab", json=payload)
+    second = client.post("/portfolio/scenario-lab", json=payload)
 
     assert first.status_code == 200
     assert first.json() == second.json()
@@ -153,28 +133,11 @@ def test_portfolio_simulate_returns_seeded_percentile_fan(client):
     assert simulation["terminal"]["p10"] <= simulation["terminal"]["p50"]
     assert simulation["terminal"]["p50"] <= simulation["terminal"]["p90"]
     assert simulation["assumptionDriven"] is True
-
-
-def test_contribution_optimizer_returns_an_actionable_step(client):
-    r = client.post(
-        "/portfolio/optimize-contribution",
-        json={
-            "profile": PROFILE,
-            "holdings": HOLDINGS,
-            "returnAdj": 0,
-            "rebalance": 0.5,
-            "goalValue": 300000,
-            "targetProbability": 0.75,
-            "horizonYears": 10,
-            "paths": 300,
-            "seed": 20260806,
-            "maxContribution": 5000,
-            "contributionStep": 50,
-        },
-    )
-
-    assert r.status_code == 200
-    optimization = r.json()["optimization"]
+    assert [item["id"] for item in first.json()["comparisons"]] == [
+        "baseline",
+        "accelerate",
+    ]
+    optimization = first.json()["optimization"]
     assert optimization["requiredContribution"] % 50 == 0
     assert optimization["achievedProbability"] >= 0.75 or optimization["capped"]
 

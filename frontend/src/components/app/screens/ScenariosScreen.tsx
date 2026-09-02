@@ -1,16 +1,18 @@
 // AI Assistant — deterministic planning plus reproducible Monte Carlo ranges.
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePortfolioAnalysis } from '../../../hooks/usePortfolioAnalysis'
 import {
   DEFAULT_SIMULATION_SEED,
-  optimizeContribution,
   projectScenario,
-  simulateScenario,
   type AdvisorScenarioContext,
   type ScenarioProjection,
   type ScenarioSimulation,
 } from '../../../lib/calculations/scenario'
+import {
+  apiRunScenarioLab,
+  type ScenarioLabResult,
+} from '../../../lib/api/client'
 import { fmt, pct } from '../../../lib/format'
 import { IonIcon, IonRange } from '@ionic/react'
 import {
@@ -187,6 +189,8 @@ export function ScenariosScreen() {
   const strategyPlans = useStore((s) => s.strategyPlans)
   const saveStrategyPlan = useStore((s) => s.saveStrategyPlan)
   const removeStrategyPlan = useStore((s) => s.removeStrategyPlan)
+  const profile = useStore((s) => s.profile)
+  const holdings = useStore((s) => s.holdings)
 
   // Raw slider positions (dollars, percentage points, and 0..100 intensity).
   const [contribution, setContribution] = useState(750)
@@ -196,6 +200,10 @@ export function ScenariosScreen() {
   const [targetProbability, setTargetProbability] = useState(0.75)
   const [selectedStrategy, setSelectedStrategy] = useState('baseline')
   const [draft, setDraft] = useState('')
+  const [scenarioLab, setScenarioLab] = useState<ScenarioLabResult | null>(null)
+  const [scenarioPending, setScenarioPending] = useState(true)
+  const [scenarioError, setScenarioError] = useState<string | null>(null)
+  const [scenarioRetry, setScenarioRetry] = useState(0)
   const chatRef = useRef<HTMLDivElement>(null)
   const composerRef = useRef<HTMLTextAreaElement>(null)
   const lastHandoffId = useRef<string | null>(null)
@@ -203,65 +211,72 @@ export function ScenariosScreen() {
   const returnAdj = returnPts / 100
   const rebalance = rebalPts / 100
   const projection = projectScenario(analysis, { contribution, returnAdj, rebalance })
-  const simulation = useMemo(
-    () =>
-      simulateScenario(
-        analysis,
-        { contribution, returnAdj, rebalance },
-        { goalValue, paths: 2000, horizonYears: 10, seed: DEFAULT_SIMULATION_SEED },
-      ),
-    [analysis, contribution, goalValue, rebalance, returnAdj],
-  )
-  const strategyComparisons = useMemo(
-    () =>
-      STRATEGIES.map((strategy) => ({
-        strategy,
-        simulation: simulateScenario(
-          analysis,
-          {
-            contribution: strategy.contribution,
-            returnAdj: strategy.returnPts / 100,
-            rebalance: strategy.rebalPts / 100,
-          },
-          { goalValue, paths: 2000, horizonYears: 10, seed: DEFAULT_SIMULATION_SEED },
-        ),
-      })),
-    [analysis, goalValue],
-  )
-  const contributionOptimization = useMemo(
-    () =>
-      optimizeContribution(
-        analysis,
-        { returnAdj, rebalance },
-        {
-          goalValue,
-          targetProbability,
-          paths: 800,
-          horizonYears: 10,
-          seed: DEFAULT_SIMULATION_SEED,
-          maxContribution: 5000,
-          contributionStep: 50,
-        },
-      ),
-    [analysis, goalValue, rebalance, returnAdj, targetProbability],
-  )
+  const simulation = scenarioLab?.simulation
+  const contributionOptimization = scenarioLab?.optimization
+  const strategyComparisons = scenarioLab?.comparisons.flatMap((comparison) => {
+    const strategy = STRATEGIES.find((candidate) => candidate.id === comparison.id)
+    return strategy ? [{ strategy, simulation: comparison.simulation }] : []
+  }) ?? []
   const selected = STRATEGIES.find((strategy) => strategy.id === selectedStrategy)
   const contributionLift = projection.series[10] - projection.growthOnlySeries[10]
   const investedOverTenYears = contribution * 12 * 10
   const modeledGrowth = projection.series[10] - analysis.value - investedOverTenYears
   const canSend = draft.trim().length > 0 && !advisorPending
-  const scenarioContext: AdvisorScenarioContext = {
-    contribution,
-    goalValue,
-    horizonYears: simulation.horizonYears,
-    modeledReturn: simulation.blendedReturn,
-    modeledVolatility: simulation.blendedVolatility,
-    successProbability: simulation.successProbability,
-    p10: simulation.terminal.p10,
-    p50: simulation.terminal.p50,
-    p90: simulation.terminal.p90,
-    paths: simulation.paths,
-  }
+  const scenarioContext: AdvisorScenarioContext | null = simulation ? {
+      contribution,
+      goalValue,
+      horizonYears: simulation.horizonYears,
+      modeledReturn: simulation.blendedReturn,
+      modeledVolatility: simulation.blendedVolatility,
+      successProbability: simulation.successProbability,
+      p10: simulation.terminal.p10,
+      p50: simulation.terminal.p50,
+      p90: simulation.terminal.p90,
+      paths: simulation.paths,
+    } : null
+
+  useEffect(() => {
+    let cancelled = false
+    const timer = window.setTimeout(() => {
+      setScenarioPending(true)
+      setScenarioError(null)
+      void apiRunScenarioLab(
+        profile,
+        holdings,
+        { id: 'current', contribution, returnAdj, rebalance },
+        STRATEGIES.map((strategy) => ({
+          id: strategy.id,
+          contribution: strategy.contribution,
+          returnAdj: strategy.returnPts / 100,
+          rebalance: strategy.rebalPts / 100,
+        })),
+        {
+          goalValue,
+          targetProbability,
+          horizonYears: 10,
+          simulationPaths: 2000,
+          optimizationPaths: 800,
+          seed: DEFAULT_SIMULATION_SEED,
+          maxContribution: 5000,
+          contributionStep: 50,
+        },
+      )
+        .then((result) => {
+          if (!cancelled) setScenarioLab(result)
+        })
+        .catch(() => {
+          if (!cancelled) setScenarioError('The Python strategy engine is unavailable.')
+        })
+        .finally(() => {
+          if (!cancelled) setScenarioPending(false)
+        })
+    }, 300)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [contribution, goalValue, holdings, profile, rebalance, returnAdj, scenarioRetry, targetProbability])
 
   useEffect(() => {
     const el = chatRef.current
@@ -278,6 +293,30 @@ export function ScenariosScreen() {
     }, 80)
     return () => window.clearTimeout(timer)
   }, [assistantHandoff])
+
+  if (!simulation || !contributionOptimization) {
+    return (
+      <AppPage
+        title="AI Assistant"
+        subtitle="Model a theoretical plan and ask AI about it—side by side."
+      >
+        <section className="strategyEngineState" aria-live="polite">
+          <IonIcon icon={scenarioError ? refreshOutline : analyticsOutline} />
+          <h2>{scenarioError ? 'Strategy engine unavailable' : 'Calculating your strategy'}</h2>
+          <p>
+            {scenarioError
+              ? 'SmartFolio now calculates probability ranges in its Python backend. Start or reconnect the backend, then try again.'
+              : 'The Python engine is running the current plan, four comparisons, and contribution optimizer.'}
+          </p>
+          {scenarioError && (
+            <button className="primary" onClick={() => setScenarioRetry((value) => value + 1)}>
+              <IonIcon icon={refreshOutline} /> Retry
+            </button>
+          )}
+        </section>
+      </AppPage>
+    )
+  }
 
   const applyStrategy = (strategy: StrategyPreset) => {
     setSelectedStrategy(strategy.id)
@@ -316,7 +355,7 @@ export function ScenariosScreen() {
 
   const send = () => {
     if (!canSend) return
-    void ask(draft, scenarioContext, assistantHandoff ?? undefined)
+    void ask(draft, scenarioContext ?? undefined, assistantHandoff ?? undefined)
     setDraft('')
   }
 
@@ -466,7 +505,18 @@ export function ScenariosScreen() {
                     <p>Seeded monthly paths turn one projection into a visible range of outcomes.</p>
                   </div>
                 </div>
-                <span className="strategyPathBadge">{simulation.paths.toLocaleString()} fixed-seed paths</span>
+                {scenarioError ? (
+                  <button
+                    className="strategyPathBadge strategyPathBadgeError"
+                    onClick={() => setScenarioRetry((value) => value + 1)}
+                  >
+                    Retry Python model
+                  </button>
+                ) : (
+                  <span className="strategyPathBadge">
+                    {scenarioPending ? 'Updating Python model…' : `${simulation.paths.toLocaleString()} backend paths`}
+                  </span>
+                )}
               </div>
 
               <label className="strategyGoalControl">
@@ -590,7 +640,7 @@ export function ScenariosScreen() {
                       )
                     })}
                   </div>
-                  <p>Comparisons reuse one seed so each strategy faces equivalent market paths.</p>
+                  <p>Python computes every comparison with one seed so each strategy faces equivalent market paths.</p>
                 </div>
               </div>
             </section>
@@ -708,7 +758,7 @@ export function ScenariosScreen() {
               {advisorPrompts.map((prompt, index) => (
                 <button
                   key={prompt}
-                  onClick={() => void ask(prompt, scenarioContext, assistantHandoff ?? undefined)}
+                  onClick={() => void ask(prompt, scenarioContext ?? undefined, assistantHandoff ?? undefined)}
                   disabled={advisorPending}
                 >
                   <span>{index + 1}</span>

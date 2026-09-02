@@ -1,9 +1,8 @@
 """Deterministic portfolio analytics.
 
 Math only — returns numbers and structured findings, never prose. The prose
-lives in services/ai (the explanation layer). This is the same boundary as the
-frontend's lib/calculations vs lib/ai split, and the formulas are a 1:1 port of
-frontend/src/lib/calculations/portfolio.ts.
+lives in services/ai (the explanation layer), and this Python service is the
+canonical portfolio model used by the API.
 """
 from __future__ import annotations
 

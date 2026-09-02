@@ -47,7 +47,6 @@ import { computeImpact } from '../lib/calculations/impact'
 import type { AdvisorScenarioContext } from '../lib/calculations/scenario'
 import { buildSavedMemo } from '../lib/ai/memo'
 import { answerAdvisor } from '../lib/ai/advisor'
-import { isNative, successFeedback } from '../lib/native'
 import { navigateTo, screenFromPath } from '../lib/nav'
 import {
   apiAnalyzeStock,
@@ -221,7 +220,7 @@ export const useStore = create<AppState>((set, get) => ({
   // landing page first.
   // The store is created at module scope, so this runs on import — guard the
   // window access or importing the store throws under Node (tests, SSR).
-  page: isNative || screenFromPath(initialPathname()) ? 'app' : 'landing',
+  page: screenFromPath(initialPathname()) ? 'app' : 'landing',
   screen: 'overview',
   setupStep: 0,
   stockTab: 'forecast',
@@ -438,9 +437,6 @@ export const useStore = create<AppState>((set, get) => ({
       })
     } finally {
       set({ running: false })
-      // A pipeline run is the app's one long action; on device a success tap
-      // is the difference between "did that work?" and obvious completion.
-      void successFeedback()
     }
   },
   resetStock: () => {

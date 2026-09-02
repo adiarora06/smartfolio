@@ -17,7 +17,7 @@ import {
 } from '../../../lib/api/client'
 import { Panel, PanelHead } from '../../shared/ui'
 import { AppPage } from '../../shared/AppPage'
-import { openExternal, shareText } from '../../../lib/native'
+import { openExternal, shareText } from '../../../lib/browser'
 
 type ConnectionState =
   | 'checking'

@@ -21,15 +21,16 @@ npm run preview    # serve the production build
 ## Architecture
 
 The one hard rule from the vault — **deterministic code calculates, AI explains** —
-is enforced by the folder layout:
+is enforced by the folder layout. Python owns canonical financial models; the
+browser keeps only lightweight display math and explicit offline fallbacks:
 
 ```
 src/
   lib/
-    calculations/   # DETERMINISTIC engine — pure math, returns numbers + structured findings
+    calculations/   # Display math and selected offline fallbacks
       portfolio.ts    value, allocation, risk score, gaps, concentration/recommendation signals
       stock.ts        forecast bands, confidence, rating, prototype backtest
-      scenario.ts     compounding projection
+      scenario.ts     immediate compounding projection + backend result types
     ai/             # EXPLANATION layer — turns findings into prose (LLM slots in here later)
       insights.ts     concentration/recommendation sentences
       memo.ts         stock research memos
@@ -47,18 +48,18 @@ src/
     shared/         # ui primitives, ForecastChart, AllocationBars, InsightList
 ```
 
-`lib/calculations` never imports from `lib/ai`. The AI layer consumes the
+`lib/calculations` never imports from `lib/ai`. The AI layer consumes
 deterministic findings, never the other way around.
 
 ## Backend integration
 
 `src/lib/api/` is a typed client for the FastAPI backend (`../backend`), which
-owns the canonical version of both layers. Base URL comes from `VITE_API_URL`
-(default `http://localhost:8000`). Discrete actions — Run Analysis, advisor
-questions, Export JSON — are **backend-first with local fallback**: when the
-API is unreachable the app degrades to the client-side mirror above, so it
-works fully offline. The Analyze Stock terminal labels each run's engine
-("· API" / "· Local") and the Connections screen shows live backend status.
+owns the canonical financial models and AI layer. Base URL comes from
+`VITE_API_URL` (default `http://localhost:8000`). Stock analysis and advisor
+questions retain explicit local fallbacks; the Monte Carlo strategy lab is
+backend-only and shows an honest reconnect state when Python is unavailable.
+The Analyze terminal labels each run's engine and Connections shows live
+backend status.
 
 ## Notes
 

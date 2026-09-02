@@ -20,6 +20,7 @@ Interactive docs at http://localhost:8000/docs.
 |--------|----------------------|--------------|
 | GET    | `/health`            | Liveness check (the frontend pings this to detect the backend) |
 | POST   | `/portfolio/analyze` | Deterministic portfolio diagnosis + AI-layer insight prose |
+| POST   | `/portfolio/scenario-lab` | Seeded strategy comparisons + contribution optimizer |
 | POST   | `/stocks/analyze`    | Deterministic OpenVC-style forecast for a ticker + horizon |
 | POST   | `/advisor/ask`       | Advisor answer grounded in a fresh analysis of the sent state |
 
@@ -36,7 +37,7 @@ app/
   schemas.py        # Pydantic contract — mirrors frontend/src/types.ts (camelCase wire)
   api.py            # routes: each composes services + ai explicitly
   main.py           # app factory, CORS, /health
-  services/         # DETERMINISTIC engine (1:1 port of frontend lib/calculations)
+  services/         # Canonical deterministic financial engine
     portfolio.py      value, allocation, risk score, gaps, structured findings
     stock.py          forecast bands, confidence, rating, prototype backtest
     data.py           targets, assumed returns, offline stock reference table

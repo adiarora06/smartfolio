@@ -16,16 +16,12 @@ from .ratelimit import EXPENSIVE_LIMIT, limiter
 from .schemas import (
     AdvisorAskRequest,
     AdvisorAskResponse,
-    ContributionOptimizationInputs,
-    ContributionOptimizeRequest,
-    ContributionOptimizeResponse,
     PortfolioAnalyzeRequest,
     PortfolioAnalyzeResponse,
     PortfolioPerformanceRequest,
     PortfolioPerformanceResponse,
-    PortfolioSimulateRequest,
-    PortfolioSimulateResponse,
-    ScenarioSimulationInputs,
+    ScenarioLabRequest,
+    ScenarioLabResponse,
     StockAnalyzeRequest,
     StockAnalyzeResponse,
 )
@@ -34,7 +30,7 @@ from .services.ai.insights import describe_insights
 from .services.ai.llm import answer_question
 from .services.portfolio import analyze_portfolio
 from .services.performance import calculate_performance
-from .services.scenario import optimize_contribution, simulate_strategy
+from .services.scenario import run_scenario_lab
 
 router = APIRouter()
 
@@ -54,42 +50,11 @@ def portfolio_performance(req: PortfolioPerformanceRequest) -> PortfolioPerforma
     )
 
 
-@router.post("/portfolio/simulate", response_model=PortfolioSimulateResponse)
-def portfolio_simulate(req: PortfolioSimulateRequest) -> PortfolioSimulateResponse:
-    """Seeded strategy distribution using the same canonical portfolio model."""
+@router.post("/portfolio/scenario-lab", response_model=ScenarioLabResponse)
+def portfolio_scenario_lab(req: ScenarioLabRequest) -> ScenarioLabResponse:
+    """Calculate the entire interactive strategy lab in one backend request."""
     analysis = analyze_portfolio(req.holdings, req.profile)
-    inputs = ScenarioSimulationInputs(
-        contribution=req.contribution,
-        return_adj=req.return_adj,
-        rebalance=req.rebalance,
-        goal_value=req.goal_value,
-        horizon_years=req.horizon_years,
-        paths=req.paths,
-        seed=req.seed,
-    )
-    return PortfolioSimulateResponse(simulation=simulate_strategy(analysis, inputs))
-
-
-@router.post(
-    "/portfolio/optimize-contribution", response_model=ContributionOptimizeResponse
-)
-def contribution_optimize(req: ContributionOptimizeRequest) -> ContributionOptimizeResponse:
-    """Reverse-solve a monthly contribution for the requested goal confidence."""
-    analysis = analyze_portfolio(req.holdings, req.profile)
-    inputs = ContributionOptimizationInputs(
-        return_adj=req.return_adj,
-        rebalance=req.rebalance,
-        goal_value=req.goal_value,
-        target_probability=req.target_probability,
-        horizon_years=req.horizon_years,
-        paths=req.paths,
-        seed=req.seed,
-        max_contribution=req.max_contribution,
-        contribution_step=req.contribution_step,
-    )
-    return ContributionOptimizeResponse(
-        optimization=optimize_contribution(analysis, inputs)
-    )
+    return run_scenario_lab(analysis, req)
 
 
 async def _persist_run(workspace_id: str, resp: StockAnalyzeResponse) -> None:

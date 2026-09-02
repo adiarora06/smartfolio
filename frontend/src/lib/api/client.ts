@@ -1,9 +1,8 @@
 // Typed client for the SmartFolio FastAPI backend.
 //
-// The backend owns the canonical deterministic engine + AI explanation layer
-// (backend/app). Every call here has a local fallback in the store: when the
-// API is unreachable the app degrades gracefully to the client-side mirror in
-// lib/calculations + lib/ai, so the static deploy keeps working offline.
+// Python owns canonical financial calculations. Selected read-only features
+// retain explicit local fallbacks, while backend-only models surface an honest
+// unavailable state instead of silently running a second implementation.
 
 import type {
   AssistantSourceContext,
@@ -19,10 +18,8 @@ import type { PortfolioAnalysis } from '../calculations/portfolio'
 import type {
   AdvisorScenarioContext,
   ContributionOptimization,
-  ContributionOptimizationOptions,
   ScenarioInputs,
   ScenarioSimulation,
-  ScenarioSimulationOptions,
 } from '../calculations/scenario'
 import type { PortfolioInsights } from '../ai/insights'
 
@@ -136,46 +133,49 @@ export function apiCalculatePerformance(
   })
 }
 
-export function apiSimulateScenario(
-  profile: InvestorProfile,
-  holdings: Holding[],
-  inputs: ScenarioInputs,
-  options: Required<ScenarioSimulationOptions>,
-): Promise<{ simulation: ScenarioSimulation }> {
-  return post<{ simulation: ScenarioSimulation }>('/portfolio/simulate', {
-    profile,
-    holdings,
-    contribution: inputs.contribution,
-    returnAdj: inputs.returnAdj,
-    rebalance: inputs.rebalance,
-    goalValue: options.goalValue,
-    horizonYears: options.horizonYears,
-    paths: options.paths,
-    seed: options.seed,
-  })
+export interface ScenarioLabStrategy extends ScenarioInputs {
+  id: string
 }
 
-export function apiOptimizeContribution(
+export interface ScenarioLabResult {
+  simulation: ScenarioSimulation
+  comparisons: Array<{ id: string; simulation: ScenarioSimulation }>
+  optimization: ContributionOptimization
+}
+
+export function apiRunScenarioLab(
   profile: InvestorProfile,
   holdings: Holding[],
-  inputs: Omit<ScenarioInputs, 'contribution'>,
-  options: Required<ContributionOptimizationOptions>,
-): Promise<{ optimization: ContributionOptimization }> {
-  return post<{ optimization: ContributionOptimization }>(
-    '/portfolio/optimize-contribution',
+  primary: ScenarioLabStrategy,
+  strategies: ScenarioLabStrategy[],
+  options: {
+    goalValue: number
+    targetProbability: number
+    horizonYears: number
+    simulationPaths: number
+    optimizationPaths: number
+    seed: number
+    maxContribution: number
+    contributionStep: number
+  },
+): Promise<ScenarioLabResult> {
+  return post<ScenarioLabResult>(
+    '/portfolio/scenario-lab',
     {
       profile,
       holdings,
-      returnAdj: inputs.returnAdj,
-      rebalance: inputs.rebalance,
+      primary,
+      strategies,
       goalValue: options.goalValue,
       targetProbability: options.targetProbability,
       horizonYears: options.horizonYears,
-      paths: options.paths,
+      simulationPaths: options.simulationPaths,
+      optimizationPaths: options.optimizationPaths,
       seed: options.seed,
       maxContribution: options.maxContribution,
       contributionStep: options.contributionStep,
     },
+    { timeoutMs: SLOW_TIMEOUT_MS },
   )
 }
 

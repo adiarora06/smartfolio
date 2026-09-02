@@ -1,10 +1,9 @@
-"""Reproducible Monte Carlo strategy simulation.
+"""Canonical reproducible strategy simulation used by the web application.
 
-The browser has a field-for-field mirror in
-``frontend/src/lib/calculations/scenario.ts``.  A fixed 32-bit LCG and explicit
-Box-Muller transform keep results stable across Python and JavaScript, while
-monthly lognormal steps make the distribution respond to both return and
-portfolio volatility assumptions.
+A fixed 32-bit LCG and explicit Box-Muller transform keep results stable across
+runs, while monthly lognormal steps make the distribution respond to both
+return and portfolio-volatility assumptions. The browser renders these results
+but intentionally does not maintain a second copy of this financial model.
 """
 from __future__ import annotations
 
@@ -15,8 +14,12 @@ from ..schemas import (
     ContributionOptimization,
     ContributionOptimizationInputs,
     PortfolioAnalysis,
+    ScenarioComparison,
+    ScenarioLabRequest,
+    ScenarioLabResponse,
     ScenarioSimulation,
     ScenarioSimulationInputs,
+    ScenarioStrategy,
     SimulationPercentilePoint,
     SimulationTerminalRange,
 )
@@ -180,4 +183,70 @@ def optimize_contribution(
         capped=False,
         max_contribution=inputs.max_contribution,
         contribution_step=inputs.contribution_step,
+    )
+
+
+def _strategy_inputs(
+    strategy: ScenarioStrategy,
+    request: ScenarioLabRequest,
+    *,
+    paths: int,
+) -> ScenarioSimulationInputs:
+    return ScenarioSimulationInputs(
+        contribution=strategy.contribution,
+        return_adj=strategy.return_adj,
+        rebalance=strategy.rebalance,
+        goal_value=request.goal_value,
+        horizon_years=request.horizon_years,
+        paths=paths,
+        seed=request.seed,
+    )
+
+
+def run_scenario_lab(
+    analysis: PortfolioAnalysis,
+    request: ScenarioLabRequest,
+) -> ScenarioLabResponse:
+    """Calculate the current plan, comparisons, and optimizer atomically.
+
+    Keeping this composition in Python prevents the UI from mixing results
+    produced by different model versions and avoids one HTTP request per card.
+    """
+    simulations: dict[tuple[float, float, float], ScenarioSimulation] = {}
+
+    def simulate_once(strategy: ScenarioStrategy) -> ScenarioSimulation:
+        key = (strategy.contribution, strategy.return_adj, strategy.rebalance)
+        if key not in simulations:
+            simulations[key] = simulate_strategy(
+                analysis,
+                _strategy_inputs(strategy, request, paths=request.simulation_paths),
+            )
+        return simulations[key]
+
+    simulation = simulate_once(request.primary)
+    comparisons = [
+        ScenarioComparison(
+            id=strategy.id,
+            simulation=simulate_once(strategy),
+        )
+        for strategy in request.strategies
+    ]
+    optimization = optimize_contribution(
+        analysis,
+        ContributionOptimizationInputs(
+            return_adj=request.primary.return_adj,
+            rebalance=request.primary.rebalance,
+            goal_value=request.goal_value,
+            target_probability=request.target_probability,
+            horizon_years=request.horizon_years,
+            paths=request.optimization_paths,
+            seed=request.seed,
+            max_contribution=request.max_contribution,
+            contribution_step=request.contribution_step,
+        ),
+    )
+    return ScenarioLabResponse(
+        simulation=simulation,
+        comparisons=comparisons,
+        optimization=optimization,
     )

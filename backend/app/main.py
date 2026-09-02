@@ -38,13 +38,6 @@ DEFAULT_CORS_ORIGINS = ",".join(
     ]
 )
 
-# The iOS app's webview origin. Always allowed, never configurable: it is a
-# fixed native scheme, not a deploy-specific host. Critically, this is UNIONED
-# with SMARTFOLIO_CORS_ORIGINS rather than living in the default — that env var
-# *replaces* the defaults, so a deploy that sets it (production does) would
-# otherwise lock the native app out.
-NATIVE_ORIGINS = ["capacitor://localhost", "ionic://localhost"]
-
 # Error tracking — activates only when SENTRY_DSN is set (free tier: sentry.io).
 if settings.sentry_dsn:
     import sentry_sdk
@@ -76,7 +69,6 @@ def create_app() -> FastAPI:
 
     configured = os.environ.get("SMARTFOLIO_CORS_ORIGINS", DEFAULT_CORS_ORIGINS).split(",")
     origins = [o.strip() for o in configured if o.strip()]
-    origins += [o for o in NATIVE_ORIGINS if o not in origins]
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,

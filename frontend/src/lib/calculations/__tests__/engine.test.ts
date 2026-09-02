@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { analyzePortfolio } from '../portfolio'
-import { optimizeContribution, projectScenario, simulateScenario } from '../scenario'
+import { projectScenario } from '../scenario'
 import { computeImpact } from '../impact'
 import { analyzeStock } from '../stock'
 import { calculatePerformance } from '../performance'
@@ -75,66 +75,6 @@ describe('projectScenario', () => {
     projection.points.forEach(({ years, value }) => {
       expect(value).toBeCloseTo(projection.series[years], 6)
     })
-  })
-})
-
-describe('simulateScenario', () => {
-  const inputs = { contribution: 1000, returnAdj: 0, rebalance: 0.5 }
-  const options = { goalValue: 300000, horizonYears: 10, paths: 400, seed: 20260806 }
-
-  it('is reproducible for the same assumptions and seed', () => {
-    expect(simulateScenario(analysis, inputs, options)).toEqual(
-      simulateScenario(analysis, inputs, options),
-    )
-  })
-
-  it('keeps every annual percentile band ordered', () => {
-    const simulation = simulateScenario(analysis, inputs, options)
-    expect(simulation.points).toHaveLength(11)
-    expect(simulation.points[0].p50).toBe(analysis.value)
-    simulation.points.forEach((point) => {
-      expect(point.p10).toBeLessThanOrEqual(point.p25)
-      expect(point.p25).toBeLessThanOrEqual(point.p50)
-      expect(point.p50).toBeLessThanOrEqual(point.p75)
-      expect(point.p75).toBeLessThanOrEqual(point.p90)
-    })
-  })
-
-  it('improves the same goal odds when contributions rise on shared paths', () => {
-    const lower = simulateScenario(analysis, { ...inputs, contribution: 250 }, options)
-    const higher = simulateScenario(analysis, { ...inputs, contribution: 2500 }, options)
-    expect(higher.successProbability).toBeGreaterThanOrEqual(lower.successProbability)
-    expect(higher.terminal.p50).toBeGreaterThan(lower.terminal.p50)
-  })
-})
-
-describe('optimizeContribution', () => {
-  const inputs = { returnAdj: 0, rebalance: 0.5 }
-
-  it('finds the smallest configured contribution step for a confidence target', () => {
-    const result = optimizeContribution(analysis, inputs, {
-      goalValue: 300000,
-      targetProbability: 0.75,
-      paths: 400,
-      contributionStep: 50,
-    })
-    expect(result.capped).toBe(false)
-    expect(result.requiredContribution % 50).toBe(0)
-    expect(result.achievedProbability).toBeGreaterThanOrEqual(0.75)
-  })
-
-  it('requires at least as much saving for a higher confidence target', () => {
-    const lower = optimizeContribution(analysis, inputs, {
-      goalValue: 300000,
-      targetProbability: 0.6,
-      paths: 300,
-    })
-    const higher = optimizeContribution(analysis, inputs, {
-      goalValue: 300000,
-      targetProbability: 0.9,
-      paths: 300,
-    })
-    expect(higher.requiredContribution).toBeGreaterThanOrEqual(lower.requiredContribution)
   })
 })
 

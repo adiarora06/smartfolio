@@ -206,11 +206,6 @@ class ScenarioSimulationInputs(ApiModel):
     seed: int = Field(default=20260806, ge=0, le=4294967295)
 
 
-class PortfolioSimulateRequest(ScenarioSimulationInputs):
-    profile: InvestorProfile
-    holdings: List[Holding] = Field(max_length=200)
-
-
 class SimulationPercentilePoint(ApiModel):
     year: int
     p10: float
@@ -245,10 +240,6 @@ class ScenarioSimulation(ApiModel):
     assumption_driven: bool = True
 
 
-class PortfolioSimulateResponse(ApiModel):
-    simulation: ScenarioSimulation
-
-
 class ContributionOptimizationInputs(ApiModel):
     """Inputs for reverse-solving the monthly contribution on fixed paths."""
 
@@ -263,11 +254,6 @@ class ContributionOptimizationInputs(ApiModel):
     contribution_step: float = Field(default=50, gt=0, le=1e6)
 
 
-class ContributionOptimizeRequest(ContributionOptimizationInputs):
-    profile: InvestorProfile
-    holdings: List[Holding] = Field(max_length=200)
-
-
 class ContributionOptimization(ApiModel):
     target_probability: float
     required_contribution: float
@@ -277,7 +263,42 @@ class ContributionOptimization(ApiModel):
     contribution_step: float
 
 
-class ContributionOptimizeResponse(ApiModel):
+class ScenarioStrategy(ApiModel):
+    """One named strategy included in a scenario-lab comparison."""
+
+    id: str = Field(min_length=1, max_length=64)
+    contribution: float = Field(ge=0, le=1e7)
+    return_adj: float = Field(default=0.0, ge=-0.50, le=0.50)
+    rebalance: float = Field(default=0.5, ge=0.0, le=1.0)
+
+
+class ScenarioLabRequest(ApiModel):
+    """All inputs needed to calculate the interactive AI Assistant lab."""
+
+    profile: InvestorProfile
+    holdings: List[Holding] = Field(max_length=200)
+    primary: ScenarioStrategy
+    strategies: List[ScenarioStrategy] = Field(default_factory=list, max_length=12)
+    goal_value: float = Field(gt=0, le=1e13)
+    target_probability: float = Field(default=0.75, gt=0.0, lt=1.0)
+    horizon_years: int = Field(default=10, ge=1, le=40)
+    simulation_paths: int = Field(default=2000, ge=100, le=5000)
+    optimization_paths: int = Field(default=800, ge=100, le=5000)
+    seed: int = Field(default=20260806, ge=0, le=4294967295)
+    max_contribution: float = Field(default=5000, gt=0, le=1e7)
+    contribution_step: float = Field(default=50, gt=0, le=1e6)
+
+
+class ScenarioComparison(ApiModel):
+    id: str
+    simulation: ScenarioSimulation
+
+
+class ScenarioLabResponse(ApiModel):
+    """Atomic scenario result so every visible number shares one engine."""
+
+    simulation: ScenarioSimulation
+    comparisons: List[ScenarioComparison]
     optimization: ContributionOptimization
 
 

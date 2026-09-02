@@ -14,10 +14,8 @@ import '@ionic/react/css/flex-utils.css'
 import './theme/ionic.css'
 import './styles/index.css'
 
-// Force iOS presentation everywhere, including desktop web and Android.
-// Left on 'auto', Ionic renders Material styling off-iOS, so the browser demo
-// would not match the app. Committing to one language keeps the codebase and
-// the screenshots honest about what the product looks like.
+// Use one Ionic presentation mode so the web experience is consistent across
+// browsers and operating systems.
 setupIonicReact({ mode: 'ios' })
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

@@ -12,7 +12,7 @@ import { useState } from 'react'
 import { useStore } from '../../../store/useStore'
 import { Panel, PanelHead } from '../../shared/ui'
 import { AppPage } from '../../shared/AppPage'
-import { openExternal } from '../../../lib/native'
+import { openExternal } from '../../../lib/browser'
 
 const REPO_URL = 'https://github.com/adiarora06/smartfolio'
 
