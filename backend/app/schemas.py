@@ -8,9 +8,10 @@ snake_case internally.
 from __future__ import annotations
 
 import math
+from datetime import date as calendar_date
 from typing import Dict, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.alias_generators import to_camel
 
 
@@ -59,6 +60,16 @@ TransactionType = Literal[
 PortfolioDataSource = Literal["demo", "imported", "manual"]
 
 
+def _validate_calendar_date(value: str) -> str:
+    """Reject impossible dates that still match the YYYY-MM-DD wire shape."""
+
+    try:
+        calendar_date.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError("must be a valid calendar date in YYYY-MM-DD format") from exc
+    return value
+
+
 class PortfolioTransaction(ApiModel):
     """One dated portfolio activity stored in the workspace ledger."""
 
@@ -72,6 +83,8 @@ class PortfolioTransaction(ApiModel):
     description: str = Field(default="", max_length=160)
     source: PortfolioDataSource = "manual"
 
+    _valid_date = field_validator("date")(_validate_calendar_date)
+
 
 class ValuationSnapshot(ApiModel):
     """An explicit dated portfolio value and optional benchmark observation."""
@@ -83,13 +96,83 @@ class ValuationSnapshot(ApiModel):
     benchmark_value: Optional[float] = Field(default=None, gt=0, le=1e12)
     source: PortfolioDataSource = "manual"
 
+    _valid_date = field_validator("date")(_validate_calendar_date)
+
+
+PerformanceRangePreset = Literal["1m", "3m", "6m", "ytd", "1y", "all", "custom"]
+
+
+class PerformanceRange(ApiModel):
+    preset: PerformanceRangePreset = "all"
+    start_date: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    end_date: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+
+    @field_validator("start_date", "end_date")
+    @classmethod
+    def validate_optional_date(cls, value: Optional[str]) -> Optional[str]:
+        return _validate_calendar_date(value) if value is not None else None
+
+    @model_validator(mode="after")
+    def validate_custom_range(self) -> "PerformanceRange":
+        if self.preset == "custom" and (self.start_date is None or self.end_date is None):
+            raise ValueError("custom ranges require startDate and endDate")
+        if self.start_date and self.end_date and self.start_date > self.end_date:
+            raise ValueError("startDate must be on or before endDate")
+        return self
+
+
+class PerformanceRequestedRange(ApiModel):
+    preset: PerformanceRangePreset
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+
+
+class PerformanceEffectiveRange(ApiModel):
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    day_count: int = Field(default=0, ge=0)
+
+
+class PerformanceInterval(ApiModel):
+    start_date: str
+    end_date: str
+    day_count: int = Field(gt=0)
+    external_flow: float
+    weighted_external_flow: float
+    return_value: Optional[float] = None
+    valid: bool
+
+
+class PerformanceCoverage(ApiModel):
+    calculation_status: Literal["unavailable", "partial", "complete"]
+    valuation_points: int = Field(ge=0)
+    interval_count: int = Field(ge=0)
+    valid_interval_count: int = Field(ge=0)
+    external_flow_count: int = Field(ge=0)
+    median_valuation_gap_days: Optional[float] = Field(default=None, ge=0)
+    ledger_completeness: Literal["unknown"] = "unknown"
+    benchmark_summary: Literal["none", "complete"]
+    benchmark_series: Literal["none", "partial", "complete"]
+    drawdown: Literal["snapshot_only"] = "snapshot_only"
+    allocation_history: Literal["none"] = "none"
+    attribution: Literal["none"] = "none"
+
+
+class PerformanceWarning(ApiModel):
+    code: str
+    message: str
+    dates: List[str] = Field(default_factory=list)
+
 
 class PerformancePoint(ApiModel):
     date: str
     value: float
     cumulative_contributions: float
-    portfolio_index: float
+    portfolio_index: Optional[float]
     benchmark_index: Optional[float] = None
+    external_flow: float = 0.0
+    period_return: Optional[float] = None
+    drawdown: Optional[float] = None
 
 
 class PerformanceSummary(ApiModel):
@@ -99,19 +182,37 @@ class PerformanceSummary(ApiModel):
     end_date: Optional[str]
     current_value: float
     net_contributions: float
-    gain: float
-    total_return: float
+    # Compatibility fields retained for existing clients. They mirror the
+    # canonical range metrics and are null when that calculation is unavailable.
+    gain: Optional[float]
+    total_return: Optional[float]
     benchmark_return: Optional[float]
     excess_return: Optional[float]
-    max_drawdown: float
+    max_drawdown: Optional[float]
     observations: int
     source: Literal["demo", "imported", "manual", "mixed"]
     points: List[PerformancePoint]
+    method: Literal["modified_dietz"] = "modified_dietz"
+    precision: Literal["estimated"] = "estimated"
+    flow_timing_assumption: Literal["date_weighted_end_of_day"] = (
+        "date_weighted_end_of_day"
+    )
+    requested_range: PerformanceRequestedRange
+    effective_range: PerformanceEffectiveRange
+    estimated_return: Optional[float] = None
+    annualized_return: Optional[float] = None
+    net_external_flow: float = 0.0
+    investment_gain: Optional[float] = None
+    current_drawdown: Optional[float] = None
+    coverage: PerformanceCoverage
+    intervals: List[PerformanceInterval] = Field(default_factory=list)
+    warnings: List[PerformanceWarning] = Field(default_factory=list)
 
 
 class PortfolioPerformanceRequest(ApiModel):
     transactions: List[PortfolioTransaction] = Field(max_length=5000)
     valuations: List[ValuationSnapshot] = Field(max_length=2000)
+    range: PerformanceRange = Field(default_factory=PerformanceRange)
 
 
 class PortfolioPerformanceResponse(ApiModel):

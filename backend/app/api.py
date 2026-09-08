@@ -47,9 +47,9 @@ def portfolio_analyze(req: PortfolioAnalyzeRequest) -> PortfolioAnalyzeResponse:
 
 @router.post("/portfolio/performance", response_model=PortfolioPerformanceResponse)
 def portfolio_performance(req: PortfolioPerformanceRequest) -> PortfolioPerformanceResponse:
-    """Cash-flow-adjusted performance from explicit workspace valuations."""
+    """Cash-flow-aware history from explicit workspace valuations."""
     return PortfolioPerformanceResponse(
-        performance=calculate_performance(req.transactions, req.valuations)
+        performance=calculate_performance(req.transactions, req.valuations, req.range)
     )
 
 

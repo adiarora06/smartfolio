@@ -24,6 +24,10 @@ The backend is the **canonical** home of both layers of the core rule:
 
 - `GET /health` — liveness + capability flags (live data, LLM, database)
 - `POST /portfolio/analyze` — deterministic diagnosis + AI-layer insight prose
+- `POST /portfolio/performance` — range-aware Portfolio History using chained
+  Modified Dietz estimates from dated account values and recorded external
+  cash flows. It returns effective dates, benchmark coverage, observed
+  drawdown, interval details, and explicit data-quality warnings.
 - `POST /portfolio/rebalance` — preview-only, exact-cent dollar rebalancing
   against a derived/named risk profile or an explicit target allocation. It
   supports full rebalance and new-money-only modes, contribution and minimum

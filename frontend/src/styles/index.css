@@ -2831,6 +2831,92 @@ button.dark { color: #fff; }
 }
 
 /* Portfolio risk lab ------------------------------------------------------- */
+.portfolioWorkspaceTabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  padding: 6px;
+  border: 1px solid #d7e1eb;
+  border-radius: 14px;
+  background: #edf3f7;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+.portfolioWorkspaceTab {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 11px;
+  align-items: center;
+  min-width: 0;
+  min-height: 64px;
+  border-color: transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #667085;
+  padding: 9px 13px;
+  text-align: left;
+}
+
+.portfolioWorkspaceTab > ion-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(100, 116, 139, 0.1);
+  color: #64748b;
+  padding: 9px;
+  font-size: 22px;
+}
+
+.portfolioWorkspaceTab span,
+.portfolioWorkspaceTab strong,
+.portfolioWorkspaceTab small { display: block; min-width: 0; }
+.portfolioWorkspaceTab strong { color: #172033; font-size: 16px; line-height: 1.25; }
+.portfolioWorkspaceTab small { margin-top: 2px; color: #667085; font-size: 14px; line-height: 1.35; }
+
+.portfolioWorkspaceTab.history:not(.active) {
+  border-color: rgba(15, 118, 110, 0.14);
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.portfolioWorkspaceTab.history:not(.active) > ion-icon {
+  background: rgba(15, 118, 110, 0.1);
+  color: #0f766e;
+}
+
+.portfolioWorkspaceTab:hover {
+  border-color: #d2dde8;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.portfolioWorkspaceTab.active {
+  border-color: #0f766e;
+  background: #0f766e;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.18);
+}
+
+.portfolioWorkspaceTab.active > ion-icon {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.portfolioWorkspaceTab.active strong { color: #fff; }
+.portfolioWorkspaceTab.active small { color: #cceee8; }
+.portfolioWorkspacePanel { display: grid; min-width: 0; gap: 14px; }
+
+@media (min-width: 992px) {
+  .portfolioWorkspaceTab { min-height: 72px; padding: 10px 15px; }
+  .portfolioWorkspaceTab strong { font-size: 17px; }
+  .portfolioWorkspaceTab small { font-size: 14px; }
+}
+
+@media (max-width: 720px) {
+  .portfolioWorkspaceTabs { gap: 4px; padding: 4px; }
+  .portfolioWorkspaceTab { grid-template-columns: 1fr; justify-items: center; padding: 8px 5px; text-align: center; }
+  .portfolioWorkspaceTab > ion-icon { width: 34px; height: 34px; padding: 7px; font-size: 20px; }
+  .portfolioWorkspaceTab small { display: none; }
+}
+
 .portfolioRiskLab {
   overflow: hidden;
   border: 1px solid var(--line);
@@ -4046,17 +4132,11 @@ button.dark { color: #fff; }
 
 .foundationHead small,
 .foundationHead h2,
-.foundationHead p,
-.foundationCardHead small,
-.foundationCardHead strong,
-.foundationLedgerHead small,
-.foundationLedgerHead h3 {
+.foundationHead p {
   display: block;
 }
 
-.foundationHead small,
-.foundationCardHead small,
-.foundationLedgerHead small {
+.foundationHead small {
   color: #0f766e;
   font-size: 11px;
   font-weight: 900;
@@ -4068,9 +4148,7 @@ button.dark { color: #fff; }
 .foundationHead p { margin: 3px 0 0; color: #667085; font-size: 14px; }
 .foundationActions { display: flex; flex-wrap: wrap; gap: 8px; }
 .foundationActions button,
-.foundationComposerActions button,
-.foundationLedgerHead button,
-.foundationLedger footer button {
+.foundationComposerActions button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4086,17 +4164,6 @@ button.dark { color: #fff; }
 .foundationPrimary:disabled { border-color: #cfd8e3; background: #e4eaf0; color: #7b8799; cursor: not-allowed; }
 .foundationFileInput { display: none; }
 
-.foundationComposer {
-  padding: 14px 18px;
-  border-bottom: 1px solid #dde5ee;
-  background: #f7fafc;
-}
-
-.foundationImportPreview { display: grid; gap: 12px; }
-.foundationImportPreview > div:first-child { display: flex; gap: 10px; align-items: center; }
-.foundationImportPreview > div:first-child > span:last-child { min-width: 0; }
-.foundationImportPreview strong { display: block; overflow: hidden; color: #172033; text-overflow: ellipsis; white-space: nowrap; }
-.foundationImportPreview small { display: block; color: #667085; font-size: 12px; }
 .foundationComposerIcon {
   display: grid;
   width: 38px;
@@ -4124,90 +4191,11 @@ button.dark { color: #fff; }
 .foundationActivityForm select { min-height: 42px; font-size: 14px; }
 .foundationActivityForm .foundationComposerActions { align-self: end; white-space: nowrap; }
 
-.foundationGrid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(350px, 0.75fr);
-  min-height: 410px;
-}
-
-.foundationPerformanceCard {
-  min-width: 0;
-  padding: 18px;
-  border-right: 1px solid rgba(255, 255, 255, 0.09);
-  background:
-    radial-gradient(circle at 90% 10%, rgba(72, 185, 168, 0.16), transparent 34%),
-    #101a30;
-  color: #dbe7f6;
-}
-
-.foundationCardHead { display: flex; justify-content: space-between; gap: 14px; align-items: center; }
-.foundationCardHead small { color: #69d1c0; }
-.foundationCardHead strong { margin-top: 2px; color: #fff; font-size: 15px; }
-.foundationMeasured { padding: 6px 9px; border: 1px solid rgba(105, 209, 192, 0.35); border-radius: 999px; background: rgba(105, 209, 192, 0.1); color: #8be3d5; font-size: 11px; font-weight: 850; }
-.foundationMeasured.pending { border-color: rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.06); color: #aab6c8; }
-
-.foundationMetrics {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin: 16px 0 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 11px;
-  background: rgba(255, 255, 255, 0.045);
-}
-.foundationMetrics > div { min-width: 0; padding: 11px 13px; border-right: 1px solid rgba(255, 255, 255, 0.1); }
-.foundationMetrics > div:last-child { border-right: 0; }
-.foundationMetrics span,
-.foundationMetrics strong,
-.foundationMetrics small { display: block; }
-.foundationMetrics span { color: #8fa0b8; font-size: 11px; font-weight: 850; letter-spacing: 0.04em; text-transform: uppercase; }
-.foundationMetrics strong { margin-top: 3px; overflow: hidden; color: #fff; font-size: 20px; text-overflow: ellipsis; white-space: nowrap; }
-.foundationMetrics strong.negative { color: #fda4af; }
-.foundationMetrics small { margin-top: 2px; overflow: hidden; color: #8fa0b8; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-
-.foundationChart { margin: 0; }
-.foundationChart svg { display: block; width: 100%; height: 226px; overflow: visible; }
-.foundationChart text { fill: #8797ad; font-size: 11px; }
-.foundationChartAxis { stroke: rgba(255, 255, 255, 0.12); }
-.foundationChartArea { fill: url(#foundation-area); }
-.foundationPortfolioLine { fill: none; stroke: #69d1c0; stroke-linecap: round; stroke-linejoin: round; stroke-width: 4; }
-.foundationBenchmarkLine { fill: none; stroke: #8fa0b8; stroke-dasharray: 7 7; stroke-linecap: round; stroke-width: 2.5; }
-.foundationPortfolioDot { fill: #69d1c0; stroke: #101a30; stroke-width: 3; }
-.foundationChart figcaption { display: flex; justify-content: flex-end; gap: 16px; color: #a9b6c8; font-size: 11px; }
-.foundationChart figcaption span { display: inline-flex; align-items: center; gap: 6px; }
-.foundationChart figcaption i { width: 18px; height: 3px; border-radius: 9px; background: #69d1c0; }
-.foundationChart figcaption i.benchmarkLegend { height: 0; border-top: 2px dashed #8fa0b8; background: transparent; }
-.foundationChartEmpty { display: grid; min-height: 230px; place-items: center; align-content: center; gap: 5px; color: #8fa0b8; text-align: center; }
-.foundationChartEmpty ion-icon { font-size: 28px; color: #69d1c0; }
-.foundationChartEmpty strong { color: #fff; }
-.foundationChartEmpty span { font-size: 12px; }
-
-.foundationLedger { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; background: #fff; }
-.foundationLedgerHead { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 15px; border-bottom: 1px solid #e1e7ef; }
-.foundationLedgerHead > span { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 10px; background: rgba(15, 118, 110, 0.1); color: #0f766e; font-size: 19px; }
-.foundationLedgerHead h3 { margin: 1px 0 0; font-size: 17px; }
-.foundationLedgerHead button { min-height: 36px; padding: 6px 9px; color: #0f766e; font-size: 12px; }
-
-.foundationActivityList { display: grid; align-content: start; }
-.foundationActivityList > div { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto 32px; gap: 9px; align-items: center; min-width: 0; padding: 11px 13px; border-bottom: 1px solid #edf1f5; }
-.foundationActivityList > div:hover { background: #f9fbfd; }
-.foundationActivityList > div > span:nth-child(2) { min-width: 0; }
-.foundationActivityList strong,
-.foundationActivityList small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.foundationActivityList strong { color: #172033; font-size: 13px; text-transform: capitalize; }
-.foundationActivityList small { margin-top: 1px; color: #7b8799; font-size: 11px; }
-.foundationActivityList b { color: #344054; font-size: 13px; font-variant-numeric: tabular-nums; }
-.foundationActivityList button { display: grid; width: 32px; min-height: 32px; padding: 0; place-items: center; border-color: transparent; color: #98a2b3; }
-.foundationActivityList button:hover { border-color: #fecdd3; background: #fff1f2; color: #be123c; }
-.foundationActivityList > p { margin: 0; padding: 24px; color: #7b8799; text-align: center; }
 .foundationActivityType { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9px; background: #eef2f6; color: #64748b; }
 .foundationActivityType.positive { background: #e9f8f3; color: #0f766e; }
 .foundationActivityType.negative { background: #fff1f2; color: #be123c; }
-.foundationLedger footer { display: flex; align-items: center; gap: 10px; padding: 10px 13px; border-top: 1px solid #e1e7ef; background: #f8fafc; color: #667085; font-size: 11px; }
-.foundationLedger footer button { min-height: 34px; margin-left: auto; padding: 5px 8px; font-size: 11px; }
 
 @media (max-width: 1120px) {
-  .foundationGrid { grid-template-columns: 1fr; }
-  .foundationLedger { border-top: 1px solid #dfe6ee; }
   .foundationActivityForm { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .foundationActivityForm .foundationDescription { grid-column: span 2; }
 }
@@ -4216,16 +4204,10 @@ button.dark { color: #fff; }
   .foundationHead { align-items: flex-start; flex-direction: column; }
   .foundationActions { width: 100%; }
   .foundationActions button { flex: 1; }
-  .foundationMetrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .foundationMetrics > div:nth-child(2) { border-right: 0; }
-  .foundationMetrics > div:nth-child(-n + 2) { border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
   .foundationActivityForm { grid-template-columns: 1fr 1fr; }
   .foundationActivityForm .foundationDescription { grid-column: 1 / -1; }
   .foundationActivityForm .foundationComposerActions { grid-column: 1 / -1; }
   .foundationComposerActions { flex-wrap: wrap; }
-  .foundationChart svg { height: 190px; }
-  .foundationLedgerHead { grid-template-columns: 38px minmax(0, 1fr); }
-  .foundationLedgerHead button { grid-column: 1 / -1; }
 }
 
 /* ==========================================================================
@@ -4283,12 +4265,6 @@ button.dark { color: #fff; }
   }
 
   .strategySavedRemove { width: 44px; }
-
-  .foundationActivityList > div {
-    grid-template-columns: 34px minmax(0, 1fr) auto 44px;
-  }
-
-  .foundationActivityList button { width: 44px; }
 
   .desktopPageHeader p { font-size: 18px; }
   .desktopPageActions button { font-size: 15px; }
@@ -4432,22 +4408,9 @@ button.dark { color: #fff; }
 
   /* Performance history and activity ledger supporting copy. */
   .foundationHead small,
-  .foundationImportPreview small,
   .foundationImportCounts span,
   .foundationImportErrors,
-  .foundationActivityForm label,
-  .foundationMeasured,
-  .foundationMetrics span,
-  .foundationMetrics small,
-  .foundationChart text,
-  .foundationChart figcaption,
-  .foundationChartEmpty span,
-  .foundationLedgerHead small,
-  .foundationActivityList strong,
-  .foundationActivityList small,
-  .foundationActivityList b,
-  .foundationLedger footer,
-  .foundationLedger footer button {
+  .foundationActivityForm label {
     font-size: 14px;
     line-height: 1.45;
   }
@@ -4458,10 +4421,7 @@ button.dark { color: #fff; }
   .strategyCompareCopy strong,
   .strategyCompareCopy small,
   .strategySavedCard strong,
-  .strategySavedCard small,
-  .foundationMetrics small,
-  .foundationActivityList strong,
-  .foundationActivityList small {
+  .strategySavedCard small {
     overflow: visible;
     text-overflow: clip;
     white-space: normal;
@@ -4480,8 +4440,6 @@ button.dark { color: #fff; }
   .strategyTerminalMetrics span,
   .strategySavedHead small,
   .strategySavedCard small,
-  .foundationActivityList small,
-  .foundationActivityList > p,
   .strategyApplyOptimizer:disabled,
   .foundationPrimary:disabled {
     color: #667085;
@@ -4490,15 +4448,10 @@ button.dark { color: #fff; }
   /* Muted annotations on navy surfaces need a lighter, not darker, token. */
   .portfolioStressList small,
   .strategyCompareCopy small,
-  .strategyComparePanel > p,
-  .foundationMetrics span,
-  .foundationMetrics small,
-  .foundationChart figcaption,
-  .foundationChartEmpty {
+  .strategyComparePanel > p {
     color: #aab6c8;
   }
 
-  .foundationChart text,
   .strategyMonteCarloChart text,
   .strategyProjectionChart text {
     fill: #8fa0b8;
@@ -4537,7 +4490,7 @@ button.dark { color: #fff; }
   .strategyAdvisorPanel :where(button, input, select, textarea, summary):focus-visible,
   .portfolioStressPanel :where(button, input, select, textarea, summary):focus-visible,
   .strategyComparePanel :where(button, input, select, textarea, summary):focus-visible,
-  .foundationPerformanceCard :where(button, input, select, textarea, summary):focus-visible {
+  .historyPerformanceCard :where(button, input, select, textarea, summary):focus-visible {
     outline-color: #5eead4;
   }
 }
@@ -4553,6 +4506,494 @@ button.dark { color: #fff; }
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Portfolio History ------------------------------------------------------
+   Range/view exploration stays prominent; data maintenance is disclosed in
+   one manager so the default Portfolio page remains calm and scannable. */
+.portfolioHistory {
+  overflow: hidden;
+  border-color: #d5e0eb;
+  border-radius: 16px;
+}
+
+.historyHead {
+  padding: 18px 20px;
+  background: linear-gradient(112deg, #ffffff 0%, #f3faf8 100%);
+}
+
+.historyHead h2 { font-size: 23px; letter-spacing: -0.015em; }
+.historyHead p { font-size: 15px; }
+.historyHeadActions button { min-height: 44px; font-size: 14px; }
+
+.historyManager {
+  display: grid;
+  gap: 15px;
+  padding: 15px 20px 18px;
+  border-bottom: 1px solid #dce5ee;
+  background: #f7fafc;
+}
+
+.historyManagerTabs {
+  display: inline-flex;
+  width: fit-content;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #d8e2ec;
+  border-radius: 10px;
+  background: #eef3f7;
+}
+
+.historyManagerTabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #667085;
+  padding: 7px 12px;
+  font-size: 14px;
+}
+
+.historyManagerTabs button.active {
+  background: #fff;
+  color: #0f766e;
+  box-shadow: 0 1px 5px rgba(15, 23, 42, 0.1);
+}
+
+.historyImportPanel,
+.historyCoveragePanel { display: grid; gap: 13px; }
+
+.historyImportIntro {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.historyImportIntro > span:nth-child(2) { min-width: 0; }
+.historyImportIntro strong,
+.historyImportIntro small { display: block; }
+.historyImportIntro strong { color: #172033; font-size: 16px; }
+.historyImportIntro small { margin-top: 2px; color: #667085; font-size: 14px; }
+.historyImportIntro button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+
+.historyCoverageStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid #d8e2ec;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.historyCoverageStats span {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border-right: 1px solid #e3e9f0;
+  color: #667085;
+  font-size: 14px;
+}
+
+.historyCoverageStats span:last-child { border-right: 0; }
+.historyCoverageStats strong { color: #172033; font-size: 16px; }
+
+.historyMethodNote {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 12px 14px;
+  border: 1px solid #cddde9;
+  border-radius: 10px;
+  background: #f7fbff;
+  color: #42637a;
+}
+
+.historyMethodNote ion-icon { margin-top: 2px; font-size: 20px; }
+.historyMethodNote p { margin: 0; font-size: 14px; line-height: 1.55; }
+
+.historyGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(370px, 0.72fr);
+  min-height: 540px;
+}
+
+.historyPerformanceCard {
+  min-width: 0;
+  padding: 18px 20px 15px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    radial-gradient(circle at 88% 8%, rgba(72, 185, 168, 0.16), transparent 34%),
+    #101a30;
+  color: #dbe7f6;
+}
+
+.historyControlBar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 12px 16px;
+  align-items: center;
+}
+
+.historySource small,
+.historySource strong { display: block; }
+.historySource small { color: #69d1c0; font-size: 12px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+.historySource strong { margin-top: 2px; color: #fff; font-size: 16px; }
+
+.historyEngineBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  gap: 6px;
+  border: 1px solid rgba(105, 209, 192, 0.28);
+  border-radius: 999px;
+  background: rgba(105, 209, 192, 0.1);
+  color: #8be3d5;
+  padding: 6px 9px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.historyEngineBadge.local {
+  border-color: rgba(255, 255, 255, 0.17);
+  background: rgba(255, 255, 255, 0.055);
+  color: #bdc9da;
+}
+
+.historyImportPolicy {
+  margin: 0;
+  color: #9eabc0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.historyViewPicker,
+.historyRangePicker {
+  display: inline-flex;
+  width: fit-content;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.historyRangePicker { justify-self: end; }
+.historyViewPicker button,
+.historyRangePicker button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #a9b6ca;
+  padding: 6px 11px;
+  font-size: 14px;
+}
+
+.historyViewPicker button.active,
+.historyRangePicker button.active {
+  background: rgba(94, 234, 212, 0.15);
+  color: #83eee0;
+  box-shadow: inset 0 0 0 1px rgba(94, 234, 212, 0.1);
+}
+
+.historyViewPicker button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.historyMetrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 15px 0 11px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.historyMetrics > div { min-width: 0; padding: 12px 14px; border-right: 1px solid rgba(255, 255, 255, 0.1); }
+.historyMetrics > div:last-child { border-right: 0; }
+.historyMetrics span,
+.historyMetrics strong,
+.historyMetrics small { display: block; }
+.historyMetrics span { color: #a9b6c8; font-size: 12px; font-weight: 850; letter-spacing: 0.04em; text-transform: uppercase; }
+.historyMetrics strong { margin-top: 3px; color: #fff; font-size: 22px; line-height: 1.2; }
+.historyMetrics strong.negative { color: #fda4af; }
+.historyMetrics small { margin-top: 3px; color: #aab6c8; font-size: 13px; line-height: 1.4; }
+
+.historyChart { margin: 0; }
+.historyPlot { position: relative; border-radius: 10px; }
+.historyPlot:focus-visible { outline: 3px solid #5eead4; outline-offset: 3px; }
+.historyChart svg { display: block; width: 100%; height: 288px; overflow: visible; touch-action: pan-y; }
+.historyChart text { fill: #98a8bd; font-size: 13px; }
+.historyGridLine { stroke: rgba(255, 255, 255, 0.1); stroke-width: 1; }
+.historyPrimaryArea { opacity: 1; }
+.historyPrimaryLine { fill: none; stroke: #69d1c0; stroke-linecap: round; stroke-linejoin: round; stroke-width: 4; }
+.historySecondaryLine { fill: none; stroke: #9aa9bd; stroke-dasharray: 8 7; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.5; }
+.historyCursorLine { stroke: rgba(255, 255, 255, 0.2); stroke-dasharray: 3 4; }
+.historyCursorDot { fill: #69d1c0; stroke: #101a30; stroke-width: 4; }
+.historyChart--drawdown .historyPrimaryLine { stroke: #fb7185; }
+.historyChart--drawdown .historyCursorDot { fill: #fb7185; }
+
+.historyTooltip {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  display: grid;
+  min-width: 210px;
+  gap: 5px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 9px;
+  background: rgba(9, 17, 33, 0.94);
+  color: #c5d2e4;
+  padding: 9px 10px;
+  pointer-events: none;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+  transform: translateX(10px);
+}
+
+.historyTooltip.alignRight { transform: translateX(calc(-100% - 10px)); }
+.historyTooltip > small { color: #91a4bf; font-size: 14px; }
+.historyTooltip > span { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; gap: 7px; align-items: center; font-size: 14px; }
+.historyTooltip i { width: 7px; height: 7px; border-radius: 50%; background: #69d1c0; }
+.historyTooltip i.secondary { background: #9aa9bd; }
+.historyTooltip strong { color: #fff; font-size: 14px; }
+
+.historyChart figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 15px;
+  color: #aab6c8;
+  font-size: 13px;
+}
+
+.historyChart figcaption span { display: inline-flex; align-items: center; gap: 6px; }
+.historyChart figcaption span:last-child { margin-left: auto; color: #8495ae; }
+.historyChart figcaption i { width: 18px; height: 3px; border-radius: 9px; background: #69d1c0; }
+.historyChart figcaption i.secondary { height: 0; border-top: 2px dashed #9aa9bd; background: transparent; }
+
+.historyChartEmpty {
+  display: grid;
+  min-height: 288px;
+  place-items: center;
+  align-content: center;
+  gap: 5px;
+  border: 1px dashed rgba(148, 163, 184, 0.22);
+  border-radius: 10px;
+  color: #aab6c8;
+  text-align: center;
+}
+
+.historyChartEmpty ion-icon { color: #69d1c0; font-size: 30px; }
+.historyChartEmpty strong { color: #fff; font-size: 17px; }
+.historyChartEmpty span { font-size: 14px; }
+
+.historyCoverageShortcut {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 18px;
+  gap: 9px;
+  align-items: center;
+  width: 100%;
+  min-height: 56px;
+  margin-top: 12px;
+  border-color: rgba(148, 163, 184, 0.17);
+  background: rgba(255, 255, 255, 0.035);
+  color: #aab6c8;
+  padding: 8px 11px;
+  text-align: left;
+}
+
+.historyCoverageShortcut > ion-icon:first-child { color: #69d1c0; font-size: 19px; }
+.historyCoverageShortcut strong,
+.historyCoverageShortcut small { display: block; }
+.historyCoverageShortcut strong { color: #dce7f7; font-size: 14px; }
+.historyCoverageShortcut small { margin-top: 1px; color: #91a2ba; font-size: 13px; }
+
+.historyActivityPanel {
+  display: grid;
+  min-width: 0;
+  grid-template-rows: auto auto 1fr auto;
+  background: #fff;
+}
+
+.historyActivityHead {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #e1e7ef;
+}
+
+.historyActivityHead > span {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(15, 118, 110, 0.1);
+  color: #0f766e;
+  font-size: 20px;
+}
+
+.historyActivityHead small,
+.historyActivityHead h3 { display: block; margin: 0; }
+.historyActivityHead small { color: #0f766e; font-size: 12px; font-weight: 850; letter-spacing: 0.07em; text-transform: uppercase; }
+.historyActivityHead h3 { margin-top: 2px; color: #172033; font-size: 19px; }
+.historyActivityHead button { display: inline-flex; align-items: center; gap: 5px; min-height: 40px; color: #0f766e; font-size: 14px; }
+
+.historyActivityFilters {
+  display: flex;
+  gap: 5px;
+  padding: 10px 13px;
+  border-bottom: 1px solid #e8edf3;
+  background: #f8fafc;
+}
+
+.historyActivityFilters button {
+  min-height: 36px;
+  border-color: transparent;
+  background: transparent;
+  color: #667085;
+  padding: 5px 9px;
+  font-size: 13px;
+}
+
+.historyActivityFilters button.active {
+  border-color: rgba(15, 118, 110, 0.18);
+  background: rgba(15, 118, 110, 0.08);
+  color: #0f766e;
+}
+
+.historyActivityList { display: grid; align-content: start; }
+.historyActivityRow {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto 40px;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 11px 13px;
+  border-bottom: 1px solid #edf1f5;
+}
+.historyActivityRow:hover { background: #f9fbfd; }
+.historyActivityRow > span:nth-child(2) { min-width: 0; }
+.historyActivityRow strong,
+.historyActivityRow small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.historyActivityRow strong { color: #172033; font-size: 14px; text-transform: capitalize; }
+.historyActivityRow small { margin-top: 2px; color: #667085; font-size: 13px; }
+.historyActivityRow b { color: #344054; font-size: 14px; font-variant-numeric: tabular-nums; }
+.historyActivityRow > button { display: grid; width: 40px; min-height: 40px; place-items: center; border-color: transparent; color: #98a2b3; padding: 0; }
+.historyActivityRow > button:hover { border-color: #fecdd3; background: #fff1f2; color: #be123c; }
+
+.historyActivityEmpty { display: grid; place-items: center; align-content: center; min-height: 250px; gap: 5px; color: #667085; text-align: center; }
+.historyActivityEmpty ion-icon { color: #0f766e; font-size: 30px; }
+.historyActivityEmpty strong { color: #172033; font-size: 16px; }
+.historyActivityEmpty small { font-size: 14px; }
+
+.historyActivityFooter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 13px;
+  border-top: 1px solid #e1e7ef;
+  background: #f8fafc;
+  color: #667085;
+  font-size: 13px;
+}
+.historyActivityFooter button { min-height: 36px; margin-left: auto; color: #0f766e; padding: 5px 8px; font-size: 13px; }
+
+.historyCoverageWarnings {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.historyCoverageWarnings li {
+  position: relative;
+  padding-left: 18px;
+  color: #5a6879;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.historyCoverageWarnings li::before {
+  position: absolute;
+  top: 0.6em;
+  left: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d97706;
+  content: '';
+}
+
+@media (min-width: 992px) {
+  .historyHead small,
+  .historySource small,
+  .historyMetrics span,
+  .historyActivityHead small { font-size: 12px; }
+  .historyManagerTabs button,
+  .historyViewPicker button,
+  .historyRangePicker button,
+  .historyHeadActions button { font-size: 15px; }
+  .historyImportIntro small,
+  .historyCoverageStats span,
+  .historyMethodNote p,
+  .historyMetrics small,
+  .historyChart text,
+  .historyChart figcaption,
+  .historyChartEmpty span,
+  .historyCoverageShortcut strong,
+  .historyCoverageShortcut small,
+  .historyActivityRow strong,
+  .historyActivityRow small,
+  .historyActivityRow b,
+  .historyActivityEmpty small,
+  .historyActivityFooter { font-size: 14px; line-height: 1.45; }
+  .historyActivityFilters button { font-size: 14px; }
+}
+
+@media (max-width: 1180px) {
+  .historyGrid { grid-template-columns: 1fr; }
+  .historyActivityPanel { border-top: 1px solid #dfe6ee; }
+  .historyActivityList { grid-template-columns: 1fr 1fr; }
+  .historyActivityRow:nth-child(odd) { border-right: 1px solid #edf1f5; }
+}
+
+@media (max-width: 900px) {
+  .historyControlBar { grid-template-columns: 1fr; }
+  .historyEngineBadge,
+  .historyRangePicker { justify-self: start; }
+  .historyCoverageStats { grid-template-columns: 1fr 1fr; }
+  .historyCoverageStats span:nth-child(2) { border-right: 0; }
+  .historyCoverageStats span:nth-child(-n + 2) { border-bottom: 1px solid #e3e9f0; }
+  .historyImportIntro { grid-template-columns: 42px minmax(0, 1fr); }
+  .historyImportIntro button { grid-column: auto; }
+}
+
+@media (max-width: 760px) {
+  .historyHeadActions { display: grid; grid-template-columns: 1fr; }
+  .historyManager { padding-inline: 14px; }
+  .historyManagerTabs { display: grid; width: 100%; grid-template-columns: 1fr; }
+  .historyPerformanceCard { padding: 15px 12px; }
+  .historyViewPicker { width: 100%; }
+  .historyViewPicker button { flex: 1; }
+  .historyMetrics { grid-template-columns: 1fr 1fr; }
+  .historyMetrics > div:nth-child(2) { border-right: 0; }
+  .historyMetrics > div:nth-child(-n + 2) { border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+  .historyChart svg { height: 240px; }
+  .historyTooltip { display: none; }
+  .historyActivityList { grid-template-columns: 1fr; }
+  .historyActivityRow:nth-child(odd) { border-right: 0; }
+  .historyActivityRow small { white-space: normal; }
 }
 
 /* Context-aware AI Assistant handoff. */

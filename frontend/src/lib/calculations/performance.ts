@@ -6,6 +6,39 @@ export interface PerformancePoint {
   cumulativeContributions: number
   portfolioIndex: number
   benchmarkIndex: number | null
+  /** Canonical backend history fields. Local fallback points omit these. */
+  externalFlow?: number
+  periodReturn?: number | null
+  drawdown?: number
+}
+
+export type PerformanceRangePreset = '1m' | '3m' | '6m' | 'ytd' | '1y' | 'all' | 'custom'
+
+export interface PerformanceRangeRequest {
+  preset: PerformanceRangePreset
+  startDate?: string
+  endDate?: string
+}
+
+export interface PerformanceCoverage {
+  calculationStatus: 'unavailable' | 'partial' | 'complete'
+  valuationPoints: number
+  intervalCount: number
+  validIntervalCount: number
+  externalFlowCount: number
+  medianValuationGapDays: number | null
+  ledgerCompleteness: 'unknown'
+  benchmarkSummary: 'none' | 'complete'
+  benchmarkSeries: 'none' | 'partial' | 'complete'
+  drawdown: 'snapshot_only'
+  allocationHistory: 'none'
+  attribution: 'none'
+}
+
+export interface PerformanceWarning {
+  code: string
+  message: string
+  dates: string[]
 }
 
 export interface PerformanceSummary {
@@ -15,14 +48,44 @@ export interface PerformanceSummary {
   endDate: string | null
   currentValue: number
   netContributions: number
-  gain: number
-  totalReturn: number
+  gain: number | null
+  totalReturn: number | null
   benchmarkReturn: number | null
   excessReturn: number | null
-  maxDrawdown: number
+  maxDrawdown: number | null
   observations: number
   source: 'demo' | 'imported' | 'manual' | 'mixed'
   points: PerformancePoint[]
+  /** Range-aware backend metrics. Optional while the explicit offline fallback is active. */
+  method?: 'modified_dietz'
+  precision?: 'estimated'
+  flowTimingAssumption?: 'date_weighted_end_of_day'
+  requestedRange?: {
+    preset: PerformanceRangePreset
+    startDate: string | null
+    endDate: string | null
+  }
+  effectiveRange?: {
+    startDate: string | null
+    endDate: string | null
+    dayCount: number
+  }
+  estimatedReturn?: number | null
+  annualizedReturn?: number | null
+  netExternalFlow?: number
+  investmentGain?: number | null
+  currentDrawdown?: number | null
+  coverage?: PerformanceCoverage
+  intervals?: Array<{
+    startDate: string
+    endDate: string
+    dayCount: number
+    externalFlow: number
+    weightedExternalFlow: number
+    returnValue: number | null
+    valid: boolean
+  }>
+  warnings?: PerformanceWarning[]
 }
 
 const externalFlow = (transaction: PortfolioTransaction): number => {
@@ -37,8 +100,9 @@ function sourceLabel(snapshots: ValuationSnapshot[]): PerformanceSummary['source
   return snapshots[0]?.source ?? 'manual'
 }
 
-/** Cash-flow-adjusted time-weighted performance from explicit dated valuations.
- * A return is only measured when at least two valuation dates exist. */
+/** Explicit offline fallback for the static build. It assigns each external
+ * cash flow to the end of its valuation interval; the backend's date-weighted
+ * Modified Dietz result is canonical whenever the API is reachable. */
 export function calculatePerformance(
   transactions: PortfolioTransaction[],
   valuations: ValuationSnapshot[],

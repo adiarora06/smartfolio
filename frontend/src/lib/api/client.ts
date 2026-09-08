@@ -16,7 +16,10 @@ import type {
   StockForecast,
   ValuationSnapshot,
 } from '../../types'
-import type { PerformanceSummary } from '../calculations/performance'
+import type {
+  PerformanceRangeRequest,
+  PerformanceSummary,
+} from '../calculations/performance'
 import type { PortfolioAnalysis } from '../calculations/portfolio'
 import type {
   AdvisorScenarioContext,
@@ -191,10 +194,12 @@ export function apiPreviewRebalance(input: RebalancePreviewInput): Promise<Rebal
 export function apiCalculatePerformance(
   transactions: PortfolioTransaction[],
   valuations: ValuationSnapshot[],
+  range: PerformanceRangeRequest = { preset: 'all' },
 ): Promise<{ performance: PerformanceSummary }> {
   return post<{ performance: PerformanceSummary }>('/portfolio/performance', {
     transactions,
     valuations,
+    range,
   })
 }
 

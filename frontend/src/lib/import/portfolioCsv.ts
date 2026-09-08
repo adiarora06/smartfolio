@@ -81,8 +81,23 @@ const numberValue = (value?: string): number | null => {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-const validDate = (value?: string): value is string =>
-  Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)))
+const validDate = (value?: string): value is string => {
+  const match = value?.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return false
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  if (year < 1) return false
+
+  const parsed = new Date(`${value}T00:00:00Z`)
+  return (
+    !Number.isNaN(parsed.getTime())
+    && parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() + 1 === month
+    && parsed.getUTCDate() === day
+  )
+}
 
 const rowId = (line: number, ...parts: Array<string | undefined>): string =>
   `csv-${line}-${parts.filter(Boolean).join('-').replace(/[^a-z0-9-]/gi, '').toLowerCase()}`

@@ -20,6 +20,7 @@ Interactive docs at http://localhost:8000/docs.
 |--------|----------------------|--------------|
 | GET    | `/health`            | Liveness check (the frontend pings this to detect the backend) |
 | POST   | `/portfolio/analyze` | Deterministic portfolio diagnosis + AI-layer insight prose |
+| POST   | `/portfolio/performance` | Range-aware Modified Dietz history from dated values and recorded cash flows |
 | POST   | `/portfolio/rebalance` | Preview exact-cent buy/sell dollar actions against a risk-profile or custom target |
 | POST   | `/portfolio/scenario-lab` | Seeded strategy comparisons + contribution optimizer |
 | POST   | `/stocks/analyze`    | Deterministic OpenVC-style forecast for a ticker + horizon |
@@ -62,6 +63,23 @@ cover minimum-trade suppression, contribution-only infeasibility, unresolved
 buy targets, cash constraints, and residual target drift. `canApply` is false
 whenever a target is unresolved or cash remains outside the projected holdings.
 
+## Portfolio History
+
+`POST /portfolio/performance` accepts explicit valuations, transactions, and a
+rolling or custom range. The backend geometrically links Modified Dietz
+intervals, weighting deposits and withdrawals by their recorded date. The
+response includes effective dates, account-value and normalized benchmark
+points, estimated return, net change after recorded external flows,
+snapshot-observed drawdown, interval details, and structured data-coverage
+warnings.
+
+This endpoint deliberately does not reconstruct history from current holdings.
+Its return is an estimate, ledger completeness is unknown, and total-value
+snapshots cannot establish historical allocation drift or holding-level return
+attribution. Conflicting same-day valuations, invalid capital bases, mixed
+benchmark symbols, and insufficient ranges return an explicit partial or
+unavailable state instead of a fabricated percentage.
+
 ## Architecture
 
 Same rule as everywhere in SmartFolio — **deterministic code calculates, AI
@@ -74,6 +92,7 @@ app/
   main.py           # app factory, CORS, /health
   services/         # Canonical deterministic financial engine
     portfolio.py      value, allocation, risk score, gaps, structured findings
+    performance.py    dated value history, Modified Dietz intervals, coverage
     rebalance.py      exact-cent preview planner, constraints, projected holdings
     stock.py          forecast bands, confidence, rating, prototype backtest
     data.py           targets, assumed returns, offline stock reference table

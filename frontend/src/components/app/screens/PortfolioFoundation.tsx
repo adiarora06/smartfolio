@@ -1,24 +1,42 @@
-import { type FormEvent, useMemo, useRef, useState } from 'react'
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { IonIcon } from '@ionic/react'
 import {
   addOutline,
+  barChartOutline,
+  calendarOutline,
   checkmarkCircleOutline,
+  chevronDownOutline,
+  chevronUpOutline,
   cloudUploadOutline,
   downloadOutline,
+  informationCircleOutline,
   pulseOutline,
+  serverOutline,
+  swapHorizontalOutline,
   timeOutline,
   trashOutline,
   walletOutline,
 } from 'ionicons/icons'
 import { useStore } from '../../../store/useStore'
-import { calculatePerformance, type PerformancePoint } from '../../../lib/calculations/performance'
+import {
+  calculatePerformance,
+  type PerformanceSummary,
+} from '../../../lib/calculations/performance'
+import { apiCalculatePerformance } from '../../../lib/api/client'
+import {
+  filterHistoryPoints,
+  summarizeHistory,
+  type HistoryRange,
+  type HistoryView,
+} from '../../../lib/portfolioHistory'
 import {
   parsePortfolioCsv,
   PORTFOLIO_CSV_TEMPLATE,
   type PortfolioImportResult,
 } from '../../../lib/import/portfolioCsv'
 import { fmt } from '../../../lib/format'
-import type { TransactionType } from '../../../types'
+import type { PortfolioTransaction, TransactionType } from '../../../types'
+import { PortfolioHistoryChart } from './PortfolioHistoryChart'
 
 const ACTIVITY_TYPES: Array<[TransactionType, string]> = [
   ['deposit', 'Deposit'],
@@ -29,6 +47,22 @@ const ACTIVITY_TYPES: Array<[TransactionType, string]> = [
   ['fee', 'Fee'],
 ]
 
+const RANGE_OPTIONS: Array<[HistoryRange, string]> = [
+  ['3m', '3M'],
+  ['6m', '6M'],
+  ['1y', '1Y'],
+  ['all', 'All'],
+]
+
+const VIEW_OPTIONS: Array<[HistoryView, string]> = [
+  ['performance', 'Performance'],
+  ['value', 'Value'],
+  ['drawdown', 'Drawdown'],
+]
+
+type ManageTab = 'activity' | 'import' | 'coverage'
+type ActivityFilter = 'all' | 'cash' | 'trades'
+
 const DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: 'numeric',
@@ -38,83 +72,36 @@ const DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
 const shortDate = (value: string): string =>
   DATE_FORMATTER.format(new Date(`${value}T12:00:00`))
 
+const localDateValue = (value = new Date()): string => {
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 const signedPct = (value: number | null): string =>
   value == null ? '—' : `${value >= 0 ? '+' : ''}${(value * 100).toFixed(1)}%`
 
-function chartPath(values: number[], width: number, height: number, min: number, max: number): string {
-  const span = Math.max(max - min, 1)
-  return values
-    .map((value, index) => {
-      const x = values.length === 1 ? width / 2 : (index / (values.length - 1)) * width
-      const y = height - ((value - min) / span) * height
-      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`
-    })
-    .join(' ')
-}
+const drawdownPct = (value: number | null): string =>
+  value == null ? '—' : `${(value * 100).toFixed(1)}%`
 
-function PerformanceHistoryChart({ points }: { points: PerformancePoint[] }) {
-  if (points.length < 2) {
-    return (
-      <div className="foundationChartEmpty">
-        <IonIcon icon={timeOutline} />
-        <strong>Two valuation dates unlock performance</strong>
-        <span>Import history or record another valuation later.</span>
-      </div>
-    )
-  }
-  const width = 640
-  const height = 184
-  const portfolio = points.map((point) => point.portfolioIndex)
-  const benchmark = points.map((point) => point.benchmarkIndex).filter((value): value is number => value != null)
-  const allValues = [...portfolio, ...benchmark]
-  const min = Math.min(...allValues) - 2
-  const max = Math.max(...allValues) + 2
-  const portfolioPath = chartPath(portfolio, width, height, min, max)
-  const benchmarkPath = benchmark.length === points.length
-    ? chartPath(benchmark, width, height, min, max)
-    : ''
-  const lastPoint = points[points.length - 1]
-  const lastPortfolioValue = portfolio[portfolio.length - 1]
-
-  return (
-    <figure className="foundationChart">
-      <svg
-        viewBox={`0 0 ${width} ${height + 26}`}
-        role="img"
-        aria-label={`Cash-flow-adjusted portfolio performance from ${points[0].date} to ${lastPoint.date}`}
-      >
-        <defs>
-          <linearGradient id="foundation-area" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#48b9a8" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="#48b9a8" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <line x1="0" y1={height} x2={width} y2={height} className="foundationChartAxis" />
-        <path d={`${portfolioPath} L ${width} ${height} L 0 ${height} Z`} className="foundationChartArea" />
-        {benchmarkPath && <path d={benchmarkPath} className="foundationBenchmarkLine" />}
-        <path d={portfolioPath} className="foundationPortfolioLine" />
-        <circle
-          cx={width}
-          cy={height - ((lastPortfolioValue - min) / Math.max(max - min, 1)) * height}
-          r="5"
-          className="foundationPortfolioDot"
-        />
-        <text x="0" y={height + 22}>{shortDate(points[0].date)}</text>
-        <text x={width} y={height + 22} textAnchor="end">{shortDate(lastPoint.date)}</text>
-      </svg>
-      <figcaption>
-        <span><i className="portfolioLegend" />Portfolio</span>
-        {benchmarkPath && <span><i className="benchmarkLegend" />Benchmark</span>}
-      </figcaption>
-    </figure>
-  )
-}
-
-function sourceLabel(source: ReturnType<typeof calculatePerformance>['source']): string {
+const sourceLabel = (source: PerformanceSummary['source']): string => {
   if (source === 'demo') return 'Demo history'
   if (source === 'imported') return 'Imported history'
   if (source === 'mixed') return 'Mixed sources'
   return 'Recorded history'
+}
+
+const activityIcon = (type: TransactionType) => {
+  if (type === 'buy' || type === 'sell') return swapHorizontalOutline
+  if (type === 'deposit' || type === 'withdrawal') return walletOutline
+  return pulseOutline
+}
+
+const matchesActivityFilter = (transaction: PortfolioTransaction, filter: ActivityFilter) => {
+  if (filter === 'cash') return transaction.type === 'deposit' || transaction.type === 'withdrawal'
+  if (filter === 'trades') return transaction.type === 'buy' || transaction.type === 'sell'
+  return true
 }
 
 export function PortfolioFoundation({ currentValue }: { currentValue: number }) {
@@ -124,37 +111,135 @@ export function PortfolioFoundation({ currentValue }: { currentValue: number }) 
   const addTransaction = useStore((state) => state.addTransaction)
   const removeTransaction = useStore((state) => state.removeTransaction)
   const recordValuation = useStore((state) => state.recordValuation)
-  const performance = useMemo(
+  const backendOnline = useStore((state) => state.backendOnline)
+
+  const localPerformance = useMemo(
     () => calculatePerformance(transactions, valuations),
     [transactions, valuations],
   )
+  const [range, setRange] = useState<HistoryRange>('all')
+  const requestKey = useMemo(
+    () => JSON.stringify({ transactions, valuations, range }),
+    [range, transactions, valuations],
+  )
+  const [canonicalPerformance, setCanonicalPerformance] = useState<{
+    key: string
+    performance: PerformanceSummary
+  } | null>(null)
+  const [engineState, setEngineState] = useState<'loading' | 'api' | 'local'>('loading')
+
+  useEffect(() => {
+    let active = true
+    if (backendOnline === false) {
+      setEngineState('local')
+      return () => {
+        active = false
+      }
+    }
+    setEngineState('loading')
+    void apiCalculatePerformance(transactions, valuations, { preset: range })
+      .then(({ performance }) => {
+        if (!active) return
+        setCanonicalPerformance({ key: requestKey, performance })
+        setEngineState('api')
+      })
+      .catch(() => {
+        if (active) setEngineState('local')
+      })
+    return () => {
+      active = false
+    }
+  }, [backendOnline, range, requestKey, transactions, valuations])
+
+  const performance = canonicalPerformance?.key === requestKey
+    ? canonicalPerformance.performance
+    : localPerformance
+  const usingCanonical = canonicalPerformance?.key === requestKey && engineState === 'api'
   const fileInput = useRef<HTMLInputElement>(null)
-  const [importOpen, setImportOpen] = useState(false)
-  const [activityOpen, setActivityOpen] = useState(false)
+  const [manageOpen, setManageOpen] = useState(false)
+  const [manageTab, setManageTab] = useState<ManageTab>('activity')
   const [importResult, setImportResult] = useState<PortfolioImportResult | null>(null)
   const [importName, setImportName] = useState('')
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [view, setView] = useState<HistoryView>('performance')
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all')
+  const [showAllActivity, setShowAllActivity] = useState(false)
+  const [date, setDate] = useState(() => localDateValue())
   const [type, setType] = useState<TransactionType>('deposit')
   const [symbol, setSymbol] = useState('')
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
 
-  const latestActivity = useMemo(
-    () => [...transactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5),
-    [transactions],
+  const rangePoints = useMemo(
+    () => usingCanonical ? performance.points : filterHistoryPoints(performance.points, range),
+    [performance.points, range, usingCanonical],
   )
+  const period = useMemo(() => summarizeHistory(rangePoints), [rangePoints])
+  const rangeExternalFlows = useMemo(() => {
+    if (!period.startDate || !period.endDate) return 0
+    return transactions
+      .filter(
+        (transaction) =>
+          transaction.date > period.startDate! && transaction.date <= period.endDate!,
+      )
+      .reduce((sum, transaction) => {
+        if (transaction.type === 'deposit') return sum + transaction.amount
+        if (transaction.type === 'withdrawal') return sum - transaction.amount
+        return sum
+      }, 0)
+  }, [period.endDate, period.startDate, transactions])
+  const investmentChange = usingCanonical
+    ? performance.investmentGain ?? null
+    : period.measured && period.startValue != null && period.endValue != null
+      ? period.endValue - period.startValue - rangeExternalFlows
+      : null
+  const effectiveStart = usingCanonical
+    ? performance.effectiveRange?.startDate ?? null
+    : period.startDate
+  const effectiveEnd = usingCanonical
+    ? performance.effectiveRange?.endDate ?? null
+    : period.endDate
+  const rangeObservations = usingCanonical
+    ? performance.coverage?.valuationPoints ?? performance.observations
+    : period.observations
+  const benchmarkObservations = rangePoints.filter((point) => point.benchmarkIndex != null).length
+  const calculationStatus = usingCanonical
+    ? performance.coverage?.calculationStatus ?? (performance.estimatedReturn == null ? 'unavailable' : 'complete')
+    : 'unavailable'
+  const calculationComplete = usingCanonical
+    && calculationStatus === 'complete'
+    && performance.estimatedReturn != null
+  const displayView: HistoryView = calculationComplete ? view : 'value'
+  const rangeReturn = calculationComplete ? performance.estimatedReturn ?? null : null
+  const rangeBenchmarkReturn = calculationComplete ? performance.benchmarkReturn ?? null : null
+  const rangeExcessReturn = calculationComplete ? performance.excessReturn ?? null : null
+  const rangeDrawdown = calculationComplete ? performance.maxDrawdown ?? null : null
+  const calculationLabel = usingCanonical
+    ? calculationStatus === 'complete' ? 'Calculated estimate' : calculationStatus === 'partial' ? 'Partial estimate' : 'Unavailable'
+    : 'Value history only'
+  const sortedActivity = useMemo(
+    () => [...transactions]
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .filter((transaction) => matchesActivityFilter(transaction, activityFilter)),
+    [activityFilter, transactions],
+  )
+  const visibleActivity = showAllActivity ? sortedActivity : sortedActivity.slice(0, 5)
+  const symbolCount = new Set(transactions.map((item) => item.symbol).filter(Boolean)).size
+
+  const openManager = (tab: ManageTab) => {
+    setManageTab(tab)
+    setManageOpen(true)
+  }
 
   const handleFile = async (file?: File) => {
     if (!file) return
     setImportName(file.name)
     setImportResult(parsePortfolioCsv(await file.text()))
-    setImportOpen(true)
+    openManager('import')
   }
 
   const applyImport = () => {
     if (!importResult) return
     applyPortfolioImport(importResult)
-    setImportOpen(false)
     setImportResult(null)
     setImportName('')
     if (fileInput.current) fileInput.current.value = ''
@@ -186,12 +271,11 @@ export function PortfolioFoundation({ currentValue }: { currentValue: number }) 
     setAmount('')
     setSymbol('')
     setDescription('')
-    setActivityOpen(false)
   }
 
   const recordToday = () => {
     recordValuation({
-      date: new Date().toISOString().slice(0, 10),
+      date: localDateValue(),
       value: currentValue,
       benchmarkSymbol: performance.benchmarkSymbol,
       benchmarkValue: null,
@@ -203,14 +287,14 @@ export function PortfolioFoundation({ currentValue }: { currentValue: number }) 
     : 0
 
   return (
-    <section className="portfolioFoundation" aria-labelledby="portfolio-foundation-title">
-      <header className="foundationHead">
+    <section className="portfolioFoundation portfolioHistory" aria-labelledby="portfolio-history-title">
+      <header className="foundationHead historyHead">
         <div>
-          <small>Portfolio foundation</small>
-          <h2 id="portfolio-foundation-title">Performance & activity</h2>
-          <p>Measured from dated account values and cash flows—not reconstructed from today’s holdings.</p>
+          <small>Portfolio history</small>
+          <h2 id="portfolio-history-title">Performance, value & activity</h2>
+          <p>Explore estimates from dated account values and recorded cash flows.</p>
         </div>
-        <div className="foundationActions">
+        <div className="foundationActions historyHeadActions">
           <input
             ref={fileInput}
             className="foundationFileInput"
@@ -219,48 +303,37 @@ export function PortfolioFoundation({ currentValue }: { currentValue: number }) 
             aria-label="Choose portfolio CSV"
             onChange={(event) => void handleFile(event.target.files?.[0])}
           />
-          <button onClick={() => fileInput.current?.click()}>
-            <IonIcon icon={cloudUploadOutline} />
-            Import CSV
+          <button onClick={recordToday}>
+            <IonIcon icon={calendarOutline} />
+            Record today’s value
           </button>
-          <button className="foundationPrimary" onClick={() => setActivityOpen((open) => !open)}>
-            <IonIcon icon={addOutline} />
-            Add activity
+          <button
+            className={manageOpen ? 'foundationPrimary' : ''}
+            aria-expanded={manageOpen}
+            aria-controls="portfolio-history-manager"
+            onClick={() => setManageOpen((open) => !open)}
+          >
+            <IonIcon icon={manageOpen ? chevronUpOutline : chevronDownOutline} />
+            Manage history
           </button>
         </div>
       </header>
 
-      {(importOpen || activityOpen) && (
-        <div className="foundationComposer">
-          {importOpen && (
-            <div className="foundationImportPreview" aria-live="polite">
-              <div>
-                <span className="foundationComposerIcon"><IonIcon icon={cloudUploadOutline} /></span>
-                <span>
-                  <small>CSV preview</small>
-                  <strong>{importName || 'Portfolio import'}</strong>
-                </span>
-              </div>
-              <div className="foundationImportCounts">
-                <span><strong>{importResult?.holdings.length ?? 0}</strong> holdings</span>
-                <span><strong>{importResult?.transactions.length ?? 0}</strong> activities</span>
-                <span><strong>{importResult?.valuations.length ?? 0}</strong> valuations</span>
-              </div>
-              {!!importResult?.errors.length && (
-                <ul className="foundationImportErrors">
-                  {importResult.errors.slice(0, 3).map((error) => <li key={error}>{error}</li>)}
-                </ul>
-              )}
-              <div className="foundationComposerActions">
-                <button onClick={downloadTemplate}><IonIcon icon={downloadOutline} />Template</button>
-                <button onClick={() => setImportOpen(false)}>Cancel</button>
-                <button className="foundationPrimary" disabled={!importCount} onClick={applyImport}>
-                  <IonIcon icon={checkmarkCircleOutline} />Apply import
-                </button>
-              </div>
-            </div>
-          )}
-          {activityOpen && (
+      {manageOpen && (
+        <div className="historyManager" id="portfolio-history-manager">
+          <div className="historyManagerTabs" role="group" aria-label="History data tools">
+            <button aria-pressed={manageTab === 'activity'} className={manageTab === 'activity' ? 'active' : ''} onClick={() => setManageTab('activity')}>
+              <IonIcon icon={addOutline} /> Add activity
+            </button>
+            <button aria-pressed={manageTab === 'import'} className={manageTab === 'import' ? 'active' : ''} onClick={() => setManageTab('import')}>
+              <IonIcon icon={cloudUploadOutline} /> Import CSV
+            </button>
+            <button aria-pressed={manageTab === 'coverage'} className={manageTab === 'coverage' ? 'active' : ''} onClick={() => setManageTab('coverage')}>
+              <IonIcon icon={informationCircleOutline} /> Data coverage
+            </button>
+          </div>
+
+          {manageTab === 'activity' && (
             <form className="foundationActivityForm" onSubmit={saveActivity}>
               <label>Date<input type="date" value={date} onChange={(event) => setDate(event.target.value)} required /></label>
               <label>Type<select value={type} onChange={(event) => setType(event.target.value as TransactionType)}>{ACTIVITY_TYPES.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
@@ -268,48 +341,181 @@ export function PortfolioFoundation({ currentValue }: { currentValue: number }) 
               <label>Amount<input type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.00" required /></label>
               <label className="foundationDescription">Description<input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Optional note" /></label>
               <div className="foundationComposerActions">
-                <button type="button" onClick={() => setActivityOpen(false)}>Cancel</button>
+                <button type="button" onClick={() => setManageOpen(false)}>Cancel</button>
                 <button className="foundationPrimary" type="submit">Save activity</button>
               </div>
             </form>
           )}
+
+          {manageTab === 'import' && (
+            <div className="historyImportPanel" aria-live="polite">
+              <div className="historyImportIntro">
+                <span className="foundationComposerIcon"><IonIcon icon={cloudUploadOutline} /></span>
+                <span>
+                  <strong>{importName || 'Import portfolio history'}</strong>
+                  <small>Upload holdings, account activity, and dated valuations from one CSV.</small>
+                </span>
+                <button onClick={() => fileInput.current?.click()}>Choose CSV</button>
+                <button onClick={downloadTemplate}><IonIcon icon={downloadOutline} /> Template</button>
+              </div>
+              {importResult && (
+                <>
+                  <div className="foundationImportCounts">
+                    <span><strong>{importResult.holdings.length}</strong> holdings</span>
+                    <span><strong>{importResult.transactions.length}</strong> activities</span>
+                    <span><strong>{importResult.valuations.length}</strong> valuations</span>
+                  </div>
+                  {!!importResult.errors.length && (
+                    <ul className="foundationImportErrors">
+                      {importResult.errors.slice(0, 3).map((error) => <li key={error}>{error}</li>)}
+                    </ul>
+                  )}
+                  <p className="historyImportPolicy">
+                    Applying replaces each category included in this file. Existing categories not included stay unchanged.
+                  </p>
+                  <div className="foundationComposerActions">
+                    <button onClick={() => setImportResult(null)}>Clear preview</button>
+                    <button className="foundationPrimary" disabled={!importCount || !!importResult.errors.length} onClick={applyImport}>
+                      <IonIcon icon={checkmarkCircleOutline} />
+                      {importResult.errors.length ? 'Fix errors to import' : 'Apply import'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {manageTab === 'coverage' && (
+            <div className="historyCoveragePanel">
+              <div className="historyCoverageStats">
+                <span><strong>{calculationLabel}</strong> calculation status</span>
+                <span><strong>{rangeObservations}</strong> dated values in range</span>
+                <span><strong>{benchmarkObservations}</strong> benchmark points</span>
+                <span><strong>Not connected</strong> daily risk series</span>
+              </div>
+              <div className="historyMethodNote">
+                <IonIcon icon={informationCircleOutline} />
+                <p>
+                  {usingCanonical
+                    ? 'Modified Dietz estimates returns by weighting recorded external cash flows by date. Investment gain still depends on a complete ledger. Total-value snapshots cannot establish allocation drift or holding-level return attribution.'
+                    : 'Offline mode shows recorded values and cash-flow activity only. Return and drawdown estimates require the Python calculation engine. Total-value snapshots cannot establish allocation drift or holding-level return attribution.'}
+                </p>
+              </div>
+              {!!performance.warnings?.length && usingCanonical && (
+                <ul className="historyCoverageWarnings">
+                  {performance.warnings.map((warning) => (
+                    <li key={`${warning.code}-${warning.dates.join('-')}`}>{warning.message}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
       )}
 
-      <div className="foundationGrid">
-        <div className="foundationPerformanceCard">
-          <div className="foundationCardHead">
-            <span>
+      <div className="historyGrid">
+        <div className="historyPerformanceCard">
+          <div className="historyControlBar">
+            <span className="historySource">
               <small>{sourceLabel(performance.source)}</small>
-              <strong>{performance.startDate && performance.endDate ? `${shortDate(performance.startDate)} — ${shortDate(performance.endDate)}` : 'Waiting for history'}</strong>
+              <strong>
+                {effectiveStart && effectiveEnd
+                  ? effectiveStart === effectiveEnd
+                    ? `Effective ${shortDate(effectiveEnd)}`
+                    : `${shortDate(effectiveStart)} — ${shortDate(effectiveEnd)}`
+                  : 'Waiting for dated values'}
+              </strong>
             </span>
-            <span className={`foundationMeasured ${performance.measured ? '' : 'pending'}`}>
-              {performance.measured ? 'Measured' : 'Needs history'}
+            <span className={`historyEngineBadge ${usingCanonical ? '' : 'local'}`}>
+              <IonIcon icon={usingCanonical ? serverOutline : timeOutline} />
+              {engineState === 'loading' ? 'Updating history' : usingCanonical ? 'Backend estimate' : 'Offline values'}
             </span>
+            <div className="historyViewPicker" role="group" aria-label="History chart view">
+              {VIEW_OPTIONS.map(([value, label]) => (
+                <button
+                  aria-pressed={displayView === value}
+                  className={displayView === value ? 'active' : ''}
+                  disabled={value !== 'value' && !calculationComplete}
+                  title={value !== 'value' && !calculationComplete ? 'Available when the backend calculation is complete' : undefined}
+                  onClick={() => setView(value)}
+                  key={value}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="historyRangePicker" aria-label="History time range">
+              {RANGE_OPTIONS.map(([value, label]) => (
+                <button aria-pressed={range === value} className={range === value ? 'active' : ''} onClick={() => setRange(value)} key={value}>{label}</button>
+              ))}
+            </div>
           </div>
-          <div className="foundationMetrics">
-            <div><span>Portfolio return</span><strong>{performance.measured ? signedPct(performance.totalReturn) : '—'}</strong><small>cash-flow adjusted</small></div>
-            <div><span>vs {performance.benchmarkSymbol}</span><strong className={(performance.excessReturn ?? 0) < 0 ? 'negative' : ''}>{signedPct(performance.excessReturn)}</strong><small>{performance.benchmarkReturn == null ? 'benchmark unavailable' : `${signedPct(performance.benchmarkReturn)} benchmark`}</small></div>
-            <div><span>Net contributed</span><strong>{fmt.format(performance.netContributions)}</strong><small>{fmt.format(performance.gain)} value above flows</small></div>
-            <div><span>Max drawdown</span><strong>{performance.measured ? signedPct(performance.maxDrawdown) : '—'}</strong><small>{performance.observations} valuation points</small></div>
+
+          <div className="historyMetrics">
+            <div>
+              <span>Estimated return</span>
+              <strong>{signedPct(rangeReturn)}</strong>
+              <small>{rangeReturn != null ? `${rangeObservations} observed values in range` : usingCanonical ? 'complete valuation intervals required' : 'backend calculation required'}</small>
+            </div>
+            <div>
+              <span>Value change after flows</span>
+              <strong className={(investmentChange ?? 0) < 0 ? 'negative' : ''}>
+                {investmentChange == null ? '—' : fmt.format(investmentChange)}
+              </strong>
+              <small>estimated from recorded flows · ledger-dependent</small>
+            </div>
+            <div>
+              <span>Vs {performance.benchmarkSymbol}</span>
+              <strong className={(rangeExcessReturn ?? 0) < 0 ? 'negative' : ''}>{signedPct(rangeExcessReturn)}</strong>
+              <small>{rangeBenchmarkReturn == null ? 'benchmark coverage incomplete' : `${signedPct(rangeBenchmarkReturn)} benchmark estimate`}</small>
+            </div>
+            <div>
+              <span>Range drawdown</span>
+              <strong>{drawdownPct(rangeDrawdown)}</strong>
+              <small>peak-to-trough from observed values</small>
+            </div>
           </div>
-          <PerformanceHistoryChart points={performance.points} />
+
+          <PortfolioHistoryChart
+            points={rangePoints}
+            view={displayView}
+            benchmarkSymbol={performance.benchmarkSymbol}
+          />
+
+          <button className="historyCoverageShortcut" onClick={() => openManager('coverage')}>
+            <IonIcon icon={informationCircleOutline} />
+            <span>
+              <strong>{rangeObservations} valuation points · {benchmarkObservations} benchmark points</strong>
+              <small>See estimation limits and future risk-data coverage</small>
+            </span>
+            <IonIcon icon={chevronDownOutline} />
+          </button>
         </div>
 
-        <aside className="foundationLedger">
-          <div className="foundationLedgerHead">
+        <aside className="historyActivityPanel" aria-labelledby="history-activity-title">
+          <div className="historyActivityHead">
             <span><IonIcon icon={walletOutline} /></span>
-            <div><small>Transaction ledger</small><h3>Recent activity</h3></div>
-            <button onClick={recordToday}>Record today</button>
+            <div>
+              <small>Recorded ledger</small>
+              <h3 id="history-activity-title">Account activity</h3>
+            </div>
+            <button onClick={() => openManager('activity')}><IonIcon icon={addOutline} /> Add</button>
           </div>
-          <div className="foundationActivityList">
-            {latestActivity.map((transaction) => {
+
+          <div className="historyActivityFilters" aria-label="Activity filter">
+            {([['all', 'All'], ['cash', 'Cash flows'], ['trades', 'Trades']] as Array<[ActivityFilter, string]>).map(([value, label]) => (
+              <button aria-pressed={activityFilter === value} className={activityFilter === value ? 'active' : ''} onClick={() => setActivityFilter(value)} key={value}>{label}</button>
+            ))}
+          </div>
+
+          <div className="historyActivityList">
+            {visibleActivity.map((transaction) => {
               const positive = transaction.type === 'deposit' || transaction.type === 'dividend'
               const negative = transaction.type === 'withdrawal' || transaction.type === 'fee'
               return (
-                <div key={transaction.id}>
+                <div className="historyActivityRow" key={transaction.id}>
                   <span className={`foundationActivityType ${positive ? 'positive' : negative ? 'negative' : ''}`}>
-                    <IonIcon icon={pulseOutline} />
+                    <IonIcon icon={activityIcon(transaction.type)} />
                   </span>
                   <span>
                     <strong>{transaction.type}{transaction.symbol ? ` · ${transaction.symbol}` : ''}</strong>
@@ -322,12 +528,22 @@ export function PortfolioFoundation({ currentValue }: { currentValue: number }) 
                 </div>
               )
             })}
-            {!latestActivity.length && <p>No activity yet. Add an entry or import a CSV.</p>}
+            {!visibleActivity.length && (
+              <div className="historyActivityEmpty">
+                <IonIcon icon={barChartOutline} />
+                <strong>No matching activity</strong>
+                <small>Add an entry or change the filter.</small>
+              </div>
+            )}
           </div>
-          <footer>
-            <span>{transactions.length} activities</span>
-            <span>{valuations.length} valuations</span>
-            <button onClick={downloadTemplate}><IonIcon icon={downloadOutline} />CSV template</button>
+
+          <footer className="historyActivityFooter">
+            <span>{transactions.length} entries · {symbolCount} symbols</span>
+            {sortedActivity.length > 5 && (
+              <button onClick={() => setShowAllActivity((show) => !show)}>
+                {showAllActivity ? 'Show recent' : `View all ${sortedActivity.length}`}
+              </button>
+            )}
           </footer>
         </aside>
       </div>

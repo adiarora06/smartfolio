@@ -812,5 +812,7 @@ def test_performance_refuses_to_claim_return_from_one_valuation():
         ],
     )
     assert not performance.measured
-    assert performance.total_return == 0
+    assert performance.total_return is None
+    assert performance.max_drawdown is None
+    assert performance.gain is None
     assert performance.benchmark_return is None

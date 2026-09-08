@@ -2,7 +2,7 @@
 // headline metrics, an allocation donut, and per-holding weight bars that all
 // recalculate live as you type.
 
-import { useState } from 'react'
+import { useRef, useState, type KeyboardEvent } from 'react'
 import { useStore } from '../../../store/useStore'
 import { usePortfolioAnalysis } from '../../../hooks/usePortfolioAnalysis'
 import { fmt, pct, title } from '../../../lib/format'
@@ -24,11 +24,14 @@ import {
   analyticsOutline,
   alertCircleOutline,
   arrowForwardOutline,
+  pieChartOutline,
   pulseOutline,
   refreshOutline,
   shieldCheckmarkOutline,
+  timeOutline,
   trendingDownOutline,
   trashOutline,
+  walletOutline,
 } from 'ionicons/icons'
 import { MetricCard, MetricGrid, Panel, PanelHead } from '../../shared/ui'
 import { AppPage } from '../../shared/AppPage'
@@ -46,6 +49,19 @@ const ASSET_OPTIONS: Array<[AssetClass, string]> = [
 ]
 
 const TYPE_OPTIONS: HoldingType[] = ['stock', 'etf', 'cash']
+
+type PortfolioView = 'snapshot' | 'history' | 'holdings'
+
+const PORTFOLIO_VIEWS: Array<{
+  id: PortfolioView
+  label: string
+  detail: string
+  icon: string
+}> = [
+  { id: 'snapshot', label: 'Snapshot', detail: 'Allocation & risk', icon: pieChartOutline },
+  { id: 'history', label: 'History', detail: 'Performance & activity', icon: timeOutline },
+  { id: 'holdings', label: 'Holdings', detail: 'Review & edit', icon: walletOutline },
+]
 
 // Light-theme palette per asset class (donut + legend swatches).
 const ASSET_COLORS: Record<string, string> = {
@@ -209,6 +225,30 @@ export function PortfolioScreen() {
   const removeHolding = useStore((s) => s.removeHolding)
   const updateHolding = useStore((s) => s.updateHolding)
   const openAssistant = useStore((s) => s.openAssistant)
+  const [portfolioView, setPortfolioView] = useState<PortfolioView>('snapshot')
+  const viewTabs = useRef<Array<HTMLButtonElement | null>>([])
+
+  const selectPortfolioView = (view: PortfolioView, focus = false) => {
+    const index = PORTFOLIO_VIEWS.findIndex((item) => item.id === view)
+    setPortfolioView(view)
+    if (focus) requestAnimationFrame(() => viewTabs.current[index]?.focus())
+  }
+
+  const handleViewKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    let nextIndex: number | null = null
+    if (event.key === 'ArrowRight') nextIndex = (index + 1) % PORTFOLIO_VIEWS.length
+    if (event.key === 'ArrowLeft') nextIndex = (index - 1 + PORTFOLIO_VIEWS.length) % PORTFOLIO_VIEWS.length
+    if (event.key === 'Home') nextIndex = 0
+    if (event.key === 'End') nextIndex = PORTFOLIO_VIEWS.length - 1
+    if (nextIndex == null) return
+    event.preventDefault()
+    selectPortfolioView(PORTFOLIO_VIEWS[nextIndex].id, true)
+  }
+
+  const addAndEditHolding = () => {
+    addHolding()
+    selectPortfolioView('holdings')
+  }
 
   // Donut segments from the live asset-class allocation.
   const segments: DonutSegment[] = Object.entries(analysis.current)
@@ -271,10 +311,10 @@ export function PortfolioScreen() {
   return (
     <AppPage
       title="Portfolio"
-      subtitle="Holdings, measured performance, and risk — updated together."
+      subtitle="Allocation, estimated performance, and risk — one focused view at a time."
       actions={
         <>
-          <button className="primary" onClick={addHolding}>
+          <button className="primary" onClick={addAndEditHolding}>
             <IonIcon icon={addOutline} />
             Add holding
           </button>
@@ -286,6 +326,37 @@ export function PortfolioScreen() {
       }
     >
       <div className="portfolioScreen">
+      <nav className="portfolioWorkspaceTabs" role="tablist" aria-label="Portfolio workspace views">
+        {PORTFOLIO_VIEWS.map((item, index) => (
+          <button
+            ref={(element) => { viewTabs.current[index] = element }}
+            id={`portfolio-${item.id}-tab`}
+            className={`portfolioWorkspaceTab ${item.id === 'history' ? 'history' : ''} ${portfolioView === item.id ? 'active' : ''}`}
+            role="tab"
+            aria-selected={portfolioView === item.id}
+            aria-controls={`portfolio-${item.id}-panel`}
+            tabIndex={portfolioView === item.id ? 0 : -1}
+            onClick={() => selectPortfolioView(item.id)}
+            onKeyDown={(event) => handleViewKeyDown(event, index)}
+            key={item.id}
+          >
+            <IonIcon icon={item.icon} />
+            <span>
+              <strong>{item.label}</strong>
+              <small>{item.id === 'holdings' ? `${holdings.length} positions · edit` : item.detail}</small>
+            </span>
+          </button>
+        ))}
+      </nav>
+
+      {portfolioView === 'snapshot' && (
+      <div
+        className="portfolioWorkspacePanel portfolioSnapshotView"
+        id="portfolio-snapshot-panel"
+        role="tabpanel"
+        aria-labelledby="portfolio-snapshot-tab"
+        tabIndex={0}
+      >
       <div className="portfolioSummaryBand">
       <MetricGrid>
         <MetricCard
@@ -355,8 +426,6 @@ export function PortfolioScreen() {
 
       <RebalancePlanner analysis={analysis} />
       </div>
-
-      <PortfolioFoundation currentValue={analysis.value} />
 
       <section className="portfolioRiskLab" aria-labelledby="portfolio-risk-title">
         <header className="portfolioRiskHead">
@@ -478,7 +547,29 @@ export function PortfolioScreen() {
           Assumption-driven estimates for education—not forecasts or guarantees. Live market histories will replace assumptions in a later calibration pass.
         </footer>
       </section>
+      </div>
+      )}
 
+      {portfolioView === 'history' && (
+        <div
+          className="portfolioWorkspacePanel portfolioHistoryView"
+          id="portfolio-history-panel"
+          role="tabpanel"
+          aria-labelledby="portfolio-history-tab"
+          tabIndex={0}
+        >
+          <PortfolioFoundation currentValue={analysis.value} />
+        </div>
+      )}
+
+      {portfolioView === 'holdings' && (
+      <div
+        className="portfolioWorkspacePanel portfolioHoldingsView"
+        id="portfolio-holdings-panel"
+        role="tabpanel"
+        aria-labelledby="portfolio-holdings-tab"
+        tabIndex={0}
+      >
       <Panel className="portfolioHoldingsPanel">
         <PanelHead title={<span>Holdings <small>{holdings.length} positions</small></span>} />
         <div className="body">
@@ -566,6 +657,8 @@ export function PortfolioScreen() {
             </IonList>
           </div>
       </Panel>
+      </div>
+      )}
       </div>
     </AppPage>
   )
