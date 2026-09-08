@@ -5,10 +5,13 @@
 // unavailable state instead of silently running a second implementation.
 
 import type {
+  AllocationMap,
+  AssetClass,
   AssistantSourceContext,
   Holding,
   InvestorProfile,
   PortfolioTransaction,
+  RiskProfileName,
   StockAnalyzeResponse,
   StockForecast,
   ValuationSnapshot,
@@ -121,6 +124,68 @@ export function apiAnalyzePortfolio(
   holdings: Holding[],
 ): Promise<PortfolioAnalyzeResult> {
   return post<PortfolioAnalyzeResult>('/portfolio/analyze', { profile, holdings })
+}
+
+export type RebalanceMode = 'rebalance' | 'new_money_only'
+export type RebalanceAction = 'buy' | 'sell'
+
+/** One deterministic model trade. A missing symbol is intentionally unresolved:
+ * the engine knows which asset class is needed, but does not invent a security. */
+export interface RebalanceTrade {
+  symbol?: string | null
+  name?: string | null
+  asset: AssetClass
+  action: RebalanceAction
+  amount: number
+  beforeValue?: number | null
+  afterValue?: number | null
+  resolved: boolean
+}
+
+export interface RebalancePreview {
+  mode: RebalanceMode
+  beforeTotal: number
+  afterTotal: number
+  totalTraded: number
+  estimatedTrades: number
+  beforeAllocation: AllocationMap
+  afterAllocation: AllocationMap
+  targetAllocation: AllocationMap
+  targetSource: 'risk_profile' | 'custom'
+  targetProfile?: RiskProfileName | null
+  /** Canonical modeled holdings after the plan. Apply and undo use this exact payload. */
+  projectedHoldings: Holding[]
+  trades: RebalanceTrade[]
+  warnings: Array<{
+    code: string
+    message: string
+    asset?: AssetClass | null
+    amount?: number | null
+  }>
+  canApply: boolean
+  totalBuys: number
+  totalSells: number
+  cashRemaining: number
+  unresolvedAmount: number
+  exactTargetReached: boolean
+  previewOnly: boolean
+}
+
+export interface RebalancePreviewInput {
+  profile: InvestorProfile
+  holdings: Holding[]
+  mode: RebalanceMode
+  contributionAmount: number
+  minTradeAmount: number
+}
+
+/** Preview only. SmartFolio never sends brokerage orders from this endpoint. */
+export function apiPreviewRebalance(input: RebalancePreviewInput): Promise<RebalancePreview> {
+  return post<RebalancePreview>(
+    '/portfolio/rebalance',
+    { ...input, previewOnly: true },
+    { timeoutMs: SLOW_TIMEOUT_MS },
+  )
 }
 
 export function apiCalculatePerformance(

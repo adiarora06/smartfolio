@@ -7,9 +7,10 @@ snake_case internally.
 """
 from __future__ import annotations
 
+import math
 from typing import Dict, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 
 
@@ -21,6 +22,15 @@ class ApiModel(BaseModel):
 
 RiskProfileName = Literal["conservative", "balanced", "growth", "aggressive"]
 StockRating = Literal["Constructive", "Neutral", "Cautious"]
+AssetClass = Literal[
+    "us_equity",
+    "intl_equity",
+    "bonds",
+    "cash",
+    "alternatives",
+    "crypto",
+    "other",
+]
 
 
 class InvestorProfile(ApiModel):
@@ -38,9 +48,7 @@ class Holding(ApiModel):
     symbol: str = Field(max_length=16)
     name: str = Field(max_length=128)
     type: Literal["stock", "etf", "cash"]
-    asset: Literal[
-        "us_equity", "intl_equity", "bonds", "cash", "alternatives", "crypto", "other"
-    ]
+    asset: AssetClass
     sector: str = Field(max_length=64)
     value: float = Field(ge=0, le=1e12)
 
@@ -192,6 +200,116 @@ class PortfolioAnalyzeRequest(ApiModel):
 class PortfolioAnalyzeResponse(ApiModel):
     analysis: PortfolioAnalysis
     insights: PortfolioInsights
+
+
+RebalanceMode = Literal["rebalance", "new_money_only"]
+RebalanceAction = Literal["buy", "sell"]
+RebalanceTargetSource = Literal["risk_profile", "custom"]
+
+
+class RebalancePlanRequest(ApiModel):
+    """Inputs for a deterministic, preview-only dollar rebalancing plan.
+
+    The target can be supplied directly, selected by named risk profile, or
+    derived from ``profile``. A named/custom target overrides ``profile`` so a
+    client can keep sending the investor context while previewing alternatives.
+    """
+
+    holdings: List[Holding] = Field(max_length=200)
+    profile: Optional[InvestorProfile] = None
+    target_profile: Optional[RiskProfileName] = None
+    target_allocation: Optional[Dict[AssetClass, float]] = None
+    mode: RebalanceMode = "rebalance"
+    contribution_amount: float = Field(default=0.0, ge=0, le=1e12)
+    min_trade_amount: float = Field(default=0.0, ge=0, le=1e12)
+    # This endpoint never executes or persists trades. Requiring true makes a
+    # future execution endpoint an explicit, separately reviewed contract.
+    preview_only: Literal[True] = True
+
+    @model_validator(mode="after")
+    def validate_target(self) -> "RebalancePlanRequest":
+        if self.target_profile is not None and self.target_allocation is not None:
+            raise ValueError("Use targetProfile or targetAllocation, not both")
+        if (
+            self.profile is None
+            and self.target_profile is None
+            and self.target_allocation is None
+        ):
+            raise ValueError(
+                "profile, targetProfile, or targetAllocation is required"
+            )
+        if self.target_allocation is not None:
+            if not self.target_allocation:
+                raise ValueError("targetAllocation cannot be empty")
+            values = list(self.target_allocation.values())
+            if any(
+                not math.isfinite(value) or value < 0 or value > 1
+                for value in values
+            ):
+                raise ValueError(
+                    "targetAllocation weights must be finite values from 0 to 1"
+                )
+            if not math.isclose(sum(values), 1.0, rel_tol=0.0, abs_tol=1e-6):
+                raise ValueError("targetAllocation weights must sum to 1")
+        return self
+
+
+class RebalanceTrade(ApiModel):
+    """One exact dollar action; share counts require price/quantity data."""
+
+    symbol: Optional[str]
+    name: Optional[str]
+    asset: AssetClass
+    action: RebalanceAction
+    amount: float
+    before_value: Optional[float]
+    after_value: Optional[float]
+    resolved: bool
+
+
+class RebalanceWarning(ApiModel):
+    """Machine-readable planner limitation with UI-ready text."""
+
+    code: Literal[
+        "empty_portfolio",
+        "below_minimum_trade",
+        "cash_constraint",
+        "new_money_insufficient",
+        "sell_required",
+        "unresolved_buy_target",
+        "uninvested_cash",
+        "target_not_reached",
+    ]
+    message: str
+    asset: Optional[AssetClass] = None
+    amount: Optional[float] = None
+
+
+class RebalancePlanResponse(ApiModel):
+    """An executable preview when ``can_apply`` is true; never an order."""
+
+    mode: RebalanceMode
+    before_total: float
+    after_total: float
+    total_traded: float
+    estimated_trades: int
+    before_allocation: Dict[str, float]
+    after_allocation: Dict[str, float]
+    target_allocation: Dict[str, float]
+    trades: List[RebalanceTrade]
+    projected_holdings: List[Holding]
+    warnings: List[RebalanceWarning]
+    can_apply: bool
+    target_source: RebalanceTargetSource
+    target_profile: Optional[RiskProfileName]
+    total_buys: float
+    total_sells: float
+    # Planned buys that need the user to choose a security. They appear in
+    # trades/afterAllocation but cannot appear in projectedHoldings yet.
+    unresolved_amount: float
+    cash_remaining: float
+    exact_target_reached: bool
+    preview_only: Literal[True] = True
 
 
 class ScenarioSimulationInputs(ApiModel):

@@ -24,11 +24,9 @@ import {
   analyticsOutline,
   alertCircleOutline,
   arrowForwardOutline,
-  checkmarkCircleOutline,
   pulseOutline,
   refreshOutline,
   shieldCheckmarkOutline,
-  sparklesOutline,
   trendingDownOutline,
   trashOutline,
 } from 'ionicons/icons'
@@ -36,6 +34,7 @@ import { MetricCard, MetricGrid, Panel, PanelHead } from '../../shared/ui'
 import { AppPage } from '../../shared/AppPage'
 import { DonutChart, type DonutSegment } from '../../shared/DonutChart'
 import { PortfolioFoundation } from './PortfolioFoundation'
+import { RebalancePlanner } from './RebalancePlanner'
 import type { AssetClass, Holding, HoldingType } from '../../../types'
 
 const ASSET_OPTIONS: Array<[AssetClass, string]> = [
@@ -237,11 +236,6 @@ export function PortfolioScreen() {
   const biggestGap = Object.entries(analysis.gap).sort(
     (a, b) => Math.abs(b[1]) - Math.abs(a[1]),
   )[0]
-  const priorityGaps = Object.entries(analysis.gap)
-    .filter(([, delta]) => Math.abs(delta) >= 0.02)
-    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
-    .slice(0, 3)
-
   // Per-holding weights, heaviest first.
   const weights = [...holdings]
     .filter((h) => h.value > 0)
@@ -255,28 +249,6 @@ export function PortfolioScreen() {
         ? 'Near profile budget'
         : 'Inside profile budget'
   const topRiskDriver = risk.topContributors[0]
-  const gapSummary = priorityGaps.length
-    ? priorityGaps
-        .map(([asset, delta]) => `${delta >= 0 ? 'add' : 'trim'} ${pct(Math.abs(delta))} ${assetLabel(asset)}`)
-        .join(', ')
-    : 'no material allocation gaps'
-
-  const openRebalanceAssistant = () => {
-    openAssistant({
-      origin: 'portfolio',
-      kind: 'rebalance_plan',
-      title: 'Portfolio rebalance priorities',
-      summary: `The ${title(analysis.riskProfileName)} target currently calls for ${gapSummary}. Modeled risk-budget use is ${pct(risk.riskBudgetUsed)}.`,
-      suggestedQuestion: `Build a gradual rebalance plan around these priorities: ${gapSummary}. Use future contributions first and explain the risk trade-offs.`,
-      facts: {
-        'Portfolio value': fmt.format(analysis.value),
-        'Risk profile': title(analysis.riskProfileName),
-        'Risk budget': `${pct(risk.riskBudgetUsed)} used`,
-        'Top risk driver': topRiskDriver?.label ?? 'No material driver',
-      },
-    })
-  }
-
   const openRiskAssistant = () => {
     const topDriverSummary = topRiskDriver
       ? `${topRiskDriver.label} contributes ${pct(topRiskDriver.riskContribution)} of modeled risk at ${pct(topRiskDriver.weight)} of capital`
@@ -343,8 +315,6 @@ export function PortfolioScreen() {
       </MetricGrid>
       </div>
 
-      <PortfolioFoundation currentValue={analysis.value} />
-
       <div className="portfolioCoreGrid">
       <Panel className="portfolioAllocationPanel">
         <PanelHead title="Allocation at a glance" />
@@ -383,39 +353,10 @@ export function PortfolioScreen() {
         </div>
       </Panel>
 
-      <aside className="portfolioRebalancePanel">
-        <div className="portfolioRebalanceHead">
-          <span><IonIcon icon={sparklesOutline} /></span>
-          <div>
-            <small>AI planning preview</small>
-            <h2>Rebalance priorities</h2>
-          </div>
-        </div>
-        <div className="portfolioGapList">
-          {priorityGaps.map(([asset, delta]) => (
-            <div key={asset}>
-              <span className={delta >= 0 ? 'need' : 'trim'}>
-                <IonIcon icon={delta >= 0 ? checkmarkCircleOutline : alertCircleOutline} />
-              </span>
-              <span>
-                <strong>{assetLabel(asset)}</strong>
-                <small>{delta >= 0 ? 'Increase' : 'Reduce'} by {pct(Math.abs(delta))}</small>
-              </span>
-              <b>{pct(analysis.current[asset] ?? 0)} → {pct(analysis.target[asset] ?? 0)}</b>
-            </div>
-          ))}
-        </div>
-        <div className="portfolioRebalanceSummary">
-          <span>Risk profile</span>
-          <strong>{title(analysis.riskProfileName)}</strong>
-          <small>{analysis.concentrations.length ? `${analysis.concentrations.length} concentration flags to model` : 'No concentration flags'}</small>
-        </div>
-        <button className="portfolioStrategyButton" onClick={openRebalanceAssistant}>
-          Simulate this plan
-          <IonIcon icon={arrowForwardOutline} />
-        </button>
-      </aside>
+      <RebalancePlanner analysis={analysis} />
       </div>
+
+      <PortfolioFoundation currentValue={analysis.value} />
 
       <section className="portfolioRiskLab" aria-labelledby="portfolio-risk-title">
         <header className="portfolioRiskHead">

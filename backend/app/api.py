@@ -20,6 +20,8 @@ from .schemas import (
     PortfolioAnalyzeResponse,
     PortfolioPerformanceRequest,
     PortfolioPerformanceResponse,
+    RebalancePlanRequest,
+    RebalancePlanResponse,
     ScenarioLabRequest,
     ScenarioLabResponse,
     StockAnalyzeRequest,
@@ -30,6 +32,7 @@ from .services.ai.insights import describe_insights
 from .services.ai.llm import answer_question
 from .services.portfolio import analyze_portfolio
 from .services.performance import calculate_performance
+from .services.rebalance import plan_rebalance
 from .services.scenario import run_scenario_lab
 
 router = APIRouter()
@@ -48,6 +51,12 @@ def portfolio_performance(req: PortfolioPerformanceRequest) -> PortfolioPerforma
     return PortfolioPerformanceResponse(
         performance=calculate_performance(req.transactions, req.valuations)
     )
+
+
+@router.post("/portfolio/rebalance", response_model=RebalancePlanResponse)
+def portfolio_rebalance(req: RebalancePlanRequest) -> RebalancePlanResponse:
+    """Preview exact-cent dollar actions; never execute or persist trades."""
+    return plan_rebalance(req)
 
 
 @router.post("/portfolio/scenario-lab", response_model=ScenarioLabResponse)

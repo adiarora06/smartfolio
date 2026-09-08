@@ -24,6 +24,10 @@ The backend is the **canonical** home of both layers of the core rule:
 
 - `GET /health` — liveness + capability flags (live data, LLM, database)
 - `POST /portfolio/analyze` — deterministic diagnosis + AI-layer insight prose
+- `POST /portfolio/rebalance` — preview-only, exact-cent dollar rebalancing
+  against a derived/named risk profile or an explicit target allocation. It
+  supports full rebalance and new-money-only modes, contribution and minimum
+  trade constraints, canonical projected holdings, and structured warnings.
 - `POST /stocks/analyze` — **full pipeline run**: forecast + optional what-if
   impact (send `profile` + `holdings`) + real agent trace + narrated memo.
   With an `X-Workspace-Id` header the run is persisted to history.
@@ -90,6 +94,32 @@ invisible, and Phases 4–5 (persistence, live market data, real LLM calls)
 naturally force the discrete actions to be backend-only — the seams are already
 in place. When live data lands, the offline mirror becomes explicitly a
 "demo/offline mode".
+
+## Rebalancing Planner Contract (2026-09-07)
+
+The backend owns `POST /portfolio/rebalance`; it is a preview endpoint and does
+not execute or persist orders. All values are rounded and calculated in integer
+cents. Named/custom target weights are converted to target dollars with the
+largest-remainder method, guaranteeing that target values equal the
+post-contribution total.
+
+Contribution-only plans spread available cash proportionally across positive
+asset-class deficits. Resolved buys go to the largest existing holding in the
+class; sells drain the largest holding first and cascade as needed. This stable
+policy minimizes line items and preserves exact totals. Missing buy vehicles are
+returned explicitly as `resolved: false` with no symbol rather than fabricating
+a fund or security.
+
+The response distinguishes `cashRemaining` (not allocated by the plan and only
+used when no existing cash holding can receive it) from
+`unresolvedAmount` (allocated to an asset class but awaiting a chosen security).
+Thus `projectedHoldings + cashRemaining + unresolvedAmount = afterTotal`.
+`afterAllocation`, `totalBuys`, and `totalTraded` describe the complete intended
+plan; `projectedHoldings` contains only changes that can be mapped to existing
+holdings. Structured warnings explain infeasible contribution-only targets,
+minimum-trade skips, residual drift, and unresolved purchases. `canApply` is
+only true when the projected holdings are complete and no cash is left outside
+them.
 
 ## Run Locally
 

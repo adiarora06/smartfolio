@@ -157,6 +157,7 @@ interface AppState {
   addHolding: () => void
   removeHolding: (index: number) => void
   updateHolding: <K extends keyof Holding>(index: number, field: K, value: Holding[K]) => void
+  replaceHoldings: (holdings: Holding[]) => void
   resetHoldings: () => void
   addTransaction: (
     transaction: Omit<PortfolioTransaction, 'id' | 'source'> & {
@@ -347,6 +348,7 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => ({
       holdings: s.holdings.map((h, i) => (i === index ? { ...h, [field]: value } : h)),
     })),
+  replaceHoldings: (holdings) => set({ holdings: holdings.map((holding) => ({ ...holding })) }),
   resetHoldings: () => set({ holdings: demoHoldings() }),
 
   addTransaction: (transaction) =>

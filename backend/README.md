@@ -20,12 +20,47 @@ Interactive docs at http://localhost:8000/docs.
 |--------|----------------------|--------------|
 | GET    | `/health`            | Liveness check (the frontend pings this to detect the backend) |
 | POST   | `/portfolio/analyze` | Deterministic portfolio diagnosis + AI-layer insight prose |
+| POST   | `/portfolio/rebalance` | Preview exact-cent buy/sell dollar actions against a risk-profile or custom target |
 | POST   | `/portfolio/scenario-lab` | Seeded strategy comparisons + contribution optimizer |
 | POST   | `/stocks/analyze`    | Deterministic OpenVC-style forecast for a ticker + horizon |
 | POST   | `/advisor/ask`       | Advisor answer grounded in a fresh analysis of the sent state |
 
 `POST /profiles` and `GET /analyses/{id}` from the roadmap land with
 persistence (Phase 4 — Neon Postgres).
+
+## Rebalancing preview
+
+`POST /portfolio/rebalance` is deliberately preview-only (`previewOnly` must be
+`true`). It accepts the current `holdings`, either an investor `profile`, named
+`targetProfile`, or custom `targetAllocation`, plus:
+
+- `mode: "rebalance" | "new_money_only"`
+- `contributionAmount` (new cash available to the plan)
+- `minTradeAmount` (minimum asset-class drift worth acting on)
+
+All money math is performed in integer cents. Target dollars use a stable
+largest-remainder allocation, so they add to `afterTotal` exactly. New money is
+distributed proportionally across positive post-contribution target deficits.
+For resolved buys, the largest existing holding in that asset class receives
+the addition; sells use the largest holding first and cascade only when needed,
+minimizing line items with symbol/name as stable tie-breakers.
+
+The engine never invents a ticker. A required asset class with no existing
+holding produces a trade with `symbol: null`, `resolved: false` and contributes
+to `unresolvedAmount`; the UI must ask the user to choose a vehicle before
+applying. `projectedHoldings` contains resolved changes only, while
+`afterAllocation`, `totalBuys`, and `totalTraded` include the intended unresolved
+trades. Truly unallocated money is added to an existing cash holding when one
+is available; otherwise it remains `cashRemaining`. The accounting invariant is:
+
+```text
+sum(projectedHoldings.value) + cashRemaining + unresolvedAmount = afterTotal
+```
+
+`warnings` are structured (`code`, `message`, optional `asset`/`amount`) and
+cover minimum-trade suppression, contribution-only infeasibility, unresolved
+buy targets, cash constraints, and residual target drift. `canApply` is false
+whenever a target is unresolved or cash remains outside the projected holdings.
 
 ## Architecture
 
@@ -39,6 +74,7 @@ app/
   main.py           # app factory, CORS, /health
   services/         # Canonical deterministic financial engine
     portfolio.py      value, allocation, risk score, gaps, structured findings
+    rebalance.py      exact-cent preview planner, constraints, projected holdings
     stock.py          forecast bands, confidence, rating, prototype backtest
     data.py           targets, assumed returns, offline stock reference table
     ai/             # EXPLANATION layer (mirror of frontend lib/ai — LLM slots in here)
