@@ -21,6 +21,7 @@ Interactive docs at http://localhost:8000/docs.
 | GET    | `/health`            | Liveness check (the frontend pings this to detect the backend) |
 | POST   | `/portfolio/analyze` | Deterministic portfolio diagnosis + AI-layer insight prose |
 | POST   | `/portfolio/performance` | Range-aware Modified Dietz history from dated values and recorded cash flows |
+| POST   | `/portfolio/positions` | Position-level cost-basis coverage and optional quote-only price refresh |
 | POST   | `/portfolio/rebalance` | Preview exact-cent buy/sell dollar actions against a risk-profile or custom target |
 | POST   | `/portfolio/scenario-lab` | Seeded strategy comparisons + contribution optimizer |
 | POST   | `/stocks/analyze`    | Deterministic OpenVC-style forecast for a ticker + horizon |
@@ -62,6 +63,32 @@ sum(projectedHoldings.value) + cashRemaining + unresolvedAmount = afterTotal
 cover minimum-trade suppression, contribution-only infeasibility, unresolved
 buy targets, cash constraints, and residual target drift. `canApply` is false
 whenever a target is unresolved or cash remains outside the projected holdings.
+It is also false when a dollar trade would change a share-tracked holding while
+leaving its recorded quantity unchanged; an executed quantity must be recorded
+before that preview can replace the portfolio.
+
+## Enriched holdings and position P&L
+
+The original value-only holding payload remains valid. Holdings can now also
+carry a stable `id`, `quantity`, `averageCost`, aggregate `costBasis`,
+`currentPrice`, `priceAsOf`, `priceSource`, and holding `source`. `value` remains
+required and authoritative: SmartFolio never reverse-engineers shares from a
+dollar balance. When quantity and either basis form are present, the other
+basis form is derived; inconsistent basis inputs are rejected.
+
+`POST /portfolio/positions` derives unrealized gain only for positions with a
+known basis and reports value-weighted cost, quantity, and priced coverage.
+Missing basis is `null`, never presented as a zero gain. Cash is intentionally
+treated as cost-covered at its nominal value with zero unrealized gain and is
+excluded from share-data coverage denominators.
+
+With `refreshPrices: true`, the endpoint uses the market resolver's quote-only
+path, not the deep stock-analysis path, and deduplicates repeated symbols.
+Share-tracked holdings are explicitly revalued as quantity × refreshed price;
+value-only holdings retain their reported value. Synthetic offline reference
+prices are not applied unless `allowOfflineReferencePrices: true`. Every result
+retains price provider, as-of date, cache/reference status, and structured
+warnings.
 
 ## Portfolio History
 
@@ -157,6 +184,14 @@ cloud deploys (install an async driver, e.g. `pip install asyncpg`, and use
 `GET /workspaces/{id}/state`, and saves with debounced PUTs. Analysis runs sent
 with an `X-Workspace-Id` header are stored and replayable via
 `GET /analyses/{id}` when the same workspace header is provided.
+
+Holding rows retain an internal integer database key and expose a separate,
+workspace-scoped stable holding id. An idempotent startup migration adds and
+backfills the enriched fields on existing SQLite or Postgres databases without
+deleting holdings. Holdings PUT now upserts stable ids and deletes only rows
+omitted from the submitted collection; id-less legacy saves remain accepted
+and receive canonical ids in the response. Transactions may optionally link to
+a holding through `holdingId`.
 
 ## Config
 

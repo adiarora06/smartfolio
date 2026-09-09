@@ -146,6 +146,9 @@ export function RebalancePlanner({ analysis }: { analysis: PortfolioAnalysis }) 
   const preview = previewState?.preview ?? null
   const stale = Boolean(previewState && previewState.signature !== currentSignature && !applied)
   const applyBlocker = preview ? rebalanceApplyBlocker(holdings, preview) : null
+  const requiresExecutedShares = preview?.warnings.some(
+    (warning) => warning.code === 'share_quantity_unadjusted',
+  ) ?? false
   const unresolvedCount = preview?.trades.filter((trade) => !trade.resolved || !trade.symbol).length ?? 0
   const planningNotes = preview?.warnings.filter(
     (warning) => warning.code !== 'unresolved_buy_target' && warning.code !== 'target_not_reached',
@@ -479,7 +482,13 @@ export function RebalancePlanner({ analysis }: { analysis: PortfolioAnalysis }) 
                       title={applyBlocker || (stale ? 'Refresh this preview before applying it.' : undefined)}
                       onClick={() => setConfirming(true)}
                     >
-                      {applied ? 'Applied to SmartFolio' : applyBlocker ? 'Resolve investments first' : 'Apply to portfolio model'}
+                      {applied
+                        ? 'Applied to SmartFolio'
+                        : requiresExecutedShares
+                          ? 'Record trades before applying'
+                          : applyBlocker
+                            ? 'Resolve plan first'
+                            : 'Apply to portfolio model'}
                     </button>
                   </div>
                 )}

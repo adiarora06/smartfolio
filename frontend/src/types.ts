@@ -25,6 +25,7 @@ export type Liquidity = 'low' | 'medium' | 'high'
 export type Goal = 'long_term_growth' | 'retirement' | 'income'
 
 export type HoldingType = 'stock' | 'etf' | 'cash'
+export type HoldingSource = 'manual' | 'demo' | 'imported' | 'plaid' | 'analysis'
 export type AssetClass =
   | 'us_equity'
   | 'intl_equity'
@@ -51,12 +52,26 @@ export interface InvestorProfile {
 }
 
 export interface Holding {
+  /** Stable application identity. Legacy wire payloads may omit this; the
+   * store normalizes every holding before it enters app state. */
+  id?: string
   symbol: string
   name: string
   type: HoldingType
   asset: AssetClass
   sector: string
+  /** Reported market value remains the authoritative compatibility field. */
   value: number
+  source?: HoldingSource
+  quantity?: number | null
+  /** Per-unit basis. Kept alongside total cost basis for import fidelity. */
+  averageCost?: number | null
+  /** Total cost basis for the position. */
+  costBasis?: number | null
+  currentPrice?: number | null
+  /** Valid YYYY-MM-DD date supplied by the price provider. */
+  priceAsOf?: string | null
+  priceSource?: string | null
 }
 
 export type TransactionType =
@@ -73,6 +88,8 @@ export type PortfolioDataSource = 'demo' | 'imported' | 'manual'
  * buys, sells, dividends, and fees explain what happened inside the account. */
 export interface PortfolioTransaction {
   id: string
+  /** Stable holding identity when known; symbol remains the legacy fallback. */
+  holdingId?: string | null
   date: string
   type: TransactionType
   symbol?: string | null

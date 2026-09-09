@@ -51,26 +51,47 @@ type DemoHoldingTuple = [
   asset: Holding['asset'],
   sector: string,
   value: number,
+  quantity: number | null,
+  averageCost: number | null,
+  currentPrice: number | null,
 ]
 
 const DEMO_HOLDING_TUPLES: DemoHoldingTuple[] = [
-  ['AAPL', 'Apple Inc.', 'stock', 'us_equity', 'technology', 5000],
-  ['NVDA', 'NVIDIA Corp.', 'stock', 'us_equity', 'technology', 5500],
-  ['TSLA', 'Tesla Inc.', 'stock', 'us_equity', 'consumer_cyclical', 3500],
-  ['VOO', 'Vanguard S&P 500 ETF', 'etf', 'us_equity', 'broad_market', 7000],
-  ['VXUS', 'Vanguard Total International Stock ETF', 'etf', 'intl_equity', 'broad_market', 1500],
-  ['CASH', 'Cash', 'cash', 'cash', 'cash', 2500],
+  ['AAPL', 'Apple Inc.', 'stock', 'us_equity', 'technology', 5000, 20, 190, 250],
+  ['NVDA', 'NVIDIA Corp.', 'stock', 'us_equity', 'technology', 5500, 25, 160, 220],
+  ['TSLA', 'Tesla Inc.', 'stock', 'us_equity', 'consumer_cyclical', 3500, 14, 280, 250],
+  ['VOO', 'Vanguard S&P 500 ETF', 'etf', 'us_equity', 'broad_market', 7000, 14, 430, 500],
+  ['VXUS', 'Vanguard Total International Stock ETF', 'etf', 'intl_equity', 'broad_market', 1500, 25, 55, 60],
+  ['CASH', 'Cash', 'cash', 'cash', 'cash', 2500, null, null, null],
 ]
 
 /** A fresh copy of the demo portfolio (never share the array reference). */
 export const demoHoldings = (): Holding[] =>
-  DEMO_HOLDING_TUPLES.map(([symbol, name, type, asset, sector, value]) => ({
+  DEMO_HOLDING_TUPLES.map(([
     symbol,
     name,
     type,
     asset,
     sector,
     value,
+    quantity,
+    averageCost,
+    currentPrice,
+  ]) => ({
+    id: `demo-${symbol.toLowerCase()}`,
+    symbol,
+    name,
+    type,
+    asset,
+    sector,
+    value,
+    source: 'demo',
+    quantity,
+    averageCost,
+    costBasis: quantity != null && averageCost != null ? quantity * averageCost : null,
+    currentPrice,
+    priceAsOf: currentPrice == null ? null : '2026-08-08',
+    priceSource: currentPrice == null ? null : 'demo',
   }))
 
 /** Dated demo history keeps the performance foundation inspectable without
@@ -88,6 +109,7 @@ export const demoTransactions = (): PortfolioTransaction[] => [
     id: 'demo-buy-aapl-2025-01-03',
     date: '2025-01-03',
     type: 'buy',
+    holdingId: 'demo-aapl',
     symbol: 'AAPL',
     quantity: 20,
     price: 200,
@@ -107,6 +129,7 @@ export const demoTransactions = (): PortfolioTransaction[] => [
     id: 'demo-dividend-2025-06-14',
     date: '2025-06-14',
     type: 'dividend',
+    holdingId: 'demo-aapl',
     symbol: 'AAPL',
     amount: 120,
     description: 'Cash dividend',
@@ -124,6 +147,7 @@ export const demoTransactions = (): PortfolioTransaction[] => [
     id: 'demo-dividend-2025-12-15',
     date: '2025-12-15',
     type: 'dividend',
+    holdingId: 'demo-voo',
     symbol: 'VOO',
     amount: 160,
     description: 'ETF distribution',

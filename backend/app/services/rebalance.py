@@ -206,6 +206,7 @@ def _sell_from_existing(
             -projected[index],
             holdings[index].symbol.upper(),
             holdings[index].name,
+            holdings[index].id or "",
             index,
         )
     )
@@ -221,6 +222,7 @@ def _sell_from_existing(
         remaining -= sold
         trades.append(
             RebalanceTrade(
+                holding_id=holdings[index].id,
                 symbol=holdings[index].symbol,
                 name=holdings[index].name,
                 asset=asset,
@@ -250,6 +252,7 @@ def _buy_existing_or_unresolved(
     if not indices:
         trades.append(
             RebalanceTrade(
+                holding_id=None,
                 symbol=None,
                 name=None,
                 asset=asset,
@@ -268,6 +271,7 @@ def _buy_existing_or_unresolved(
             -projected[item],
             holdings[item].symbol.upper(),
             holdings[item].name,
+            holdings[item].id or "",
             item,
         ),
     )
@@ -275,6 +279,7 @@ def _buy_existing_or_unresolved(
     projected[index] += amount
     trades.append(
         RebalanceTrade(
+            holding_id=holdings[index].id,
             symbol=holdings[index].symbol,
             name=holdings[index].name,
             asset=asset,
@@ -472,11 +477,26 @@ def plan_rebalance(request: RebalancePlanRequest) -> RebalancePlanResponse:
             cash_remaining,
         )
 
+    share_metadata_unadjusted = False
+    for index, holding in enumerate(holdings):
+        if holding.quantity is None or projected[index] == _to_cents(holding.value):
+            continue
+        share_metadata_unadjusted = True
+        _warning(
+            warnings,
+            "share_quantity_unadjusted",
+            f"{holding.symbol or holding.name} is share-tracked; record an "
+            "executed quantity before applying this dollar-only preview.",
+            holding.asset,
+            abs(projected[index] - _to_cents(holding.value)),
+        )
+
     unresolved = any(not trade.resolved for trade in trades)
     resolved_count = sum(1 for trade in trades if trade.resolved)
     can_apply = (
         after_total > 0
         and not unresolved
+        and not share_metadata_unadjusted
         and cash_remaining == 0
         and (resolved_count > 0 or exact_target_reached)
     )

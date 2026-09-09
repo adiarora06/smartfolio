@@ -6,19 +6,7 @@ import { useRef, useState, type KeyboardEvent } from 'react'
 import { useStore } from '../../../store/useStore'
 import { usePortfolioAnalysis } from '../../../hooks/usePortfolioAnalysis'
 import { fmt, pct, title } from '../../../lib/format'
-import {
-  IonInput,
-  IonIcon,
-  IonItem,
-  IonItemOption,
-  IonItemOptions,
-  IonItemSliding,
-  IonLabel,
-  IonList,
-  IonNote,
-  IonSelect,
-  IonSelectOption,
-} from '@ionic/react'
+import { IonIcon } from '@ionic/react'
 import {
   addOutline,
   analyticsOutline,
@@ -30,7 +18,6 @@ import {
   shieldCheckmarkOutline,
   timeOutline,
   trendingDownOutline,
-  trashOutline,
   walletOutline,
 } from 'ionicons/icons'
 import { MetricCard, MetricGrid, Panel, PanelHead } from '../../shared/ui'
@@ -38,17 +25,8 @@ import { AppPage } from '../../shared/AppPage'
 import { DonutChart, type DonutSegment } from '../../shared/DonutChart'
 import { PortfolioFoundation } from './PortfolioFoundation'
 import { RebalancePlanner } from './RebalancePlanner'
-import type { AssetClass, Holding, HoldingType } from '../../../types'
-
-const ASSET_OPTIONS: Array<[AssetClass, string]> = [
-  ['us_equity', 'US Equity'],
-  ['intl_equity', 'Intl Equity'],
-  ['bonds', 'bonds'],
-  ['cash', 'cash'],
-  ['alternatives', 'alternatives'],
-]
-
-const TYPE_OPTIONS: HoldingType[] = ['stock', 'etf', 'cash']
+import { HoldingsWorkspace } from './HoldingsWorkspace'
+import '../../../styles/holdings.css'
 
 type PortfolioView = 'snapshot' | 'history' | 'holdings'
 
@@ -102,134 +80,25 @@ function RiskMetric({
   )
 }
 
-/** Phone layout for one holding: identity + value always visible, the rest
- *  behind a disclosure. Replaces the 7-column table, which reflowed into
- *  unlabeled inputs on a narrow screen. */
-function HoldingCard({
-  holding,
-  index,
-  total,
-}: {
-  holding: Holding
-  index: number
-  total: number
-}) {
-  const updateHolding = useStore((s) => s.updateHolding)
-  const removeHolding = useStore((s) => s.removeHolding)
-  const [open, setOpen] = useState(false)
-
-  return (
-    <>
-      {/* Swipe left to delete — the iOS list gesture, so no persistent
-          Remove button competing with the data for width. */}
-      <IonItemSliding>
-        <IonItem button detail={false} onClick={() => setOpen((v) => !v)}>
-          <IonLabel>
-            <h2 className="hcardSym">{holding.symbol || '—'}</h2>
-            <p>
-              {holding.name || 'Unnamed'} · {pct(holding.value / (total || 1))}
-            </p>
-          </IonLabel>
-          <IonNote slot="end" className="hcardVal">
-            {fmt.format(holding.value)}
-          </IonNote>
-        </IonItem>
-
-        <IonItemOptions side="end">
-          <IonItemOption color="danger" onClick={() => removeHolding(index)}>
-            Delete
-          </IonItemOption>
-        </IonItemOptions>
-      </IonItemSliding>
-
-      {open && (
-        <div className="hcardBody">
-          <IonItem>
-            <IonInput
-              label="Symbol"
-              labelPlacement="stacked"
-              value={holding.symbol}
-              onIonInput={(e) =>
-                updateHolding(index, 'symbol', (e.detail.value ?? '').toUpperCase())
-              }
-            />
-          </IonItem>
-          <IonItem>
-            <IonInput
-              label="Name"
-              labelPlacement="stacked"
-              value={holding.name}
-              onIonInput={(e) => updateHolding(index, 'name', e.detail.value ?? '')}
-            />
-          </IonItem>
-          <IonItem>
-            <IonInput
-              label="Value"
-              labelPlacement="stacked"
-              type="number"
-              inputmode="decimal"
-              value={holding.value}
-              onIonInput={(e) => updateHolding(index, 'value', Number(e.detail.value ?? 0))}
-            />
-          </IonItem>
-          {/* IonSelect opens the native-style picker instead of a <select>. */}
-          <IonItem>
-            <IonSelect
-              label="Type"
-              labelPlacement="stacked"
-              interface="action-sheet"
-              value={holding.type}
-              onIonChange={(e) => updateHolding(index, 'type', e.detail.value as HoldingType)}
-            >
-              {TYPE_OPTIONS.map((t) => (
-                <IonSelectOption value={t} key={t}>
-                  {t}
-                </IonSelectOption>
-              ))}
-            </IonSelect>
-          </IonItem>
-          <IonItem>
-            <IonSelect
-              label="Asset class"
-              labelPlacement="stacked"
-              interface="action-sheet"
-              value={holding.asset}
-              onIonChange={(e) => updateHolding(index, 'asset', e.detail.value as AssetClass)}
-            >
-              {ASSET_OPTIONS.map(([value, label]) => (
-                <IonSelectOption value={value} key={value}>
-                  {label}
-                </IonSelectOption>
-              ))}
-            </IonSelect>
-          </IonItem>
-          <IonItem lines="none">
-            <IonInput
-              label="Sector"
-              labelPlacement="stacked"
-              value={holding.sector}
-              onIonInput={(e) => updateHolding(index, 'sector', e.detail.value ?? '')}
-            />
-          </IonItem>
-        </div>
-      )}
-    </>
-  )
-}
-
 export function PortfolioScreen() {
   const holdings = useStore((s) => s.holdings)
   const analysis = usePortfolioAnalysis()
   const addHolding = useStore((s) => s.addHolding)
-  const resetHoldings = useStore((s) => s.resetHoldings)
   const removeHolding = useStore((s) => s.removeHolding)
-  const updateHolding = useStore((s) => s.updateHolding)
+  const resetHoldings = useStore((s) => s.resetHoldings)
   const openAssistant = useStore((s) => s.openAssistant)
   const [portfolioView, setPortfolioView] = useState<PortfolioView>('snapshot')
+  const [editingHoldingId, setEditingHoldingId] = useState<string | null>(null)
+  const [newHoldingId, setNewHoldingId] = useState<string | null>(null)
   const viewTabs = useRef<Array<HTMLButtonElement | null>>([])
 
   const selectPortfolioView = (view: PortfolioView, focus = false) => {
     const index = PORTFOLIO_VIEWS.findIndex((item) => item.id === view)
+    if (view !== 'holdings' && newHoldingId && editingHoldingId === newHoldingId) {
+      removeHolding(newHoldingId)
+      setNewHoldingId(null)
+      setEditingHoldingId(null)
+    }
     setPortfolioView(view)
     if (focus) requestAnimationFrame(() => viewTabs.current[index]?.focus())
   }
@@ -246,8 +115,17 @@ export function PortfolioScreen() {
   }
 
   const addAndEditHolding = () => {
-    addHolding()
+    if (newHoldingId) removeHolding(newHoldingId)
+    const holdingId = addHolding()
+    setNewHoldingId(holdingId)
+    setEditingHoldingId(holdingId)
     selectPortfolioView('holdings')
+  }
+
+  const resetPortfolio = () => {
+    resetHoldings()
+    setNewHoldingId(null)
+    setEditingHoldingId(null)
   }
 
   // Donut segments from the live asset-class allocation.
@@ -318,7 +196,7 @@ export function PortfolioScreen() {
             <IonIcon icon={addOutline} />
             Add holding
           </button>
-          <button onClick={resetHoldings}>
+          <button onClick={resetPortfolio}>
             <IonIcon icon={refreshOutline} />
             Reset demo
           </button>
@@ -563,101 +441,20 @@ export function PortfolioScreen() {
       )}
 
       {portfolioView === 'holdings' && (
-      <div
-        className="portfolioWorkspacePanel portfolioHoldingsView"
-        id="portfolio-holdings-panel"
-        role="tabpanel"
-        aria-labelledby="portfolio-holdings-tab"
-        tabIndex={0}
-      >
-      <Panel className="portfolioHoldingsPanel">
-        <PanelHead title={<span>Holdings <small>{holdings.length} positions</small></span>} />
-        <div className="body">
-            <div className="table">
-              <div className="thead">
-                <span>Symbol</span>
-                <span>Name</span>
-                <span>Type</span>
-                <span>Asset</span>
-                <span>Sector</span>
-                <span>Value</span>
-                <span />
-              </div>
-              {holdings.map((h, i) => (
-                <div className="row" key={i}>
-                  <input
-                    aria-label={`Symbol for holding ${i + 1}`}
-                    className="holdingSymbolInput"
-                    name="symbol"
-                    value={h.symbol}
-                    onChange={(e) => updateHolding(i, 'symbol', e.target.value)}
-                  />
-                  <input
-                    aria-label={`Name for ${h.symbol || `holding ${i + 1}`}`}
-                    className="holdingNameInput"
-                    name="name"
-                    value={h.name}
-                    onChange={(e) => updateHolding(i, 'name', e.target.value)}
-                  />
-                  <select
-                    aria-label={`Type for ${h.symbol || `holding ${i + 1}`}`}
-                    name="type"
-                    value={h.type}
-                    onChange={(e) => updateHolding(i, 'type', e.target.value as HoldingType)}
-                  >
-                    {TYPE_OPTIONS.map((t) => (
-                      <option value={t} key={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    aria-label={`Asset class for ${h.symbol || `holding ${i + 1}`}`}
-                    name="asset"
-                    value={h.asset}
-                    onChange={(e) => updateHolding(i, 'asset', e.target.value as AssetClass)}
-                  >
-                    {ASSET_OPTIONS.map(([value, label]) => (
-                      <option value={value} key={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    aria-label={`Sector for ${h.symbol || `holding ${i + 1}`}`}
-                    name="sector"
-                    value={h.sector}
-                    onChange={(e) => updateHolding(i, 'sector', e.target.value)}
-                  />
-                  <input
-                    aria-label={`Value for ${h.symbol || `holding ${i + 1}`}`}
-                    name="value"
-                    type="number"
-                    value={h.value}
-                    onChange={(e) => updateHolding(i, 'value', Number(e.target.value))}
-                  />
-                  <button
-                    className="removeHoldingButton"
-                    onClick={() => removeHolding(i)}
-                    aria-label={`Remove ${h.symbol || `holding ${i + 1}`}`}
-                  >
-                    <IonIcon icon={trashOutline} />
-                    <span>Remove</span>
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* Phone layout. Both trees render; the mobile CSS layer shows one
-                (.table above 720px, .hcards below). */}
-            <IonList className="hcards" lines="full">
-              {holdings.map((h, i) => (
-                <HoldingCard key={i} holding={h} index={i} total={total} />
-              ))}
-            </IonList>
-          </div>
-      </Panel>
-      </div>
+        <div
+          className="portfolioWorkspacePanel portfolioHoldingsView"
+          id="portfolio-holdings-panel"
+          role="tabpanel"
+          aria-labelledby="portfolio-holdings-tab"
+          tabIndex={0}
+        >
+          <HoldingsWorkspace
+            expandedId={editingHoldingId}
+            onExpandedIdChange={setEditingHoldingId}
+            draftId={newHoldingId}
+            onDraftResolved={() => setNewHoldingId(null)}
+          />
+        </div>
       )}
       </div>
     </AppPage>

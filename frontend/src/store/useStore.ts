@@ -49,6 +49,13 @@ import { buildSavedMemo } from '../lib/ai/memo'
 import { answerAdvisor } from '../lib/ai/advisor'
 import { navigateTo, screenFromPath } from '../lib/nav'
 import {
+  applyHoldingPatch,
+  createHoldingId,
+  normalizeHolding,
+  normalizeHoldings,
+  type NormalizedHolding,
+} from '../lib/holdings'
+import {
   apiAnalyzeStock,
   apiAskAdvisor,
   apiCreateWorkspace,
@@ -82,6 +89,7 @@ interface LocalSnapshot {
 
 function loadLocalSnapshot(): LocalSnapshot {
   try {
+    if (typeof localStorage === 'undefined') return {}
     const raw = localStorage.getItem(LS_STATE_KEY)
     return raw ? (JSON.parse(raw) as LocalSnapshot) : {}
   } catch {
@@ -108,7 +116,7 @@ interface AppState {
 
   // domain inputs
   profile: InvestorProfile
-  holdings: Holding[]
+  holdings: NormalizedHolding[]
   connections: Connection[]
   chat: ChatMessage[]
   stockMemory: SavedMemo[]
@@ -154,9 +162,14 @@ interface AppState {
   updateProfile: (patch: Partial<InvestorProfile>) => void
 
   // holdings
-  addHolding: () => void
-  removeHolding: (index: number) => void
-  updateHolding: <K extends keyof Holding>(index: number, field: K, value: Holding[K]) => void
+  addHolding: () => string
+  removeHolding: (id: string) => void
+  updateHolding: <K extends Exclude<keyof Holding, 'id'>>(
+    id: string,
+    field: K,
+    value: Holding[K],
+  ) => void
+  replaceHolding: (id: string, holding: Holding) => void
   replaceHoldings: (holdings: Holding[]) => void
   resetHoldings: () => void
   addTransaction: (
@@ -200,10 +213,23 @@ interface AppState {
 
 const local = loadLocalSnapshot()
 const initialProfile = local.profile ?? { ...DEFAULT_PROFILE }
-const initialHoldings = local.holdings?.length ? local.holdings : demoHoldings()
+const initialHoldings = normalizeHoldings(
+  local.holdings !== undefined ? local.holdings : demoHoldings(),
+  local.holdings !== undefined ? 'manual' : 'demo',
+)
 const initialTransactions = local.transactions ?? demoTransactions()
 const initialValuations = local.valuations ?? demoValuations()
 const initialStock = analyzeStock('AAPL', 30)
+
+// Persist upgraded legacy holdings immediately. Waiting for the first edit
+// would generate a different identity if the user reloaded beforehand.
+if (local.holdings !== undefined && typeof localStorage !== 'undefined') {
+  try {
+    localStorage.setItem(LS_STATE_KEY, JSON.stringify({ ...local, holdings: initialHoldings }))
+  } catch {
+    // Storage can be disabled or full; the in-memory upgrade still works.
+  }
+}
 
 /** Current path, or '' where there is no DOM (Node tests, SSR). */
 const initialPathname = (): string =>
@@ -336,20 +362,41 @@ export const useStore = create<AppState>((set, get) => ({
 
   updateProfile: (patch) => set((s) => ({ profile: { ...s.profile, ...patch } })),
 
-  addHolding: () =>
-    set((s) => ({
-      holdings: [
-        ...s.holdings,
-        { symbol: '', name: '', type: 'stock', asset: 'us_equity', sector: 'technology', value: 0 },
-      ],
+  addHolding: () => {
+    const id = createHoldingId()
+    const holding = normalizeHolding({
+      id,
+      symbol: '',
+      name: '',
+      type: 'stock',
+      asset: 'us_equity',
+      sector: 'technology',
+      value: 0,
+      source: 'manual',
+    })
+    set((state) => ({ holdings: [...state.holdings, holding] }))
+    return id
+  },
+  removeHolding: (id) =>
+    set((state) => ({ holdings: state.holdings.filter((holding) => holding.id !== id) })),
+  updateHolding: (id, field, value) =>
+    set((state) => ({
+      holdings: state.holdings.map((holding) => {
+        if (holding.id !== id) return holding
+        const patch = { [field]: value } as Partial<Omit<Holding, 'id'>>
+        return applyHoldingPatch(holding, patch)
+      }),
     })),
-  removeHolding: (index) => set((s) => ({ holdings: s.holdings.filter((_, i) => i !== index) })),
-  updateHolding: (index, field, value) =>
-    set((s) => ({
-      holdings: s.holdings.map((h, i) => (i === index ? { ...h, [field]: value } : h)),
+  replaceHolding: (id, replacement) =>
+    set((state) => ({
+      holdings: state.holdings.map((holding) =>
+        holding.id === id
+          ? normalizeHolding({ ...replacement, id }, replacement.source ?? holding.source)
+          : holding,
+      ),
     })),
-  replaceHoldings: (holdings) => set({ holdings: holdings.map((holding) => ({ ...holding })) }),
-  resetHoldings: () => set({ holdings: demoHoldings() }),
+  replaceHoldings: (holdings) => set({ holdings: normalizeHoldings(holdings) }),
+  resetHoldings: () => set({ holdings: normalizeHoldings(demoHoldings(), 'demo') }),
 
   addTransaction: (transaction) =>
     set((state) => {
@@ -395,7 +442,9 @@ export const useStore = create<AppState>((set, get) => ({
     })),
   applyPortfolioImport: (payload) =>
     set((state) => ({
-      holdings: payload.holdings.length ? payload.holdings : state.holdings,
+      holdings: payload.holdings.length
+        ? normalizeHoldings(payload.holdings, 'imported')
+        : state.holdings,
       transactions: payload.transactions.length ? payload.transactions : state.transactions,
       valuations: payload.valuations.length ? payload.valuations : state.valuations,
       screen: 'portfolio',
@@ -448,14 +497,22 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => ({
       holdings: [
         ...s.holdings,
-        {
+        normalizeHolding({
+          id: createHoldingId(),
           symbol: s.stock.symbol,
           name: s.stock.name,
           type: 'stock',
           asset: 'us_equity',
           sector: s.stock.sector,
-          value: Math.round(s.stock.price * 10),
-        },
+          value: Math.round(s.stock.price * 1000) / 100,
+          source: 'analysis',
+          quantity: 10,
+          averageCost: s.stock.price,
+          costBasis: Math.round(s.stock.price * 1000) / 100,
+          currentPrice: s.stock.price,
+          priceAsOf: s.stock.asOf ?? null,
+          priceSource: s.stock.source,
+        }, 'analysis'),
       ],
       screen: 'portfolio',
     })),
@@ -483,7 +540,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   importHoldings: (holdings) => {
     if (!holdings.length) return
-    set({ holdings, screen: 'portfolio' })
+    set({ holdings: normalizeHoldings(holdings, 'plaid'), screen: 'portfolio' })
   },
 
   saveStrategyPlan: (plan) =>
@@ -566,7 +623,7 @@ async function bootstrapWorkspace(set: Set, get: Get): Promise<void> {
     suppressSync = true
     try {
       if (state.profile) set({ profile: state.profile })
-      if (state.holdings.length) set({ holdings: state.holdings })
+      set({ holdings: normalizeHoldings(state.holdings) })
       if (state.transactions.length) set({ transactions: state.transactions })
       if (state.valuations.length) set({ valuations: state.valuations })
       if (state.memos.length) {

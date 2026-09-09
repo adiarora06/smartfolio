@@ -28,6 +28,9 @@ The backend is the **canonical** home of both layers of the core rule:
   Modified Dietz estimates from dated account values and recorded external
   cash flows. It returns effective dates, benchmark coverage, observed
   drawdown, interval details, and explicit data-quality warnings.
+- `POST /portfolio/positions` — current-position P&L and data coverage, with an
+  optional quote-only refresh that never substitutes offline reference prices
+  without explicit opt-in.
 - `POST /portfolio/rebalance` — preview-only, exact-cent dollar rebalancing
   against a derived/named risk profile or an explicit target allocation. It
   supports full rebalance and new-money-only modes, contribution and minimum
@@ -72,8 +75,9 @@ server-side. Keyless deploys are byte-identical to template behavior
 `app/db.py`: SQLAlchemy 2.0 async. **SQLite file by default**
 (`backend/data/smartfolio.db`, gitignored — zero-setup persistence, verified to
 survive restarts); set `DATABASE_URL` for Neon/Postgres. Tables: workspaces,
-profiles, holdings, stock_runs (full response as JSON), memos. Schema is
-`create_all` on startup — move to Alembic when it stabilizes. Anonymous
+profiles, holdings, stock_runs (full response as JSON), memos. `create_all`
+handles fresh installs and an idempotent startup migration adds/backfills the
+enriched holding columns on existing SQLite/Postgres databases. Anonymous
 workspace model: the frontend mints an id once, keeps it in localStorage,
 hydrates on load, and pushes debounced saves. Auth is explicitly out of scope.
 
@@ -124,6 +128,12 @@ holdings. Structured warnings explain infeasible contribution-only targets,
 minimum-trade skips, residual drift, and unresolved purchases. `canApply` is
 only true when the projected holdings are complete and no cash is left outside
 them.
+
+Share-tracked holdings add stable identity, quantity, average/aggregate cost,
+current price, price date/provider, and source to the legacy required dollar
+value. `value` stays authoritative and quantity is never fabricated. Rebalance
+trades carry `holdingId` when matched; a dollar-only preview cannot be applied
+when it would change a tracked holding without updating quantity.
 
 ## Run Locally
 

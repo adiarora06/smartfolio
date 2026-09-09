@@ -10,6 +10,8 @@ the mapped holdings the user explicitly imports.
 """
 from __future__ import annotations
 
+import uuid
+from datetime import date
 from typing import List, Optional
 
 import httpx
@@ -26,6 +28,17 @@ _HOSTS = {
     "development": "https://development.plaid.com",
     "production": "https://production.plaid.com",
 }
+
+
+def _date_only(value: object) -> Optional[str]:
+    if not value:
+        return None
+    candidate = str(value)[:10]
+    try:
+        date.fromisoformat(candidate)
+    except ValueError:
+        return None
+    return candidate
 
 
 def _host() -> str:
@@ -123,15 +136,39 @@ async def import_holdings(request: Request, body: HoldingsImportRequest) -> Hold
         value = h.get("institution_value")
         if value is None:
             value = (h.get("quantity") or 0) * (h.get("institution_price") or 0)
+        raw_quantity = h.get("quantity")
+        quantity = float(raw_quantity) if raw_quantity is not None else None
+        raw_price = h.get("institution_price")
+        current_price = (
+            float(raw_price) if raw_price is not None and float(raw_price) > 0 else None
+        )
+        raw_basis = h.get("cost_basis")
+        cost_basis = float(raw_basis) if raw_basis is not None else None
+        average_cost = (
+            cost_basis / quantity
+            if cost_basis is not None and quantity is not None and quantity > 0
+            else None
+        )
+        stable_key = f"{h.get('account_id', '')}:{h.get('security_id', '')}"
         symbol = (sec.get("ticker_symbol") or sec.get("name") or "?")[:16]
         holdings.append(
             Holding(
+                id=uuid.uuid5(
+                    uuid.NAMESPACE_URL, f"smartfolio:plaid:{stable_key}"
+                ).hex,
                 symbol=symbol.upper(),
                 name=(sec.get("name") or symbol)[:128],
                 type="cash" if sec_type == "cash" else ("etf" if sec_type == "etf" else "stock"),
                 asset=_ASSET_BY_TYPE.get(sec_type, "other"),  # type: ignore[arg-type]
                 sector="imported",
                 value=round(float(value), 2),
+                quantity=quantity,
+                average_cost=average_cost,
+                cost_basis=cost_basis,
+                current_price=current_price,
+                price_as_of=_date_only(h.get("institution_price_as_of")),
+                price_source="plaid" if current_price is not None else None,
+                source="plaid",
             )
         )
 

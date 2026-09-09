@@ -32,6 +32,18 @@ AssetClass = Literal[
     "crypto",
     "other",
 ]
+HoldingSource = Literal["manual", "demo", "imported", "plaid", "analysis"]
+PortfolioDataSource = Literal["demo", "imported", "manual"]
+
+
+def _validate_calendar_date(value: str) -> str:
+    """Reject impossible dates that still match the YYYY-MM-DD wire shape."""
+
+    try:
+        calendar_date.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError("must be a valid calendar date in YYYY-MM-DD format") from exc
+    return value
 
 
 class InvestorProfile(ApiModel):
@@ -46,28 +58,126 @@ class InvestorProfile(ApiModel):
 
 
 class Holding(ApiModel):
+    # ``id`` is optional at stateless API boundaries so legacy value-only
+    # payloads remain valid. Workspace persistence assigns one and always
+    # returns it, making position identity independent of symbol or row order.
+    id: Optional[str] = Field(default=None, min_length=1, max_length=64)
     symbol: str = Field(max_length=16)
     name: str = Field(max_length=128)
     type: Literal["stock", "etf", "cash"]
     asset: AssetClass
     sector: str = Field(max_length=64)
     value: float = Field(ge=0, le=1e12)
+    quantity: Optional[float] = Field(default=None, ge=0, le=1e12)
+    average_cost: Optional[float] = Field(default=None, ge=0, le=1e12)
+    cost_basis: Optional[float] = Field(default=None, ge=0, le=1e12)
+    current_price: Optional[float] = Field(default=None, gt=0, le=1e12)
+    price_as_of: Optional[str] = Field(
+        default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"
+    )
+    price_source: Optional[str] = Field(default=None, min_length=1, max_length=64)
+    source: HoldingSource = "manual"
+
+    @field_validator("symbol")
+    @classmethod
+    def normalize_symbol(cls, value: str) -> str:
+        # Empty symbols are valid only as transient editor drafts today; the
+        # shared holding contract historically allowed them, so preserve that
+        # compatibility while normalizing real symbols.
+        return value.strip().upper()
+
+    @field_validator("price_as_of")
+    @classmethod
+    def validate_price_date(cls, value: Optional[str]) -> Optional[str]:
+        return _validate_calendar_date(value) if value is not None else None
+
+    @model_validator(mode="after")
+    def normalize_cost_basis(self) -> "Holding":
+        """Fill either aggregate/per-share basis when the other is known.
+
+        ``value`` deliberately remains authoritative. Merely adding quantity
+        or a price must never silently revalue a legacy holding; only the
+        explicit price-refresh endpoint performs that operation.
+        """
+
+        if self.current_price is not None and self.price_source is None:
+            self.price_source = "manual"
+
+        if self.average_cost is not None and not self.quantity:
+            raise ValueError("averageCost requires a positive quantity")
+        if self.quantity and self.average_cost is not None:
+            derived = self.quantity * self.average_cost
+            if self.cost_basis is None:
+                self.cost_basis = round(derived, 2)
+            elif not math.isclose(
+                self.cost_basis,
+                derived,
+                rel_tol=1e-6,
+                abs_tol=0.02,
+            ):
+                raise ValueError(
+                    "costBasis must equal quantity multiplied by averageCost"
+                )
+        elif self.quantity and self.cost_basis is not None:
+            self.average_cost = self.cost_basis / self.quantity
+        return self
+
+
+PositionValuationMode = Literal["reported_value", "quantity_priced"]
+PositionGainStatus = Literal["complete", "unavailable"]
+PositionPriceStatus = Literal[
+    "current", "cached", "stale", "reference", "manual", "unavailable"
+]
+
+
+class PortfolioPositionsRequest(ApiModel):
+    holdings: List[Holding] = Field(max_length=200)
+    refresh_prices: bool = False
+    allow_offline_reference_prices: bool = False
+
+
+class PortfolioPosition(ApiModel):
+    holding_id: Optional[str]
+    symbol: str
+    market_value: float
+    cost_basis: Optional[float]
+    average_cost: Optional[float]
+    unrealized_gain: Optional[float]
+    unrealized_gain_pct: Optional[float]
+    valuation_mode: PositionValuationMode
+    gain_status: PositionGainStatus
+    price_status: PositionPriceStatus
+
+
+class PortfolioPositionSummary(ApiModel):
+    market_value: float
+    covered_market_value: float
+    cost_basis: Optional[float]
+    unrealized_gain: Optional[float]
+    unrealized_gain_pct: Optional[float]
+    cost_basis_coverage: float = Field(ge=0, le=1)
+    quantity_coverage: float = Field(ge=0, le=1)
+    priced_coverage: float = Field(ge=0, le=1)
+    calculation_status: Literal["complete", "partial", "unavailable"]
+
+
+class PortfolioPositionWarning(ApiModel):
+    code: str
+    message: str
+    holding_id: Optional[str]
+    symbol: str
+
+
+class PortfolioPositionsResponse(ApiModel):
+    holdings: List[Holding]
+    positions: List[PortfolioPosition]
+    summary: PortfolioPositionSummary
+    warnings: List[PortfolioPositionWarning] = Field(default_factory=list)
 
 
 TransactionType = Literal[
     "deposit", "withdrawal", "buy", "sell", "dividend", "fee"
 ]
-PortfolioDataSource = Literal["demo", "imported", "manual"]
-
-
-def _validate_calendar_date(value: str) -> str:
-    """Reject impossible dates that still match the YYYY-MM-DD wire shape."""
-
-    try:
-        calendar_date.fromisoformat(value)
-    except ValueError as exc:
-        raise ValueError("must be a valid calendar date in YYYY-MM-DD format") from exc
-    return value
 
 
 class PortfolioTransaction(ApiModel):
@@ -76,6 +186,7 @@ class PortfolioTransaction(ApiModel):
     id: str = Field(max_length=64)
     date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
     type: TransactionType
+    holding_id: Optional[str] = Field(default=None, min_length=1, max_length=64)
     symbol: Optional[str] = Field(default=None, max_length=16)
     quantity: Optional[float] = Field(default=None, ge=0, le=1e12)
     price: Optional[float] = Field(default=None, ge=0, le=1e12)
@@ -358,6 +469,9 @@ class RebalancePlanRequest(ApiModel):
 class RebalanceTrade(ApiModel):
     """One exact dollar action; share counts require price/quantity data."""
 
+    holding_id: Optional[str] = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     symbol: Optional[str]
     name: Optional[str]
     asset: AssetClass
@@ -380,6 +494,7 @@ class RebalanceWarning(ApiModel):
         "unresolved_buy_target",
         "uninvested_cash",
         "target_not_reached",
+        "share_quantity_unadjusted",
     ]
     message: str
     asset: Optional[AssetClass] = None
@@ -843,6 +958,12 @@ class WorkspaceState(ApiModel):
 
 class HoldingsPut(ApiModel):
     holdings: List[Holding] = Field(max_length=500)
+
+
+class HoldingsPutResponse(ApiModel):
+    ok: Literal[True] = True
+    count: int = Field(ge=0)
+    holdings: List[Holding]
 
 
 class TransactionsPut(ApiModel):

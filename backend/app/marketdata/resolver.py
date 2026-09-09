@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Dict, Optional
 
 import httpx
@@ -39,6 +40,14 @@ from .finnhub import FinnhubProvider, parse_finnhub_fundamentals
 from .offline import offline_snapshot
 from .series import PriceSeries, compute_stats
 from .yahoo import fetch_daily as yahoo_fetch_daily, parse_rows_series
+
+
+@dataclass(frozen=True)
+class ResolvedQuote:
+    """One quote plus how it was obtained, without triggering deep analysis."""
+
+    snapshot: MarketSnapshot
+    origin: str  # live | cache | stale | reference
 
 
 def _build_provider() -> Optional[MarketDataProvider]:
@@ -175,6 +184,52 @@ class MarketDataResolver:
         lock = self._locks.setdefault(symbol, asyncio.Lock())
         async with lock:
             return await self._resolve_locked(symbol)
+
+    async def resolve_quote(self, ticker: str) -> ResolvedQuote:
+        """Resolve only a spot quote.
+
+        Portfolio valuation calls this batch-friendly path so refreshing six
+        holdings does not also spend scarce history, fundamentals, and news
+        requests for all six symbols.
+        """
+
+        symbol = ticker.strip().upper()
+        if not symbol:
+            raise ValueError("ticker cannot be empty")
+        lock = self._locks.setdefault(symbol, asyncio.Lock())
+        async with lock:
+            base = offline_snapshot(symbol)
+            quote_provider = self.provider or self.deep_provider
+            if quote_provider is None:
+                return ResolvedQuote(snapshot=base, origin="reference")
+
+            ctx = MarketContext(snapshot=base)
+            client = self._get_client()
+            payload = await self._cached_fetch(
+                symbol,
+                "quote",
+                lambda: self._fetch_quote(client, quote_provider, symbol),
+                ctx,
+            )
+            if payload:
+                origin = "live"
+                if "quote:cache" in ctx.sources:
+                    origin = "cache"
+                elif "quote:stale" in ctx.sources:
+                    origin = "stale"
+                return ResolvedQuote(
+                    snapshot=merge(
+                        base,
+                        MarketSnapshot(
+                            symbol=symbol,
+                            price=payload.get("price"),
+                            as_of=payload.get("asOf"),
+                            source=payload.get("source", quote_provider.name),
+                        ),
+                    ),
+                    origin=origin,
+                )
+            return ResolvedQuote(snapshot=base, origin="reference")
 
     async def _resolve_locked(self, symbol: str) -> MarketContext:
         base = offline_snapshot(symbol)

@@ -11,8 +11,9 @@ from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Header, Request
 
 from .db import SessionLocal, save_stock_run
+from .marketdata.resolver import resolver
 from .orchestrator import run_stock_analysis
-from .ratelimit import EXPENSIVE_LIMIT, limiter
+from .ratelimit import EXPENSIVE_LIMIT, POSITION_LIMIT, limiter
 from .schemas import (
     AdvisorAskRequest,
     AdvisorAskResponse,
@@ -20,6 +21,8 @@ from .schemas import (
     PortfolioAnalyzeResponse,
     PortfolioPerformanceRequest,
     PortfolioPerformanceResponse,
+    PortfolioPositionsRequest,
+    PortfolioPositionsResponse,
     RebalancePlanRequest,
     RebalancePlanResponse,
     ScenarioLabRequest,
@@ -32,6 +35,7 @@ from .services.ai.insights import describe_insights
 from .services.ai.llm import answer_question
 from .services.portfolio import analyze_portfolio
 from .services.performance import calculate_performance
+from .services.positions import analyze_positions
 from .services.rebalance import plan_rebalance
 from .services.scenario import run_scenario_lab
 
@@ -51,6 +55,15 @@ def portfolio_performance(req: PortfolioPerformanceRequest) -> PortfolioPerforma
     return PortfolioPerformanceResponse(
         performance=calculate_performance(req.transactions, req.valuations, req.range)
     )
+
+
+@router.post("/portfolio/positions", response_model=PortfolioPositionsResponse)
+@limiter.limit(POSITION_LIMIT)
+async def portfolio_positions(
+    request: Request, req: PortfolioPositionsRequest
+) -> PortfolioPositionsResponse:
+    """Derive position-level P&L and optionally refresh quote-only prices."""
+    return await analyze_positions(req, resolver)
 
 
 @router.post("/portfolio/rebalance", response_model=RebalancePlanResponse)

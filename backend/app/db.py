@@ -12,7 +12,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import AsyncIterator, Optional
 
-from sqlalchemy import JSON, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    JSON,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    inspect,
+    text,
+)
+from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -60,14 +71,31 @@ class ProfileRow(Base):
 
 class HoldingRow(Base):
     __tablename__ = "holdings"
+    __table_args__ = (
+        Index(
+            "ux_holdings_workspace_holding_id",
+            "workspace_id",
+            "holding_id",
+            unique=True,
+        ),
+    )
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), index=True)
+    holding_id: Mapped[str] = mapped_column(String(64), default=new_id)
     symbol: Mapped[str] = mapped_column(String(16))
     name: Mapped[str] = mapped_column(String(128))
     type: Mapped[str] = mapped_column(String(16))
     asset: Mapped[str] = mapped_column(String(24))
     sector: Mapped[str] = mapped_column(String(48))
     value: Mapped[float] = mapped_column(Float)
+    quantity: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    average_cost: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    cost_basis: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    current_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    price_as_of: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    price_source: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    source: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
     position: Mapped[int] = mapped_column(Integer)
 
 
@@ -79,6 +107,7 @@ class TransactionRow(Base):
     )
     date: Mapped[str] = mapped_column(String(10), index=True)
     type: Mapped[str] = mapped_column(String(16))
+    holding_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     symbol: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
     quantity: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
@@ -162,6 +191,79 @@ else:
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 
+_HOLDING_MIGRATION_COLUMNS = {
+    "holding_id": "VARCHAR(64)",
+    "quantity": "FLOAT",
+    "average_cost": "FLOAT",
+    "cost_basis": "FLOAT",
+    "current_price": "FLOAT",
+    "price_as_of": "VARCHAR(32)",
+    "price_source": "VARCHAR(32)",
+    "source": "VARCHAR(16)",
+}
+
+
+def migrate_enriched_holdings(conn: Connection) -> None:
+    """Add enriched holding fields to an existing database without data loss.
+
+    ``create_all`` creates the complete schema for new installations but does
+    not alter existing tables. This small, idempotent migration keeps local
+    SQLite databases and hosted Postgres databases upgradeable without adding
+    a separate migration dependency.
+    """
+
+    inspector = inspect(conn)
+    table_names = set(inspector.get_table_names())
+    if "holdings" in table_names:
+        holding_columns = {
+            column["name"] for column in inspector.get_columns("holdings")
+        }
+        for name, sql_type in _HOLDING_MIGRATION_COLUMNS.items():
+            if name not in holding_columns:
+                conn.execute(text(f"ALTER TABLE holdings ADD COLUMN {name} {sql_type}"))
+
+    if "transactions" in table_names:
+        transaction_columns = {
+            column["name"] for column in inspector.get_columns("transactions")
+        }
+        if "holding_id" not in transaction_columns:
+            conn.execute(
+                text("ALTER TABLE transactions ADD COLUMN holding_id VARCHAR(64)")
+            )
+
+    if "holdings" not in table_names:
+        return
+
+    # Repair missing IDs and the unlikely duplicate left by a partially applied
+    # migration before creating the workspace-scoped uniqueness guarantee.
+    rows = conn.execute(
+        text(
+            "SELECT id, workspace_id, holding_id FROM holdings "
+            "ORDER BY workspace_id, id"
+        )
+    ).mappings()
+    seen: set[tuple[str, str]] = set()
+    for row in rows:
+        workspace_id = str(row["workspace_id"])
+        holding_id = str(row["holding_id"] or "").strip()
+        if not holding_id or (workspace_id, holding_id) in seen:
+            holding_id = new_id()
+            while (workspace_id, holding_id) in seen:
+                holding_id = new_id()
+            conn.execute(
+                text("UPDATE holdings SET holding_id = :holding_id WHERE id = :id"),
+                {"holding_id": holding_id, "id": row["id"]},
+            )
+        seen.add((workspace_id, holding_id))
+
+    conn.execute(
+        text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_holdings_workspace_holding_id "
+            "ON holdings (workspace_id, holding_id)"
+        )
+    )
+
+
 async def init_db() -> None:
     # Ensure the SQLite directory exists before the first connection.
     url = settings.database_url
@@ -170,6 +272,7 @@ async def init_db() -> None:
         Path(path).expanduser().parent.mkdir(parents=True, exist_ok=True)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(migrate_enriched_holdings)
 
 
 async def get_session() -> AsyncIterator[AsyncSession]:

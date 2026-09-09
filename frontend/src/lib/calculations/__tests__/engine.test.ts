@@ -154,15 +154,16 @@ describe('parsePortfolioCsv', () => {
       'symbol,name,type,asset,sector,value\nMSFT,Microsoft Corp.,stock,us_equity,technology,4500',
     )
     expect(parsed.errors).toEqual([])
-    expect(parsed.holdings).toEqual([
-      {
-        symbol: 'MSFT',
-        name: 'Microsoft Corp.',
-        type: 'stock',
-        asset: 'us_equity',
-        sector: 'technology',
-        value: 4500,
-      },
-    ])
+    expect(parsed.holdings).toHaveLength(1)
+    expect(parsed.holdings[0]).toMatchObject({
+      symbol: 'MSFT',
+      name: 'Microsoft Corp.',
+      type: 'stock',
+      asset: 'us_equity',
+      sector: 'technology',
+      value: 4500,
+      source: 'imported',
+    })
+    expect(parsed.holdings[0].id).toBeTruthy()
   })
 })

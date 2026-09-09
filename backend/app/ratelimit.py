@@ -23,3 +23,8 @@ limiter = Limiter(key_func=client_ip)
 
 # Per-IP budgets for the endpoints that trigger LLM generations.
 EXPENSIVE_LIMIT = "30/minute"
+
+# A refresh can fan out across many unique symbols. The quote cache absorbs
+# normal repetition; this per-IP ceiling protects the upstream free tier from
+# deliberate high-cardinality bursts.
+POSITION_LIMIT = "10/minute"

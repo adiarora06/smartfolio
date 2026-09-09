@@ -86,6 +86,21 @@ describe('rebalance preview safeguards', () => {
     expect(rebalanceApplyBlocker(holdings, unresolved)).toMatch(/Choose an investment/)
   })
 
+  it('explains why priced holdings need executed share quantities before apply', () => {
+    const quantityGuard = preview({
+      canApply: false,
+      warnings: [
+        {
+          code: 'share_quantity_unadjusted',
+          message: 'Share quantities are not changed by a dollar preview.',
+        },
+      ],
+    })
+
+    expect(rebalanceApplyBlocker(holdings, quantityGuard)).toMatch(/executed share quantities/i)
+    expect(rebalanceApplyBlocker(holdings, quantityGuard)).not.toMatch(/Choose an investment/)
+  })
+
   it('blocks a projected snapshot that no longer matches the portfolio', () => {
     const mismatched = preview({
       projectedHoldings: [{ ...holdings[0], symbol: 'AAPL' }, holdings[1]],

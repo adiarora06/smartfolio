@@ -32,6 +32,13 @@ Represents one asset in a portfolio.
 - sector
 - region
 
+Implemented current-position fields now include a stable workspace-scoped id,
+quantity, average cost, aggregate cost basis, authoritative market value,
+current price, price as-of/source, and holding source. All share/cost fields are
+nullable so legacy value-only holdings remain first-class. Unrealized gain is
+derived only where basis exists; it is not persisted. Current holdings still do
+not imply historical allocation or tax-lot attribution.
+
 ## Portfolio Snapshot
 
 Represents a full portfolio at a point in time.
@@ -95,4 +102,3 @@ These entities exist as typed contracts today (durable storage is Phase 4):
 - Frontend TypeScript types — [[13 Frontend Architecture]]
   (`frontend/src/types.ts`), kept as a line-for-line mirror (camelCase wire).
 - Neon Postgres persistence is designed in [[15 Improvement Design]] (M2).
-

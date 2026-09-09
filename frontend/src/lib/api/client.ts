@@ -129,12 +129,70 @@ export function apiAnalyzePortfolio(
   return post<PortfolioAnalyzeResult>('/portfolio/analyze', { profile, holdings })
 }
 
+export interface PortfolioPosition {
+  holdingId: string | null
+  symbol: string
+  marketValue: number
+  costBasis: number | null
+  averageCost: number | null
+  unrealizedGain: number | null
+  unrealizedGainPct: number | null
+  valuationMode: 'reported_value' | 'quantity_priced'
+  gainStatus: 'complete' | 'unavailable'
+  priceStatus: 'current' | 'cached' | 'stale' | 'reference' | 'manual' | 'unavailable'
+}
+
+export interface PortfolioPositionSummary {
+  marketValue: number
+  coveredMarketValue: number
+  costBasis: number | null
+  unrealizedGain: number | null
+  unrealizedGainPct: number | null
+  costBasisCoverage: number
+  quantityCoverage: number
+  pricedCoverage: number
+  calculationStatus: 'complete' | 'partial' | 'unavailable'
+}
+
+export interface PortfolioPositionWarning {
+  code: string
+  message: string
+  holdingId: string | null
+  symbol: string
+}
+
+export interface PortfolioPositionsResult {
+  holdings: Holding[]
+  positions: PortfolioPosition[]
+  summary: PortfolioPositionSummary
+  warnings: PortfolioPositionWarning[]
+}
+
+export function apiAnalyzePositions(
+  holdings: Holding[],
+  options: {
+    refreshPrices?: boolean
+    allowOfflineReferencePrices?: boolean
+  } = {},
+): Promise<PortfolioPositionsResult> {
+  return post<PortfolioPositionsResult>(
+    '/portfolio/positions',
+    {
+      holdings,
+      refreshPrices: options.refreshPrices ?? false,
+      allowOfflineReferencePrices: options.allowOfflineReferencePrices ?? false,
+    },
+    { timeoutMs: SLOW_TIMEOUT_MS },
+  )
+}
+
 export type RebalanceMode = 'rebalance' | 'new_money_only'
 export type RebalanceAction = 'buy' | 'sell'
 
 /** One deterministic model trade. A missing symbol is intentionally unresolved:
  * the engine knows which asset class is needed, but does not invent a security. */
 export interface RebalanceTrade {
+  holdingId?: string | null
   symbol?: string | null
   name?: string | null
   asset: AssetClass

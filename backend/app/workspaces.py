@@ -30,6 +30,7 @@ from .schemas import (
     AnalysisSummary,
     Holding,
     HoldingsPut,
+    HoldingsPutResponse,
     InvestorProfile,
     MemoIn,
     MemoOut,
@@ -90,12 +91,20 @@ async def get_state(
     ).all()
     holdings = [
         Holding(
+            id=h.holding_id,
             symbol=h.symbol,
             name=h.name,
             type=h.type,  # type: ignore[arg-type]
             asset=h.asset,  # type: ignore[arg-type]
             sector=h.sector,
             value=h.value,
+            quantity=h.quantity,
+            average_cost=h.average_cost,
+            cost_basis=h.cost_basis,
+            current_price=h.current_price,
+            price_as_of=h.price_as_of,
+            price_source=h.price_source,
+            source=h.source or "manual",  # type: ignore[arg-type]
         )
         for h in holding_rows
     ]
@@ -127,6 +136,7 @@ async def get_state(
             id=row.id,
             date=row.date,
             type=row.type,  # type: ignore[arg-type]
+            holding_id=row.holding_id,
             symbol=row.symbol,
             quantity=row.quantity,
             price=row.price,
@@ -183,18 +193,58 @@ async def put_profile(
     return {"ok": True}
 
 
-@router.put("/workspaces/{workspace_id}/holdings")
+@router.put(
+    "/workspaces/{workspace_id}/holdings", response_model=HoldingsPutResponse
+)
 async def put_holdings(
     workspace_id: str,
     body: HoldingsPut,
     session: AsyncSession = Depends(get_session),
-) -> dict:
+) -> HoldingsPutResponse:
     await _require_workspace(session, workspace_id)
-    await session.execute(delete(HoldingRow).where(HoldingRow.workspace_id == workspace_id))
+    existing = list(
+        (
+            await session.scalars(
+                select(HoldingRow)
+                .where(HoldingRow.workspace_id == workspace_id)
+                .order_by(HoldingRow.position)
+            )
+        ).all()
+    )
+    by_holding_id = {row.holding_id: row for row in existing if row.holding_id}
+    requested_ids = [holding.id for holding in body.holdings if holding.id]
+    if len(requested_ids) != len(set(requested_ids)):
+        raise HTTPException(status_code=422, detail="holding ids must be unique")
+
+    claimed_rows: set[int] = set()
+    canonical: List[Holding] = []
     for i, h in enumerate(body.holdings):
-        session.add(HoldingRow(workspace_id=workspace_id, position=i, **h.model_dump()))
+        row = by_holding_id.get(h.id) if h.id else None
+        # Legacy clients do not know holding ids. Reusing the row at the same
+        # position avoids needless identity churn until they next hydrate and
+        # adopt the canonical ids returned below.
+        if row is None and h.id is None and i < len(existing):
+            candidate = existing[i]
+            if candidate.id not in claimed_rows:
+                row = candidate
+        holding_id = h.id or (row.holding_id if row is not None else new_id())
+        if row is None:
+            row = HoldingRow(workspace_id=workspace_id, holding_id=holding_id)
+            session.add(row)
+        claimed_rows.add(row.id) if row.id is not None else None
+
+        row.holding_id = holding_id
+        row.position = i
+        for field, value in h.model_dump(exclude={"id"}).items():
+            setattr(row, field, value)
+        canonical.append(h.model_copy(update={"id": holding_id}))
+
+    canonical_ids = {holding.id for holding in canonical}
+    for row in existing:
+        if row.holding_id not in canonical_ids:
+            await session.delete(row)
     await session.commit()
-    return {"ok": True, "count": len(body.holdings)}
+    return HoldingsPutResponse(count=len(canonical), holdings=canonical)
 
 
 @router.put("/workspaces/{workspace_id}/transactions")

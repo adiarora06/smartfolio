@@ -14,4 +14,17 @@ describe('store imports without a DOM', () => {
     // With no DOM there is no path to deep-link into, so it opens on landing.
     expect(useStore.getState().page).toBe('landing')
   })
+
+  it('creates and mutates holdings by stable id', async () => {
+    const { useStore } = await import('../useStore')
+    const id = useStore.getState().addHolding()
+
+    expect(useStore.getState().holdings.some((holding) => holding.id === id)).toBe(true)
+    useStore.getState().updateHolding(id, 'quantity', 2)
+    useStore.getState().updateHolding(id, 'currentPrice', 125)
+    expect(useStore.getState().holdings.find((holding) => holding.id === id)?.value).toBe(250)
+
+    useStore.getState().removeHolding(id)
+    expect(useStore.getState().holdings.some((holding) => holding.id === id)).toBe(false)
+  })
 })
