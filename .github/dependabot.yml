@@ -9,6 +9,9 @@ updates:
       frontend-dependencies:
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
     open-pull-requests-limit: 5
 
   - package-ecosystem: pip
@@ -20,6 +23,9 @@ updates:
       backend-dependencies:
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
     open-pull-requests-limit: 5
 
   - package-ecosystem: github-actions
