@@ -6,6 +6,6 @@ sqlalchemy[asyncio]>=2.0.52,<2.1
 aiosqlite>=0.22.1,<1
 anthropic>=0.125,<1
 openai>=1.109.1,<2
-asyncpg>=0.31,<1
+asyncpg>=0.32.0,<1
 slowapi>=0.1.10,<1
 sentry-sdk[fastapi]>=2.69.1,<3
