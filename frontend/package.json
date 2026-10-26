@@ -23,7 +23,7 @@
     "zustand": "^4.5.7"
   },
   "devDependencies": {
-    "@emnapi/core": "2.0.0-alpha.3",
+    "@emnapi/core": "2.0.0-beta.2",
     "@emnapi/runtime": "2.0.0-alpha.3",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
