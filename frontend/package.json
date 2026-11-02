@@ -20,7 +20,7 @@
     "react-dom": "^18.3.1",
     "react-router": "^5.3.4",
     "react-router-dom": "^5.3.4",
-    "zustand": "^4.5.7"
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@emnapi/core": "2.0.0-alpha.3",
