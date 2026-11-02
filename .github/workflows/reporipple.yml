@@ -1,0 +1,42 @@
+name: RepoRipple impact analysis
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reporipple-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  impact:
+    name: Analyze change impact
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Analyze repository impact
+        id: reporipple
+        uses: adiarora06/RepoRipple@9feab0ac7fb52de3af47d4feb8e4357a4e506f83 # v0.5.0-compatible action fix
+        with:
+          base: ${{ github.event.pull_request.base.sha }}
+          max-depth: "4"
+          reports-directory: reporipple-reports
+
+      - name: Upload impact reports
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reporipple-impact-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ steps.reporipple.outputs.markdown-report }}
+            ${{ steps.reporipple.outputs.json-report }}
+          if-no-files-found: error
+          retention-days: 14

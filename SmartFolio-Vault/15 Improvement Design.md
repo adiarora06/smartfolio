@@ -101,7 +101,7 @@ kill backend → local run still shows impact (without server events).
 
 ### Stack
 
-- **SQLAlchemy 2.0 (async) + asyncpg + Alembic** migrations; `DATABASE_URL`
+- **SQLAlchemy 2.x (async) + asyncpg + Alembic** migrations; `DATABASE_URL`
   env pointing at Neon. `app/db/` package: `engine.py`, `models.py`, `repo.py`.
 - No accounts/auth yet: an anonymous **workspace** token (UUID) minted by
   `POST /workspaces`, kept in `localStorage`, sent as `X-Workspace-Id`. This

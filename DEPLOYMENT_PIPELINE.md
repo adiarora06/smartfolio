@@ -11,7 +11,7 @@
 
 ### Backend Deployment
 - **Current**: Manual deployment to Render/Railway (or local uvicorn)
-- **Runtime**: Python 3.9+
+- **Runtime**: Python 3.12+
 - **Framework**: FastAPI with async SQLAlchemy
 - **Package Manager**: pip
 - **Start**: `uvicorn app.main:app`

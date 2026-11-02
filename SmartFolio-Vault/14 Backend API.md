@@ -72,7 +72,7 @@ server-side. Keyless deploys are byte-identical to template behavior
 
 ## Persistence (M2 — 2026-07-18)
 
-`app/db.py`: SQLAlchemy 2.0 async. **SQLite file by default**
+`app/db.py`: SQLAlchemy 2.x async. **SQLite file by default**
 (`backend/data/smartfolio.db`, gitignored — zero-setup persistence, verified to
 survive restarts); set `DATABASE_URL` for Neon/Postgres. Tables: workspaces,
 profiles, holdings, stock_runs (full response as JSON), memos. `create_all`

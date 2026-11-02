@@ -1,4 +1,4 @@
-"""Persistence layer — SQLAlchemy 2.0 async.
+"""Persistence layer — SQLAlchemy 2.x async.
 
 SQLite file by default (zero-setup local persistence); point DATABASE_URL at
 Neon/Postgres for cloud deploys. Run payloads are stored as JSON — their shape
