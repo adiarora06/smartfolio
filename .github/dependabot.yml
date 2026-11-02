@@ -12,6 +12,20 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      - dependency-name: react-router-dom
+        update-types:
+          - version-update:semver-major
+      - dependency-name: "@ionic/react-router"
+        update-types:
+          - version-update:semver-major
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
+      - dependency-name: "@emnapi/core"
+        # Defer beta prereleases while keeping release candidates and 2.0.0 eligible.
+        versions:
+          - ">=2.0.0-beta.0 <2.0.0-rc.0"
     open-pull-requests-limit: 5
 
   - package-ecosystem: pip
@@ -26,6 +40,10 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      - dependency-name: anthropic
+        update-types:
+          - version-update:semver-major
     open-pull-requests-limit: 5
 
   - package-ecosystem: github-actions
