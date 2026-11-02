@@ -13,7 +13,13 @@ updates:
           - minor
           - patch
     ignore:
+      - dependency-name: react-router
+        update-types:
+          - version-update:semver-major
       - dependency-name: react-router-dom
+        update-types:
+          - version-update:semver-major
+      - dependency-name: "@ionic/react"
         update-types:
           - version-update:semver-major
       - dependency-name: "@ionic/react-router"
@@ -23,9 +29,12 @@ updates:
         update-types:
           - version-update:semver-major
       - dependency-name: "@emnapi/core"
-        # Defer beta prereleases while keeping release candidates and 2.0.0 eligible.
+        # Keep the aligned pair on alpha.3 until stable 2.0.0 is available.
         versions:
-          - ">=2.0.0-beta.0 <2.0.0-rc.0"
+          - ">=2.0.0-alpha.4 <2.0.0"
+      - dependency-name: "@emnapi/runtime"
+        versions:
+          - ">=2.0.0-alpha.4 <2.0.0"
     open-pull-requests-limit: 5
 
   - package-ecosystem: pip
