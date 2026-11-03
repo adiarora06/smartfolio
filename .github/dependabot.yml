@@ -13,6 +13,20 @@ updates:
           - minor
           - patch
     ignore:
+      # React 19 is a coordinated framework migration. Keep the runtime and
+      # type packages on the same major until browser coverage is in place.
+      - dependency-name: react
+        versions:
+          - ">=19.0.0"
+      - dependency-name: react-dom
+        versions:
+          - ">=19.0.0"
+      - dependency-name: "@types/react"
+        versions:
+          - ">=19.0.0"
+      - dependency-name: "@types/react-dom"
+        versions:
+          - ">=19.0.0"
       - dependency-name: react-router
         update-types:
           - version-update:semver-major
@@ -50,9 +64,14 @@ updates:
           - minor
           - patch
     ignore:
+      # Provider majors require a live API smoke test because both SDK lines
+      # cross transport and API-contract boundaries.
       - dependency-name: anthropic
-        update-types:
-          - version-update:semver-major
+        versions:
+          - ">=1.0.0"
+      - dependency-name: openai
+        versions:
+          - ">=2.0.0"
     open-pull-requests-limit: 5
 
   - package-ecosystem: github-actions
