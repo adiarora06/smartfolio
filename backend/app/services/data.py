@@ -60,8 +60,8 @@ AUDIT_TRACE = (
 TOPOLOGY_TRACE = (
     "Ticker Intake Agent normalizes symbol and horizon.",
     "Market Data Tool resolves quote, daily history, fundamentals, and news tone.",
-    "Parameter Estimation Agent fits annualized volatility and a shrunk drift.",
     "Stock Forecast Agent produces the lognormal quantile cone.",
+    "Parameter Estimation Agent fits annualized volatility and a shrunk drift.",
     "Backtest Agent replays the estimator across past origins for calibration.",
     "Portfolio Agent decomposes risk contribution under a single-index model.",
     "Memo Writer narrates the result (template in local mode).",
