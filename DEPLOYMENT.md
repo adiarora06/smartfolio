@@ -4,7 +4,11 @@ The repo is a monorepo:
 
 - `frontend/` — React/Vite SPA → **Vercel**
 - `backend/` — FastAPI service → **Render** (or any Python host)
-- `index.html` — the original static prototype (superseded; kept for history)
+- `vercel.json` — builds `frontend/` and serves `frontend/dist`
+
+The original root-level `index.html` prototype was retired after the React
+deployment was verified. It remains recoverable from Git history, but is not a
+supported application or deployment entry point.
 
 The frontend works on its own — with no backend it falls back to the built-in
 offline engine (every screen works, prices show as "offline reference"). Live

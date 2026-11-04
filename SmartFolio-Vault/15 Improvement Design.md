@@ -223,9 +223,9 @@ disclaimer; without a key, behavior is byte-identical to today.
   `render.yaml` blueprint (Render free tier; Fly.io as alternate). Env:
   `DATABASE_URL`, `SMARTFOLIO_CORS_ORIGINS`, optional `MARKET_DATA_API_KEY`,
   `ANTHROPIC_API_KEY`/`LLM_MODEL`.
-- **Frontend**: point Vercel Root Directory at `frontend/` (dashboard change),
-  `VITE_API_URL` env set to the Render URL. The root static prototype retires
-  only after the SPA deploy is confirmed live.
+- **Frontend**: root `vercel.json` builds `frontend/` and serves
+  `frontend/dist`; `VITE_API_URL` is set to the Render URL. The root static
+  prototype was retired after the SPA deployment was confirmed live.
 - **Ops hardening** in FastAPI: `slowapi` rate limiting (e.g. 30 req/min/IP on
   POST routes), structured JSON logging with request IDs, `/health` extended
   with db/provider status, CORS narrowed to the real origins.
