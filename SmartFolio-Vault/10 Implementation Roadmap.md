@@ -13,24 +13,25 @@ Goal: make the current SmartFolio demo feel like a polished public financial app
 - Improve empty states, loading states, and responsive behavior.
 - Add clear disclaimers that outputs are educational and not financial advice.
 
-## Phase 2 - Frontend Application  ✅ (in progress — 2026-07-17)
+## Phase 2 - Frontend Application ✅ (completed — 2026-11-04)
 
-Goal: move from static prototype toward a maintainable app.
+Goal: replace the static prototype with a maintainable application.
 
-Done: converted `index.html` into a component-based **Vite + React + TypeScript**
-app in `frontend/`, with the deterministic/AI split enforced by folder structure
-and Zustand for state. See [[13 Frontend Architecture]]. Remaining: client-side
-persistence of setup answers across reloads, and point Vercel at `frontend/`.
+Done: retired the root static prototype and shipped a component-based **Vite +
+React + TypeScript** app from `frontend/`. Vercel builds that workspace and
+serves `frontend/dist`; Zustand state is mirrored to local storage so setup and
+portfolio state survive reloads. The deterministic/AI split is enforced by the
+folder structure. See [[13 Frontend Architecture]].
 
-- Convert `index.html` into React or Next.js.
-- Create reusable UI modules:
+- [x] Replace the root `index.html` prototype with the React/Vite application.
+- [x] Create reusable UI modules:
   - onboarding wizard
   - portfolio dashboard
   - Analyze Stock workspace
   - agent activity panel
   - forecast chart
   - risk profile summary
-- Add client-side state management for setup answers and analysis sessions.
+- [x] Add client-side state management for setup answers and analysis sessions.
 
 ## Phase 3 - Backend Services  ✅ (core done — 2026-07-17)
 
@@ -78,15 +79,19 @@ Goal: make the AI architecture resume-ready.
 - Add MCP-style connectors for external tools.
 - Add evaluation tests for agent output quality and factual grounding.
 
-## Phase 6 - Production Deployment
+## Phase 6 - Production Deployment ✅ (core deployed)
 
 Goal: make the app demonstrably cloud-native.
 
-- Deploy frontend on Vercel.
-- Deploy backend on a production service or Vercel Functions if suitable.
-- Add environment variables for market data, database, and LLM providers.
-- Add health checks.
-- Add rate limiting.
-- Add structured logging.
-- Add CI checks.
+Done: the React/Vite frontend is live on Vercel and the FastAPI backend is live
+on Render, with public health/API documentation links in the repository README.
+
+- [x] Deploy the React/Vite frontend from `frontend/dist` on Vercel.
+- [x] Deploy the FastAPI backend on Render.
+- [x] Configure environment variables for market data and LLM providers.
+- [x] Add health checks.
+- [x] Add rate limiting.
+- [x] Add structured logging.
+- [x] Add backend/frontend CI checks and dependency audits.
+- [ ] Add the production database and durable cross-device persistence from Phase 4.
 

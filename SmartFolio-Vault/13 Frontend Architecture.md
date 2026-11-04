@@ -22,11 +22,14 @@ clean.
 
 ```text
 so-i-have-this-right-uses/
-  index.html         # original static prototype (kept live during migration)
-  frontend/          # NEW — React SPA (this note)
-  backend/           # FUTURE — FastAPI service (Phase 3)
+  vercel.json        # builds and serves the React SPA from frontend/dist
+  frontend/          # React SPA (this note)
+  backend/           # FastAPI service (Phase 3)
   SmartFolio-Vault/  # this vault (project memory)
 ```
+
+The original root-level static prototype was retired after the React
+deployment was confirmed live. Its implementation remains in Git history.
 
 ## The Core Rule, Enforced by Folders
 
@@ -80,10 +83,9 @@ screen (last nav item):
 - The sidebar **Agent Network panel was removed** (AgentPanel.tsx deleted).
 - The Analyze Stock terminal **lost its Topology tab** — the terminal keeps
   only actionable tabs (Forecast, Backtest, Audit Log, Memory).
-- `OpenSourceScreen` now holds: an **SVG agent graph** (8 nodes / 7 edges —
-  profile flow and market flow converging on the Portfolio Agent, Compliance
-  as the amber guardrail), the **active agents list** (7 agents with live
-  API/local status), the run pipeline steps, the design rule, and a
+- `OpenSourceScreen` now holds: an **SVG agent graph** (8 stages / 7 edges),
+  the **active stages list** with live API/local status, the run pipeline
+  steps, the design rule, and a
   View-on-GitHub link.
 - Connections' API card copy was de-jargoned ("Analysis service · live market
   data").
@@ -123,9 +125,9 @@ interactions (holdings editing, scenario sliders) stay client-side for instant
 recomputation. The Analyze Stock terminal shows the engine source
 ("· API" / "· Local") and Connections has a live SmartFolio API status card.
 
-## Not Yet Done (follow-ups)
+## Deployment status
 
-- Wire Vercel to build `frontend/` (currently the root static prototype is what
-  deploys). This is a Phase 6 / deployment task — see [[06 Deployment]].
+- Vercel builds `frontend/` through the root `vercel.json` and serves
+  `frontend/dist`. The obsolete root static prototype has been retired.
 - ~~Extract the contracts for FastAPI Pydantic models~~ — done in Phase 3:
   `backend/app/schemas.py` mirrors `src/types.ts` (camelCase wire format).

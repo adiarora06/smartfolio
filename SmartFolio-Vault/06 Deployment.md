@@ -10,12 +10,11 @@ https://github.com/adiarora06/smartfolio
 
 ## Current Deployment
 
-The **original** deployment is a static single-page app on Vercel (root
-`index.html`). As of the Phase 2/3 work the repo is a monorepo (`frontend/` +
-`backend/`), and the live site still serves the old root `index.html` until the
-new setup below is pushed and wired.
+The live Vercel site is the React/Vite application built from `frontend/`.
+The superseded root `index.html` prototype was removed after the production
+deployment was verified; its history remains available in Git.
 
-## Target Deployment (configured 2026-07-17)
+## Deployment topology (configured 2026-07-17)
 
 Frontend and backend deploy separately — see the full walkthrough in
 `DEPLOYMENT.md` at the repo root.
@@ -36,9 +35,8 @@ Backend first (get its URL) → set `VITE_API_URL` in Vercel + redeploy → set
 
 ### Will `git push` auto-update Vercel?
 
-Yes, if the Vercel project is linked to the GitHub repo (it is). But: (1) the
-new code must be committed first; (2) with the new root `vercel.json` the push
-builds the React app instead of the old static file; (3) the Python backend does
+Yes, if the Vercel project is linked to the GitHub repo (it is). The root
+`vercel.json` builds the React app from `frontend/`; the Python backend does
 **not** run on Vercel — it must be deployed to Render/etc., or the frontend
 silently falls back to its offline engine (no live prices).
 

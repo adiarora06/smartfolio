@@ -10,7 +10,8 @@
     "build:sites": "tsc --noEmit && vite build && node scripts/prepare-sites-build.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run && npm run test:deployment-layout",
+    "test:deployment-layout": "node scripts/verify-deployment-layout.mjs"
   },
   "dependencies": {
     "@ionic/react": "^8.8.19",
