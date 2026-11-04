@@ -5,7 +5,7 @@
 // everyday workflow shows results; this tab shows the machinery.
 //
 // The graph mirrors the REAL backend trace emitted by app/orchestrator.py —
-// the same seven steps the Analyze Stock "Audit Log" tab renders. Keep the two
+// the same eight steps the Analyze Stock "Audit Log" tab renders. Keep the two
 // in sync: if the orchestrator's emit() sequence changes, update this file.
 
 import { useState } from 'react'
@@ -13,29 +13,16 @@ import { useStore } from '../../../store/useStore'
 import { Panel, PanelHead } from '../../shared/ui'
 import { AppPage } from '../../shared/AppPage'
 import { openExternal } from '../../../lib/browser'
+import { ANALYSIS_PIPELINE, type AnalysisStageKind } from '../../../lib/data/analysisPipeline'
 
 const REPO_URL = 'https://github.com/adiarora06/smartfolio'
 
 // Pipeline order matches orchestrator.py exactly.
-const AGENT_DETAILS: Array<[name: string, role: string]> = [
-  ['Ticker Intake Agent', 'Normalizes the symbol and clamps the horizon to 7–365 days.'],
-  ['Market Data Tool', 'Resolves the live price (Finnhub / Alpha Vantage) with an offline reference backstop.'],
-  ['Stock Forecast Agent', 'Builds bear / median / bull paths with a confidence score.'],
-  ['Backtest Agent', 'Evaluates sample windows: hit rate, mean error, drawdown proxy.'],
-  ['Portfolio Agent', 'Runs the what-if: how the position would shift portfolio weight and sector concentration.'],
-  ['Memo Writer', 'AI explanation layer — narrates the memo via LLM (gpt-4o-mini) or a deterministic template.'],
-  ['Compliance Agent', 'Validates every output as educational — no advice, no guarantees; serves the template if narration fails.'],
-]
+const AGENT_DETAILS: Array<[name: string, role: string]> = ANALYSIS_PIPELINE.map(
+  ({ label, role }) => [label, role],
+)
 
-const PIPELINE: string[] = [
-  'Ticker Intake normalizes the symbol and clamps the horizon.',
-  'Market Data Tool resolves the price (live provider or offline reference).',
-  'Stock Forecast Agent creates median, bear, and bull paths.',
-  'Backtest Agent evaluates sample windows.',
-  'Portfolio Agent checks concentration against your holdings.',
-  'Memo Writer narrates the result (LLM when configured, template otherwise).',
-  'Compliance Agent frames the output as educational analysis.',
-]
+const PIPELINE: string[] = ANALYSIS_PIPELINE.map(({ flow }) => flow)
 
 // Role lookup for the graph node tooltips/selection (keyed by label).
 const ROLE_BY_LABEL: Record<string, string> = Object.fromEntries(AGENT_DETAILS)
@@ -44,29 +31,37 @@ interface GraphNode {
   label: string
   x: number
   y: number
-  kind: 'agent' | 'tool' | 'guard'
+  kind: AnalysisStageKind
 }
 
 // Snake layout of the real linear pipeline: top row flows left→right, drops
 // down at the right edge, bottom row flows right→left to the Compliance guard.
-const NODES: GraphNode[] = [
-  { label: 'Ticker Intake Agent', x: 15, y: 40, kind: 'agent' },
-  { label: 'Market Data Tool', x: 210, y: 40, kind: 'tool' },
-  { label: 'Stock Forecast Agent', x: 405, y: 40, kind: 'agent' },
-  { label: 'Backtest Agent', x: 600, y: 40, kind: 'agent' },
-  { label: 'Portfolio Agent', x: 600, y: 200, kind: 'agent' },
-  { label: 'Memo Writer', x: 405, y: 200, kind: 'agent' },
-  { label: 'Compliance Agent', x: 210, y: 200, kind: 'guard' },
+const NODE_POSITIONS: ReadonlyArray<Pick<GraphNode, 'x' | 'y'>> = [
+  { x: 15, y: 40 },
+  { x: 210, y: 40 },
+  { x: 405, y: 40 },
+  { x: 600, y: 40 },
+  { x: 600, y: 200 },
+  { x: 405, y: 200 },
+  { x: 210, y: 200 },
+  { x: 15, y: 200 },
 ]
+
+const NODES: GraphNode[] = ANALYSIS_PIPELINE.map(({ label, kind }, index) => ({
+  label,
+  kind,
+  ...NODE_POSITIONS[index],
+}))
 
 // Edge lines between node borders (coordinates match NODES above; w=145 h=44).
 const EDGES: Array<[x1: number, y1: number, x2: number, y2: number]> = [
   [160, 62, 206, 62], // Ticker Intake -> Market Data
   [355, 62, 401, 62], // Market Data -> Stock Forecast
-  [550, 62, 596, 62], // Stock Forecast -> Backtest
-  [672, 88, 672, 196], // Backtest -> Portfolio (drop down)
-  [600, 222, 554, 222], // Portfolio -> Memo Writer (right to left)
-  [405, 222, 359, 222], // Memo Writer -> Compliance (guardrail last)
+  [550, 62, 596, 62], // Stock Forecast -> Parameter Estimation
+  [672, 88, 672, 196], // Parameter Estimation -> Backtest (drop down)
+  [600, 222, 554, 222], // Backtest -> Portfolio (right to left)
+  [405, 222, 359, 222], // Portfolio -> Memo Writer
+  [210, 222, 164, 222], // Memo Writer -> Compliance (guardrail last)
 ]
 
 const NODE_STYLE: Record<GraphNode['kind'], { stroke: string; fill: string }> = {
@@ -125,7 +120,7 @@ function AgentGraph({
               y={n.y + 27}
               textAnchor="middle"
               fill="#fff"
-              fontSize="11.5"
+              fontSize={n.label.length > 22 ? 9.5 : 11.5}
               fontWeight="700"
               style={{ pointerEvents: 'none' }}
             >
@@ -164,8 +159,8 @@ export function OpenSourceScreen() {
           <div>
             <h2>Agent graph</h2>
             <span style={{ color: '#93c5fd' }}>
-              The real pipeline: intake → market data → forecast → backtest → portfolio what-if → AI
-              memo → compliance guard. Click a node to see its role.
+              The real pipeline: intake → market data → forecast → parameter estimation →
+              backtest → portfolio what-if → AI memo → compliance guard. Click a node to see its role.
             </span>
           </div>
           <span>{agentStatus}</span>
@@ -180,7 +175,7 @@ export function OpenSourceScreen() {
 
       <div className="grid2">
         <Panel>
-          <PanelHead title="Active agents" subtitle="The seven-step network behind every analysis." />
+          <PanelHead title="Active stages" subtitle="The eight-stage network behind every analysis." />
           <div className="body">
             <ul className="list">
               {AGENT_DETAILS.map(([name, role]) => {
