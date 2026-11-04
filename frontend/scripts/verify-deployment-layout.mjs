@@ -21,6 +21,10 @@ await assert.doesNotReject(
 const vercelConfig = JSON.parse(
   await readFile(path.join(repositoryRoot, 'vercel.json'), 'utf8'),
 )
+const architectureNote = await readFile(
+  path.join(repositoryRoot, 'SmartFolio-Vault', '02 Architecture.md'),
+  'utf8',
+)
 
 assert.equal(vercelConfig.installCommand, 'cd frontend && npm install')
 assert.equal(vercelConfig.buildCommand, 'cd frontend && npm run build')
@@ -28,5 +32,20 @@ assert.equal(vercelConfig.outputDirectory, 'frontend/dist')
 assert.deepEqual(vercelConfig.rewrites, [
   { source: '/(.*)', destination: '/index.html' },
 ])
+assert.doesNotMatch(
+  architectureNote,
+  /^## Current Prototype$/m,
+  'architecture docs must not present the retired static prototype as current',
+)
+assert.match(
+  architectureNote,
+  /^## Historical Prototype \(Retired\)$/m,
+  'architecture docs must preserve the prototype only as retired history',
+)
+assert.match(
+  architectureNote,
+  /current Vercel deployment is a component-based \*\*Vite \+ React 18 \+/,
+  'architecture docs must identify the supported React/Vite deployment',
+)
 
 console.log('Deployment layout points exclusively to the React/Vite frontend.')

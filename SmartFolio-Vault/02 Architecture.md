@@ -1,21 +1,17 @@
 # Architecture
 
-## Current Prototype
+## Historical Prototype (Retired)
 
-The original deployed version is a single-page static application hosted on Vercel.
+The original root-level `index.html` was a standalone HTML/CSS/JavaScript
+prototype. It was superseded and deleted after the React/Vite deployment was
+verified; its implementation remains available in Git history but is not a
+supported application or deployment entry point.
 
-Current stack:
+## Current Frontend (React/Vite)
 
-- HTML
-- CSS
-- JavaScript
-- Vercel
-- GitHub
-
-## Implemented Frontend (Phase 2)
-
-The static UI has been converted into a component-based **Vite + React 18 +
+The current Vercel deployment is a component-based **Vite + React 18 +
 TypeScript** app in the `frontend/` directory, with **Zustand** for state.
+The root `vercel.json` builds that workspace and serves `frontend/dist`.
 Deterministic financial logic (`src/lib/calculations`) is kept strictly separate
 from the AI explanation layer (`src/lib/ai`). Full detail and rationale (incl.
 why React SPA over Next.js) in [[13 Frontend Architecture]].
@@ -55,6 +51,7 @@ Agent Orchestration Layer (orchestrator.py — runs in this order)
   |-- Ticker Intake Agent
   |-- Market Data Tool
   |-- Stock Forecast Agent
+  |-- Parameter Estimation Agent
   |-- Backtest Agent
   |-- Portfolio Agent
   |-- Memo Writer (LLM or template)
@@ -70,13 +67,13 @@ Data Layer
 
 ## Recommended Production Stack
 
-- React or Next.js frontend
+- React/Vite frontend
 - Python FastAPI backend
 - Docker
 - Neon Postgres
 - Vercel deployment
 - Live market data API
-- Groq/OpenAI LLM routing
+- OpenAI/Anthropic LLM routing with deterministic fallback
 - MCP-style tools
 - A2A-style agent coordination
 
