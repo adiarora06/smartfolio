@@ -19,7 +19,7 @@ SmartFolio lets an investor import or edit holdings, inspect deterministic risk 
 | --- | --- |
 | Frontend | React 18, TypeScript, Vite, Zustand, Ionic web components |
 | API and analytics | Python 3.12, FastAPI, Pydantic v2, SQLAlchemy, deterministic portfolio and risk engines |
-| AI workflow | Seven-stage agent pipeline, OpenAI/Anthropic routing and failover, compliance guardrails |
+| AI workflow | Eight-stage agent pipeline, OpenAI/Anthropic routing and failover, compliance guardrails |
 | Data | Neon Postgres, SQLite fallback, Finnhub, Alpha Vantage |
 | Delivery and quality | Vercel, Render, Docker, Sentry, Pytest, Vitest, GitHub Actions |
 
@@ -32,8 +32,8 @@ Vercel (React 18 + TypeScript + Vite + Zustand)
 Render (FastAPI + Pydantic v2 — rate limited, request-id structured logs)
   │
   ├─ Agent pipeline (orchestrator.py — every step emits a timed AgentEvent):
-  │    Ticker Intake → Market Data Tool → Stock Forecast → Backtest
-  │    → Portfolio (what-if) → Memo Writer (LLM) → Compliance (guardrail)
+  │    Ticker Intake → Market Data Tool → Stock Forecast → Parameter Estimation
+  │    → Backtest → Portfolio (what-if) → Memo Writer (LLM) → Compliance (guardrail)
   │
   ├─ Market data: Finnhub / Alpha Vantage, TTL cache + per-symbol
   │    fetch coalescing, offline reference backstop
@@ -125,3 +125,7 @@ template narration, SQLite persistence.
 ## Disclaimer
 
 Educational prototype. Not financial advice.
+
+## License
+
+[MIT](LICENSE)
