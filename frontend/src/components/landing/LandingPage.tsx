@@ -3,6 +3,7 @@
 import { useStore } from '../../store/useStore'
 import { SkipToDemoButton } from '../layout/SkipToDemoButton'
 import { DonutChart } from '../shared/DonutChart'
+import { ANALYSIS_PIPELINE, ANALYSIS_PIPELINE_SUMMARY } from '../../lib/data/analysisPipeline'
 
 const FEATURES: Array<[string, string]> = [
   ['Guided setup', 'Collects user age, income, risk tolerance, goals, and liquidity needs.'],
@@ -12,7 +13,7 @@ const FEATURES: Array<[string, string]> = [
 ]
 
 const PROOF: Array<[string, string]> = [
-  ['7 agents', 'Intake, market data, forecast, backtest, portfolio, AI memo, compliance'],
+  [`${ANALYSIS_PIPELINE.length} stages`, ANALYSIS_PIPELINE_SUMMARY],
   ['6 modules', 'Setup, portfolio, Analyze Stock, scenarios, advisor, connections'],
   ['0 advice', 'Educational analysis with deterministic calculations'],
 ]

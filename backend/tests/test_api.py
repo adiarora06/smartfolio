@@ -18,6 +18,28 @@ HOLDINGS = [
     {"symbol": "VTI", "name": "Vanguard Total Market", "type": "etf", "asset": "us_equity", "sector": "broad_market", "value": 20000},
 ]
 
+EXPECTED_STOCK_PIPELINE = [
+    "Ticker Intake Agent",
+    "Market Data Tool",
+    "Stock Forecast Agent",
+    "Parameter Estimation Agent",
+    "Backtest Agent",
+    "Portfolio Agent",
+    "Memo Writer",
+    "Compliance Agent",
+]
+
+EXPECTED_STOCK_TOPOLOGY = [
+    "Ticker Intake Agent normalizes symbol and horizon.",
+    "Market Data Tool resolves quote, daily history, fundamentals, and news tone.",
+    "Stock Forecast Agent produces the lognormal quantile cone.",
+    "Parameter Estimation Agent fits annualized volatility and a shrunk drift.",
+    "Backtest Agent replays the estimator across past origins for calibration.",
+    "Portfolio Agent decomposes risk contribution under a single-index model.",
+    "Memo Writer narrates the result (template in local mode).",
+    "Compliance Agent frames output as educational analysis.",
+]
+
 
 def test_web_origin_still_allowed(client):
     r = client.get("/health", headers={"Origin": "https://smartfolio-lemon.vercel.app"})
@@ -57,8 +79,8 @@ def test_stock_analyze_minimal(client):
     body = r.json()
     assert body["forecast"]["symbol"] == "AAPL"
     assert body["narrator"] in ("llm", "template")
-    agents = [e["agent"] for e in body["events"]]
-    assert "Compliance Agent" in agents
+    assert [event["agent"] for event in body["events"]] == EXPECTED_STOCK_PIPELINE
+    assert body["forecast"]["trace"]["topology"] == EXPECTED_STOCK_TOPOLOGY
     # No holdings sent -> impact skipped.
     assert body["impact"] is None
 
