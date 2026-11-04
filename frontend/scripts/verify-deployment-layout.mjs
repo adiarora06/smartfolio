@@ -25,6 +25,10 @@ const architectureNote = await readFile(
   path.join(repositoryRoot, 'SmartFolio-Vault', '02 Architecture.md'),
   'utf8',
 )
+const implementationRoadmap = await readFile(
+  path.join(repositoryRoot, 'SmartFolio-Vault', '10 Implementation Roadmap.md'),
+  'utf8',
+)
 
 assert.equal(vercelConfig.installCommand, 'cd frontend && npm install')
 assert.equal(vercelConfig.buildCommand, 'cd frontend && npm run build')
@@ -46,6 +50,21 @@ assert.match(
   architectureNote,
   /current Vercel deployment is a component-based \*\*Vite \+ React 18 \+/,
   'architecture docs must identify the supported React/Vite deployment',
+)
+assert.match(
+  implementationRoadmap,
+  /Phase 2 - Frontend Application ✅ \(completed/,
+  'the roadmap must record the completed React frontend migration',
+)
+assert.match(
+  implementationRoadmap,
+  /serves `frontend\/dist`/,
+  'the roadmap must identify the current Vercel output',
+)
+assert.doesNotMatch(
+  implementationRoadmap,
+  /point Vercel at `frontend\/`|Deploy frontend on Vercel|Convert `index\.html` into/,
+  'the roadmap must not describe the deployed React frontend as unfinished',
 )
 
 console.log('Deployment layout points exclusively to the React/Vite frontend.')
