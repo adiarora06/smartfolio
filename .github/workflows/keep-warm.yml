@@ -9,9 +9,12 @@ on:
     - cron: "*/10 * * * *"
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   ping:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
       - name: Ping /health
         run: |
