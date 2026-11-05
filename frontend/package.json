@@ -6,8 +6,8 @@
   "description": "SmartFolio \u2014 component-based React frontend (Phase 2 conversion of the static prototype).",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "build:sites": "tsc --noEmit && vite build && node scripts/prepare-sites-build.mjs",
+    "build": "tsc --noEmit && vite build && node scripts/verify-bundle-splitting.mjs",
+    "build:sites": "npm run build && node scripts/prepare-sites-build.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run && npm run test:deployment-layout",

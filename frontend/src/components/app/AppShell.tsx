@@ -10,7 +10,7 @@
 // `screen` is kept in sync by <ScreenSync /> so existing consumers — active
 // highlighting, and setScreen() calls like "Ask Advisor" — keep working.
 
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react'
 import { Redirect, Route, useHistory, useLocation } from 'react-router-dom'
 import {
   IonContent,
@@ -20,7 +20,9 @@ import {
   IonLabel,
   IonList,
   IonMenu,
+  IonPage,
   IonRouterOutlet,
+  IonSpinner,
   IonSplitPane,
   IonTabBar,
   IonTabButton,
@@ -39,13 +41,62 @@ import {
 } from 'ionicons/icons'
 import { useStore } from '../../store/useStore'
 import { pathFor, registerNavigator, screenFromPath } from '../../lib/nav'
-import { OverviewScreen } from './screens/OverviewScreen'
-import { PortfolioScreen } from './screens/PortfolioScreen'
-import { AnalyzeStockScreen } from './screens/AnalyzeStockScreen'
-import { ScenariosScreen } from './screens/ScenariosScreen'
-import { ConnectionsScreen } from './screens/ConnectionsScreen'
-import { OpenSourceScreen } from './screens/OpenSourceScreen'
-import { MoreScreen } from './MoreScreen'
+
+type ScreenModule = Record<string, ComponentType>
+
+function lazyScreen(loader: () => Promise<ScreenModule>, exportName: string) {
+  const Screen = lazy(async () => {
+    const module = await loader()
+    const component = module[exportName]
+    if (!component) throw new Error(`Missing lazy screen export: ${exportName}`)
+    return { default: component }
+  })
+
+  return function LazyScreenRoute() {
+    return (
+      <Suspense fallback={<ScreenFallback />}>
+        <Screen />
+      </Suspense>
+    )
+  }
+}
+
+function ScreenFallback() {
+  return (
+    <IonPage>
+      <IonContent className="screenFallback" fullscreen>
+        <IonSpinner name="crescent" />
+        <span role="status" aria-live="polite">Loading workspace…</span>
+      </IonContent>
+    </IonPage>
+  )
+}
+
+const OverviewScreen = lazyScreen(
+  () => import('./screens/OverviewScreen'),
+  'OverviewScreen',
+)
+const PortfolioScreen = lazyScreen(
+  () => import('./screens/PortfolioScreen'),
+  'PortfolioScreen',
+)
+const AnalyzeStockScreen = lazyScreen(
+  () => import('./screens/AnalyzeStockScreen'),
+  'AnalyzeStockScreen',
+)
+const ScenariosScreen = lazyScreen(
+  () => import('./screens/ScenariosScreen'),
+  'ScenariosScreen',
+)
+const ConnectionsScreen = lazyScreen(
+  () => import('./screens/ConnectionsScreen'),
+  'ConnectionsScreen',
+)
+const OpenSourceScreen = lazyScreen(
+  () => import('./screens/OpenSourceScreen'),
+  'OpenSourceScreen',
+)
+const MoreScreen = lazyScreen(() => import('./MoreScreen'), 'MoreScreen')
 
 /** Mirrors the router into the store, and hands the store a navigator. */
 function ScreenSync() {

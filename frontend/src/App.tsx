@@ -5,14 +5,30 @@
 // page scroll, not an IonPage with a nav bar. Everything under `app` is Ionic
 // and route-driven (see AppShell).
 
-import { useEffect } from 'react'
-import { IonApp } from '@ionic/react'
-import { IonReactRouter } from '@ionic/react-router'
+import { lazy, Suspense, useEffect } from 'react'
 import { useStore } from './store/useStore'
 import { TopBar } from './components/layout/TopBar'
-import { LandingPage } from './components/landing/LandingPage'
-import { SetupFlow } from './components/setup/SetupFlow'
-import { AppShell } from './components/app/AppShell'
+
+const LandingPage = lazy(() =>
+  import('./components/landing/LandingPage').then(({ LandingPage }) => ({ default: LandingPage })),
+)
+const SetupFlow = lazy(() =>
+  import('./components/setup/SetupFlow').then(({ SetupFlow }) => ({ default: SetupFlow })),
+)
+const IonicApplication = lazy(() =>
+  import('./components/app/IonicApplication').then(({ IonicApplication }) => ({
+    default: IonicApplication,
+  })),
+)
+
+function SurfaceFallback() {
+  return (
+    <div className="surfaceFallback" role="status" aria-live="polite">
+      <span className="surfaceFallbackMark" aria-hidden="true">S</span>
+      <span>Loading SmartFolio…</span>
+    </div>
+  )
+}
 
 export default function App() {
   const page = useStore((s) => s.page)
@@ -38,21 +54,20 @@ export default function App() {
   }, [checkBackend])
 
   return (
-    <IonApp>
-      <IonReactRouter>
-        {page === 'app' ? (
-          <AppShell />
-        ) : (
-          // Marketing surfaces keep the plain document flow and the web top bar.
-          <div className="webSurface">
-            <TopBar />
-            <div className="shell">
-              {page === 'landing' && <LandingPage />}
-              {page === 'setup' && <SetupFlow />}
-            </div>
+    <Suspense fallback={<SurfaceFallback />}>
+      {page === 'app' ? (
+        <IonicApplication />
+      ) : (
+        // Marketing surfaces stay outside Ionic so the landing page does not
+        // download the native-style workspace runtime before it is needed.
+        <div className="webSurface">
+          <TopBar />
+          <div className="shell">
+            {page === 'landing' && <LandingPage />}
+            {page === 'setup' && <SetupFlow />}
           </div>
-        )}
-      </IonReactRouter>
-    </IonApp>
+        </div>
+      )}
+    </Suspense>
   )
 }
