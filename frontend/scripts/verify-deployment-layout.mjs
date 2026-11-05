@@ -29,6 +29,10 @@ const implementationRoadmap = await readFile(
   path.join(repositoryRoot, 'SmartFolio-Vault', '10 Implementation Roadmap.md'),
   'utf8',
 )
+const frontendStyles = await readFile(
+  path.join(frontendRoot, 'src', 'styles', 'index.css'),
+  'utf8',
+)
 
 assert.equal(vercelConfig.installCommand, 'cd frontend && npm install')
 assert.equal(vercelConfig.buildCommand, 'cd frontend && npm run build')
@@ -65,6 +69,11 @@ assert.doesNotMatch(
   implementationRoadmap,
   /point Vercel at `frontend\/`|Deploy frontend on Vercel|Convert `index\.html` into/,
   'the roadmap must not describe the deployed React frontend as unfinished',
+)
+assert.match(
+  frontendStyles,
+  /\.surfaceFallback\s*\{[^}]*min-height:\s*100dvh;/s,
+  'the deferred top-level surface must keep its loading state centered in the viewport',
 )
 
 console.log('Deployment layout points exclusively to the React/Vite frontend.')

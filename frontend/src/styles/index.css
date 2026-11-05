@@ -212,13 +212,19 @@ ion-content > .terminal {
    initial bundle. */
 .surfaceFallback,
 .screenFallback::part(scroll) {
-  min-height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
   color: var(--ion-color-step-600, #52606d);
   font-weight: 650;
+}
+.surfaceFallback {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.screenFallback::part(scroll) {
+  min-height: 100%;
 }
 .surfaceFallbackMark {
   width: 34px;
