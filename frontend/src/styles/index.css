@@ -207,6 +207,36 @@ ion-content > .terminal {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Route and top-level surfaces load on demand. Keep the transition state
+   intentional and accessible without pulling the deferred screen into the
+   initial bundle. */
+.surfaceFallback,
+.screenFallback::part(scroll) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--ion-color-step-600, #52606d);
+  font-weight: 650;
+}
+.surfaceFallback {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.screenFallback::part(scroll) {
+  min-height: 100%;
+}
+.surfaceFallbackMark {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: #fff;
+  background: var(--ion-color-primary, #2563eb);
+  box-shadow: 0 8px 24px rgb(37 99 235 / 24%);
+}
+
 /* Desktop: the split-pane sidebar navigates, so hide the tab bar. Matches
    Ionic's `lg` breakpoint (992px) used by IonSplitPane when="lg". */
 @media (min-width: 992px) {

@@ -51,6 +51,18 @@ src/
 `lib/calculations` never imports from `lib/ai`. The AI layer consumes
 deterministic findings, never the other way around.
 
+## Delivery and bundle boundaries
+
+The public landing and setup flows do not load the Ionic workspace runtime.
+Entering the app fetches that runtime on demand, and each workspace route
+(Overview, Portfolio, Analyze, AI Assistant, Connections, Open Source, and
+More) is an independent lazy chunk. This keeps the marketing experience light
+while preserving direct links to every application screen.
+
+`npm run build` validates the generated Vite manifest after compilation. The
+build fails if a route stops being lazy, initial static JavaScript exceeds the
+budget, or any JavaScript chunk grows beyond the configured ceiling.
+
 ## Backend integration
 
 `src/lib/api/` is a typed client for the FastAPI backend (`../backend`), which
